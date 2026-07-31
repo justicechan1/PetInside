@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: PetInside
+
+  datasource:
+    url: jdbc:h2:mem:petinside
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  security:
+    user:
+      name: admin
+      password: REDACTED
+
+server:
+  port: 8080
+
+# --- MySQL 전환 시 아래 주석 해제, H2 datasource 주석 처리 ---
+# spring:
+#   datasource:
+#     url: jdbc:mysql://localhost:3306/petinside?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+#     driver-class-name: com.mysql.cj.jdbc.Driver
+#     username: ${DB_USERNAME}
+#     password: ${DB_PASSWORD}
+#   jpa:
+#     hibernate:
+#       ddl-auto: update
