@@ -1,7 +1,7 @@
-package org.example.petinside.board.domain.comment.entity;
+package org.example.petinside.cha.domain.comment.entity;
 
-import org.example.petinside.board.domain.post.entity.Post;
-import org.example.petinside.board.domain.user.entity.User;
+import org.example.petinside.cha.domain.post.entity.Post;
+import org.example.petinside.cha.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;

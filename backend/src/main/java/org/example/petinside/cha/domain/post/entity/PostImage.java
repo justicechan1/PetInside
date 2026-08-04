@@ -1,4 +1,4 @@
-package org.example.petinside.board.domain.post.entity;
+package org.example.petinside.cha.domain.post.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
