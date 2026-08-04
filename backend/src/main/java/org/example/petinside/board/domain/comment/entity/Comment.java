@@ -1,7 +1,7 @@
-package org.example.petinside.domain.comment.entity;
+package org.example.petinside.board.domain.comment.entity;
 
-import org.example.petinside.domain.post.entity.Post;
-import org.example.petinside.domain.user.entity.User;
+import org.example.petinside.board.domain.post.entity.Post;
+import org.example.petinside.board.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -60,7 +60,7 @@ public class Comment {
         this.isDeleted = false;
     }
 
-    // 비즈니스 메서드: Soft Delete
+    //  Soft Delete
     public void delete() {
         this.isDeleted = true;
     }
