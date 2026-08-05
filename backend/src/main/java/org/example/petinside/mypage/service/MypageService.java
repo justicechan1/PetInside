@@ -2,10 +2,16 @@ package org.example.petinside.mypage.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.common.exception.CustomException;
+import org.example.petinside.domain.post.entity.Post;
+import org.example.petinside.domain.user.entity.SocialAccount;
+import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.mypage.dto.MyPostResponse;
 import org.example.petinside.mypage.dto.NicknameUpdateRequest;
 import org.example.petinside.mypage.dto.PasswordUpdateRequest;
 import org.example.petinside.mypage.dto.UserInfoResponse;
+import org.example.petinside.domain.user.repository.UserRepository;
+import org.example.petinside.domain.user.repository.SocialAccountRepository;
+import org.example.petinside.domain.post.repository.PostRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,7 +29,7 @@ public class MypageService {
 
     public UserInfoResponse getMyInfo(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("유저 없음"));
+                .orElseThrow(() -> new CustomException(404, "유저 없음"));
 
         String provider = socialAccountRepository.findByUserId(userId)
                 .map(SocialAccount::getProvider)
