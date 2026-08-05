@@ -2,6 +2,7 @@ package org.example.petinside.domain.user.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
@@ -11,48 +12,41 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")
+@Table(
+    name = "social_account",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"provider", "provider_id"})
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
-public class User {
+public class SocialAccount {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String username;
-
-    @Column
-    private String password;
-
-    @Column(nullable = false, unique = true)
-    private String nickname;
-
-    @Column(name = "profile_image_url")
-    private String profileImageUrl;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(nullable = false)
-    private String role;
+    private String provider;
+
+    @Column(name = "provider_id", nullable = false)
+    private String providerId;
 
     @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "connected_at", nullable = false, updatable = false)
+    private LocalDateTime connectedAt;
 
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public void updateNickname(String nickname) {
-        this.nickname = nickname;
-    }
-
-    public void updatePassword(String encodedPassword) {
-        this.password = encodedPassword;
-    }
-
-    public void updateProfileImageUrl(String profileImageUrl) {
-        this.profileImageUrl = profileImageUrl;
+    @Builder
+    public SocialAccount(User user, String provider, String providerId) {
+        this.user = user;
+        this.provider = provider;
+        this.providerId = providerId;
     }
 }
