@@ -28,6 +28,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 회원가입/로그인 등 인증 관련 API는 누구나 접근 가능해야 합니다.
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        // 인증 없이 처리된 요청이 예외/404로 /error에 포워딩될 때도 접근 가능해야 합니다.
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 );
 
