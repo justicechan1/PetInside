@@ -12,5 +12,5 @@ public class CommentResponse {
     private String content;
     private String authorNickname;
     private LocalDateTime createdAt;
-    private List<CommentResponse> children; // 대댓글
+    private List<CommentResponse> children;
 }
