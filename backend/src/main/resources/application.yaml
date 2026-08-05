@@ -3,18 +3,14 @@ spring:
     name: PetInside
 
   datasource:
-    url: jdbc:h2:mem:petinside
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-
-  h2:
-    console:
-      enabled: true
+    url: jdbc:mysql://54.180.112.205:3306/petinside?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -28,13 +24,16 @@ spring:
 server:
   port: 8080
 
-# --- MySQL 전환 시 아래 주석 해제, H2 datasource 주석 처리 ---
+# --- H2 로컬 테스트로 되돌릴 때 아래 주석 해제, MySQL datasource 주석 처리 ---
 # spring:
 #   datasource:
-#     url: jdbc:mysql://localhost:3306/petinside?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-#     driver-class-name: com.mysql.cj.jdbc.Driver
-#     username: ${DB_USERNAME}
-#     password: ${DB_PASSWORD}
+#     url: jdbc:h2:mem:petinside
+#     driver-class-name: org.h2.Driver
+#     username: sa
+#     password:
+#   h2:
+#     console:
+#       enabled: true
 #   jpa:
 #     hibernate:
-#       ddl-auto: update
+#       ddl-auto: create-drop
