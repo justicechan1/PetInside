@@ -3,6 +3,7 @@ package org.example.petinside.mypage.service;
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.common.exception.CustomException;
 import org.example.petinside.domain.post.entity.Post;
+import org.example.petinside.domain.post.entity.PostImage;
 import org.example.petinside.domain.user.entity.SocialAccount;
 import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.mypage.dto.MyPostResponse;
@@ -66,9 +67,16 @@ public class MypageService {
 
     public Page<MyPostResponse> getMyPosts(Long userId, Pageable pageable) {
         return postRepository.findByAuthorIdAndIsDeletedFalse(userId, pageable)
-                .map(post -> new MyPostResponse(
-                        post.getId(), post.getCategory(), post.getTitle(),
-                        post.getThumbnailImageUrl(), post.getCreatedAt()
-                ));
+                .map(post -> {
+                    String thumbnail = post.getImages().stream()
+                            .filter(img -> img.getSortOrder() == 0)
+                            .map(PostImage::getImageUrl)
+                            .findFirst()
+                            .orElse(null);
+                    return new MyPostResponse(
+                            post.getId(), post.getCategory().name(), post.getTitle(),
+                            thumbnail, post.getCreatedAt()
+                    );
+                });
     }
 }
