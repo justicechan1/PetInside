@@ -2,8 +2,8 @@ package org.example.petinside.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.auth.dto.SignupRequest;
-import org.example.petinside.domain.user.User;
-import org.example.petinside.domain.user.UserRepository;
+import org.example.petinside.domain.user.entity.User;
+import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.global.exception.DuplicateFieldException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
