@@ -1,4 +1,4 @@
-package org.example.petinside.auth.dto;
+package org.example.petinside.domain.auth.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;

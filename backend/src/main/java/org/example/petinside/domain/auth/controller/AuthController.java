@@ -1,9 +1,9 @@
-package org.example.petinside.auth.controller;
+package org.example.petinside.domain.auth.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.example.petinside.auth.dto.SignupRequest;
-import org.example.petinside.auth.service.AuthService;
+import org.example.petinside.domain.auth.dto.SignupRequest;
+import org.example.petinside.domain.auth.service.AuthService;
 import org.example.petinside.global.response.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

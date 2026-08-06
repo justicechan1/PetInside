@@ -1,12 +1,12 @@
-package org.example.petinside.mypage.controller;
+package org.example.petinside.domain.mypage.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.example.petinside.mypage.dto.MyPostResponse;
-import org.example.petinside.mypage.dto.NicknameUpdateRequest;
-import org.example.petinside.mypage.dto.PasswordUpdateRequest;
-import org.example.petinside.mypage.dto.UserInfoResponse;
-import org.example.petinside.mypage.service.MypageService;
+import org.example.petinside.domain.mypage.dto.MyPostResponse;
+import org.example.petinside.domain.mypage.dto.NicknameUpdateRequest;
+import org.example.petinside.domain.mypage.dto.PasswordUpdateRequest;
+import org.example.petinside.domain.mypage.dto.UserInfoResponse;
+import org.example.petinside.domain.mypage.service.MypageService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;

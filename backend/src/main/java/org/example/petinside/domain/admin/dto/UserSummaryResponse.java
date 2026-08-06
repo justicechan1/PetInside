@@ -1,4 +1,4 @@
-package org.example.petinside.admin.dto;
+package org.example.petinside.domain.admin.dto;
 
 import org.example.petinside.domain.user.entity.User;
 

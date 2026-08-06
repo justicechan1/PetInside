@@ -1,4 +1,4 @@
-package org.example.petinside.admin.dto;
+package org.example.petinside.domain.admin.dto;
 
 import jakarta.validation.constraints.NotBlank;
 

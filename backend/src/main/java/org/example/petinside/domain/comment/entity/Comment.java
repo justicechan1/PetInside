@@ -31,7 +31,7 @@ public class Comment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id", nullable = false)
-    private User author;
+    private User user;
 
     // 대댓글 셀프 참조
     @ManyToOne(fetch = FetchType.LAZY)
@@ -52,9 +52,9 @@ public class Comment {
     private LocalDateTime createdAt;
 
     @Builder
-    public Comment(Post post, User author, Comment parent, String content) {
+    public Comment(Post post, User user, Comment parent, String content) {
         this.post = post;
-        this.author = author;
+        this.user = user;
         this.parent = parent;
         this.content = content;
         this.isDeleted = false;

@@ -1,9 +1,9 @@
-package org.example.petinside.admin.controller;
+package org.example.petinside.domain.admin.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.global.response.ApiResponse;
-import org.example.petinside.admin.dto.*;
-import org.example.petinside.admin.service.AdminService;
+import org.example.petinside.domain.admin.dto.*;
+import org.example.petinside.domain.admin.service.AdminService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;

@@ -1,4 +1,4 @@
-package org.example.petinside.mypage.service;
+package org.example.petinside.domain.mypage.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.global.exception.CustomException;
@@ -7,10 +7,10 @@ import org.example.petinside.domain.post.entity.Post;
 import org.example.petinside.domain.post.entity.PostImage;
 import org.example.petinside.domain.user.entity.SocialAccount;
 import org.example.petinside.domain.user.entity.User;
-import org.example.petinside.mypage.dto.MyPostResponse;
-import org.example.petinside.mypage.dto.NicknameUpdateRequest;
-import org.example.petinside.mypage.dto.PasswordUpdateRequest;
-import org.example.petinside.mypage.dto.UserInfoResponse;
+import org.example.petinside.domain.mypage.dto.MyPostResponse;
+import org.example.petinside.domain.mypage.dto.NicknameUpdateRequest;
+import org.example.petinside.domain.mypage.dto.PasswordUpdateRequest;
+import org.example.petinside.domain.mypage.dto.UserInfoResponse;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.domain.user.repository.SocialAccountRepository;
 import org.example.petinside.domain.post.repository.PostRepository;

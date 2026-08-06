@@ -2,6 +2,7 @@ package org.example.petinside.domain.user.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
@@ -24,7 +25,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String username;
 
-    @Column(nullable = false)
+    @Column
     private String password;
 
     @Column(nullable = false, unique = true)
@@ -43,4 +44,33 @@ public class User {
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Builder
+    private User(String username, String password, String nickname, String role) {
+        this.username = username;
+        this.password = password;
+        this.nickname = nickname;
+        this.role = role;
+    }
+
+    public static User createLocalUser(String username, String encodedPassword, String nickname) {
+        return User.builder()
+                .username(username)
+                .password(encodedPassword)
+                .nickname(nickname)
+                .role("USER")
+                .build();
+    }
+
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void updatePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
+    public void updateProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
 }

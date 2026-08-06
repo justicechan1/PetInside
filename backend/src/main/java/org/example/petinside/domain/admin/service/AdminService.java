@@ -1,4 +1,4 @@
-package org.example.petinside.admin.service;
+package org.example.petinside.domain.admin.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.global.exception.CommentNotFoundException;
@@ -8,10 +8,10 @@ import org.example.petinside.domain.comment.entity.Comment;
 import org.example.petinside.domain.comment.repository.CommentRepository;
 import org.example.petinside.domain.post.entity.Post;
 import org.example.petinside.domain.post.repository.PostRepository;
-import org.example.petinside.admin.dto.DailyStatisticsResponse;
-import org.example.petinside.admin.dto.DeleteResponse;
-import org.example.petinside.admin.dto.RoleUpdateResponse;
-import org.example.petinside.admin.dto.UserSummaryResponse;
+import org.example.petinside.domain.admin.dto.DailyStatisticsResponse;
+import org.example.petinside.domain.admin.dto.DeleteResponse;
+import org.example.petinside.domain.admin.dto.RoleUpdateResponse;
+import org.example.petinside.domain.admin.dto.UserSummaryResponse;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.domain.auth.repository.RefreshTokenRepository;
 import org.springframework.data.domain.Page;

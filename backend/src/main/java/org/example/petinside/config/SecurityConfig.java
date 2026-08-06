@@ -18,6 +18,8 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // JWT 인증 필터가 아직 없어 임시로 전체 요청을 허용한다.
+    // JWT 필터 도입 시 인증/공개 엔드포인트를 분리해야 한다.
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -25,13 +27,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(formLogin -> formLogin.disable())
-                .authorizeHttpRequests(auth -> auth
-                        // 회원가입/로그인 등 인증 관련 API는 누구나 접근 가능해야 합니다.
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-                        // 인증 없이 처리된 요청이 예외/404로 /error에 포워딩될 때도 접근 가능해야 합니다.
-                        .requestMatchers("/error").permitAll()
-                        .anyRequest().authenticated()
-                );
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
 
         return http.build();
     }
