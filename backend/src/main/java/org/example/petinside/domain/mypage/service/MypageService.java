@@ -51,8 +51,8 @@ public class MypageService {
     // [F-05] 닉네임 변경 - 중복 체크를 먼저 해서 불필요한 DB 조회 방지
     @Transactional
     public void updateNickname(Long userId, NicknameUpdateRequest request) {
-        // 이미 사용 중인 닉네임이면 409 반환
-        if (userRepository.existsByNickname(request.getNickname())) {
+        // 자신을 제외한 다른 유저가 동일 닉네임을 쓰고 있으면 409 반환
+        if (userRepository.existsByNicknameAndIdNot(request.getNickname(), userId)) {
             throw new CustomException(409, "이미 사용중인 닉네임입니다");
         }
         User user = userRepository.findById(userId)
