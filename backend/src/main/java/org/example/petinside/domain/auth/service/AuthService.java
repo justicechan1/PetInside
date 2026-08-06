@@ -1,7 +1,7 @@
-package org.example.petinside.auth.service;
+package org.example.petinside.domain.auth.service;
 
 import lombok.RequiredArgsConstructor;
-import org.example.petinside.auth.dto.SignupRequest;
+import org.example.petinside.domain.auth.dto.SignupRequest;
 import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.global.exception.DuplicateFieldException;

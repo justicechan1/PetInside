@@ -1,4 +1,4 @@
-package org.example.petinside.mypage.dto;
+package org.example.petinside.domain.mypage.dto;
 
 
 import lombok.AllArgsConstructor;
