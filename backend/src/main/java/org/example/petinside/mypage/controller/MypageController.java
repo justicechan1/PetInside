@@ -54,7 +54,9 @@ public class MypageController {
     @GetMapping("/posts")
     public ResponseEntity<ApiResponse<Page<MyPostResponse>>> getMyPosts(
             @AuthenticationPrincipal Long userId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String category,
             Pageable pageable) {
-        return ResponseEntity.ok(ApiResponse.success(mypageService.getMyPosts(userId, pageable)));
+        return ResponseEntity.ok(ApiResponse.success(mypageService.getMyPosts(userId, keyword, category, pageable)));
     }
 }
