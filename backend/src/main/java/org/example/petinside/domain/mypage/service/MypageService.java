@@ -10,6 +10,7 @@ import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.domain.mypage.dto.MyPostResponse;
 import org.example.petinside.domain.mypage.dto.NicknameUpdateRequest;
 import org.example.petinside.domain.mypage.dto.PasswordUpdateRequest;
+import org.example.petinside.domain.mypage.dto.ProfileImageUpdateRequest;
 import org.example.petinside.domain.mypage.dto.UserInfoResponse;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.domain.user.repository.SocialAccountRepository;
@@ -76,6 +77,14 @@ public class MypageService {
             throw new CustomException(401, "비밀번호 불일치");
         }
         user.updatePassword(passwordEncoder.encode(request.getNewPassword()));
+    }
+
+    // [F-07] 프로필 사진 변경 - 클라이언트에서 받은 URL을 USER 테이블에 저장
+    @Transactional
+    public void updateProfileImage(Long userId, ProfileImageUpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(404, "유저 없음"));
+        user.updateProfileImageUrl(request.getImageUrl());
     }
 
     // [F-08] 내 게시글 목록 조회 - 키워드/카테고리 선택적 필터링, 최신순 정렬

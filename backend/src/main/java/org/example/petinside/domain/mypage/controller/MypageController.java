@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.petinside.domain.mypage.dto.MyPostResponse;
 import org.example.petinside.domain.mypage.dto.NicknameUpdateRequest;
 import org.example.petinside.domain.mypage.dto.PasswordUpdateRequest;
+import org.example.petinside.domain.mypage.dto.ProfileImageUpdateRequest;
 import org.example.petinside.domain.mypage.dto.UserInfoResponse;
 import org.example.petinside.domain.mypage.service.MypageService;
 import org.springframework.data.domain.Page;
@@ -13,7 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.example.petinside.global.response.ApiResponse;
-import org.springframework.web.multipart.MultipartFile;
 
 // 마이페이지 관련 API 엔드포인트 - /api/v1/users/me 하위 모든 요청 처리
 @RestController
@@ -47,11 +47,12 @@ public class MypageController {
         return ResponseEntity.ok(ApiResponse.success(200, "비밀번호가 변경되었습니다."));
     }
 
-    // [F-07] 프로필 사진 변경 - 스토리지 업로드 방식 팀 합의 후 구현 예정
+    // [F-07] 프로필 사진 변경 - 클라이언트가 S3에 업로드 후 받은 URL을 전달
     @PutMapping("/profile-image")
     public ResponseEntity<ApiResponse<Void>> updateProfileImage(
             @AuthenticationPrincipal Long userId,
-            @RequestParam MultipartFile file) {
+            @Valid @RequestBody ProfileImageUpdateRequest request) {
+        mypageService.updateProfileImage(userId, request);
         return ResponseEntity.ok(ApiResponse.success(200, "프로필 이미지가 변경되었습니다."));
     }
 
