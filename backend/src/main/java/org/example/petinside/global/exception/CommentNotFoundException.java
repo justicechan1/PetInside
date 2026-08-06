@@ -1,4 +1,4 @@
-package org.example.petinside.admin.common;
+package org.example.petinside.global.exception;
 
 public class CommentNotFoundException extends RuntimeException {
     public CommentNotFoundException(Long commentId) {

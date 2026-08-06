@@ -1,4 +1,4 @@
-package org.example.petinside.admin.common;
+package org.example.petinside.global.exception;
 
 public class PostNotFoundException extends RuntimeException {
     public PostNotFoundException(Long postId) {

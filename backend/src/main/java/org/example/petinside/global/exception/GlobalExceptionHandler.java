@@ -43,4 +43,25 @@ public class GlobalExceptionHandler {
                         null
                 ));
     }
+
+    @ExceptionHandler(CustomException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCustomException(CustomException e) {
+        return ResponseEntity
+                .status(e.getStatus())
+                .body(ApiResponse.<Void>of(e.getStatus(), e.getMessage(), null));
+    }
+
+    @ExceptionHandler({UserNotFoundException.class, PostNotFoundException.class, CommentNotFoundException.class})
+    public ResponseEntity<ApiResponse<Void>> handleNotFoundException(RuntimeException e) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.<Void>of(HttpStatus.NOT_FOUND.value(), e.getMessage(), null));
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException e) {
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.<Void>of(HttpStatus.INTERNAL_SERVER_ERROR.value(), "서버 오류", null));
+    }
 }

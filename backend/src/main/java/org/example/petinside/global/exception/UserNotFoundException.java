@@ -1,4 +1,4 @@
-package org.example.petinside.admin.common;
+package org.example.petinside.global.exception;
 
 public class UserNotFoundException extends RuntimeException {
     public UserNotFoundException(Long userId) {
