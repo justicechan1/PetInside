@@ -1,15 +1,16 @@
-package org.example.petinside.cha.domain.post.dto;
+package org.example.petinside.domain.comment.dto;
 
 import lombok.Builder;
 import lombok.Getter;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Builder
-public class PostListResponse {
+public class CommentResponse {
     private Long id;
-    private String category;
-    private String title;
+    private String content;
     private String authorNickname;
     private LocalDateTime createdAt;
+    private List<CommentResponse> children;
 }

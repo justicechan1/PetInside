@@ -1,4 +1,4 @@
-package org.example.petinside.cha.domain.post.dto;
+package org.example.petinside.domain.post.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

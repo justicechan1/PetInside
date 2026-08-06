@@ -70,24 +70,20 @@ public class Post {
         this.isDeleted = false;
     }
 
-    // 게시글 수정
     public void update(Category category, String title, String content) {
         this.category = category;
         this.title = title;
         this.content = content;
     }
 
-    //  Soft Delete
     public void delete() {
         this.isDeleted = true;
     }
 
-    //  조회수 증가
     public void increaseViewCount() {
         this.viewCount++;
     }
 
-    // 이미지 추가
     public void addImage(PostImage image) {
         this.images.add(image);
         image.setPost(this);

@@ -1,4 +1,4 @@
-package org.example.petinside.cha.domain.comment.dto;
+package org.example.petinside.domain.comment.dto;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
