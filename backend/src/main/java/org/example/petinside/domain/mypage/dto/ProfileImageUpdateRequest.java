@@ -4,10 +4,10 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// [F-05] 닉네임 변경 요청 - @NotBlank로 빈 값 입력 시 400 자동 반환
+// [F-07] 프로필 사진 변경 요청 - 클라이언트가 S3에 업로드 후 받은 URL을 전달
 @Getter
 @NoArgsConstructor
-public class NicknameUpdateRequest {
+public class ProfileImageUpdateRequest {
     @NotBlank
-    private String nickname;
+    private String imageUrl;
 }
