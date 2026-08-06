@@ -18,7 +18,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Query("SELECT p FROM Post p WHERE p.author.id = :authorId AND p.isDeleted = false " +
            "AND (:keyword IS NULL OR p.title LIKE %:keyword%) " +
-           "AND (:category IS NULL OR p.category = :category)")
+           "AND (:category IS NULL OR p.category = :category) " +
+           "ORDER BY p.createdAt DESC")
     Page<Post> searchMyPosts(@Param("authorId") Long authorId,
                               @Param("keyword") String keyword,
                               @Param("category") Category category,

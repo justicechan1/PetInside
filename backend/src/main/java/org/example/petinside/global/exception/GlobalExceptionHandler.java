@@ -51,6 +51,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.<Void>of(e.getStatus(), e.getMessage(), null));
     }
 
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidCredentials(InvalidCredentialsException e) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.<Void>of(HttpStatus.UNAUTHORIZED.value(), e.getMessage(), null));
+    }
+
     @ExceptionHandler({UserNotFoundException.class, PostNotFoundException.class, CommentNotFoundException.class})
     public ResponseEntity<ApiResponse<Void>> handleNotFoundException(RuntimeException e) {
         return ResponseEntity

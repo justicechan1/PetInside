@@ -27,3 +27,40 @@ Content-Type: application/json
   "password": "test1234",
   "nickname": "tester03"
 }
+
+### 로그인 테스트용 회원가입 (로그인 케이스 실행 전 한 번 실행)
+POST {{host}}/api/v1/auth/signup
+Content-Type: application/json
+
+{
+  "username": "logintest01",
+  "password": "Test1234!",
+  "nickname": "logintest"
+}
+
+### 로그인 성공
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "logintest01",
+  "password": "Test1234!"
+}
+
+### 로그인 실패 - 존재하지 않는 아이디
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "no-such-user",
+  "password": "Test1234!"
+}
+
+### 로그인 실패 - 비밀번호 불일치
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "logintest01",
+  "password": "WrongPassword1!"
+}
