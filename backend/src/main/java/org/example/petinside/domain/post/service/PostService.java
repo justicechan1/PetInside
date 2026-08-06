@@ -45,7 +45,7 @@ public class PostService {
         Post post = Post.builder()
                 .title(request.getTitle())
                 .content(request.getContent())
-                .category(Category.valueOf(request.getCategory().toUpperCase()))
+                .category(parseCategory(request.getCategory()))
                 .author(user)
                 .build();
 
@@ -68,7 +68,7 @@ public class PostService {
      */
     public PageResponse<PostListResponse> getPostList(String category, String keyword, Pageable pageable) {
         Category categoryFilter = (category != null && !category.isBlank())
-                ? Category.valueOf(category.toUpperCase())
+                ? parseCategory(category)
                 : null;
 
         Page<Post> posts = postRepository.search(categoryFilter, keyword, pageable);
@@ -137,7 +137,7 @@ public class PostService {
         validateWriter(userId, post);
 
         post.update(
-                Category.valueOf(request.getCategory().toUpperCase()),
+                parseCategory(request.getCategory()),
                 request.getTitle(),
                 request.getContent()
         );
@@ -159,6 +159,15 @@ public class PostService {
         post.delete();
 
         return new IdResponse(post.getId());
+    }
+
+    // 잘못된 카테고리 문자열은 400으로 응답 (mypage 도메인과 동일한 컨벤션)
+    private Category parseCategory(String category) {
+        try {
+            return Category.valueOf(category.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new CustomException(400, "유효하지 않은 카테고리입니다 (QNA, BOAST)");
+        }
     }
 
     // 작성자 권한 검증
