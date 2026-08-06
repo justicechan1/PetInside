@@ -1,9 +1,9 @@
 package org.example.petinside.admin.service;
 
 import lombok.RequiredArgsConstructor;
-import org.example.petinside.admin.common.CommentNotFoundException;
-import org.example.petinside.admin.common.PostNotFoundException;
-import org.example.petinside.admin.common.UserNotFoundException;
+import org.example.petinside.global.exception.CommentNotFoundException;
+import org.example.petinside.global.exception.PostNotFoundException;
+import org.example.petinside.global.exception.UserNotFoundException;
 import org.example.petinside.domain.comment.entity.Comment;
 import org.example.petinside.domain.comment.repository.CommentRepository;
 import org.example.petinside.domain.post.entity.Post;

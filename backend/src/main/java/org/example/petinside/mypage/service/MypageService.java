@@ -1,7 +1,7 @@
 package org.example.petinside.mypage.service;
 
 import lombok.RequiredArgsConstructor;
-import org.example.petinside.common.exception.CustomException;
+import org.example.petinside.global.exception.CustomException;
 import org.example.petinside.domain.post.entity.Category;
 import org.example.petinside.domain.post.entity.Post;
 import org.example.petinside.domain.post.entity.PostImage;
