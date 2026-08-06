@@ -1,21 +1,11 @@
-### 회원가입 성공 (매 실행마다 고유한 username/nickname 자동 생성)
-POST {{host}}/api/v1/auth/signup
-Content-Type: application/json
-
-{
-  "username": "user{{$timestamp}}",
-  "password": "Test1234!",
-  "nickname": "n{{$randomInt 1000 9999}}"
-}
-
 ### 회원가입 실패 - 아이디 중복 (성공 요청을 먼저 한 번 실행한 뒤 테스트)
 POST {{host}}/api/v1/auth/signup
 Content-Type: application/json
 
 {
   "username": "testuser01",
-  "password": "Test1234!",
-  "nickname": "diffnick"
+  "password": "test1234!",
+  "nickname": "testuser"
 }
 
 ### 회원가입 실패 - 닉네임 형식 위반 (공백 포함/길이 초과)
