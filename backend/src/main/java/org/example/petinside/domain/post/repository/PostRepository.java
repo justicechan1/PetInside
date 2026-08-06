@@ -23,4 +23,11 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                               @Param("keyword") String keyword,
                               @Param("category") Category category,
                               Pageable pageable);
+
+    @Query("SELECT p FROM Post p WHERE p.isDeleted = false " +
+           "AND (:category IS NULL OR p.category = :category) " +
+           "AND (:keyword IS NULL OR p.title LIKE %:keyword%)")
+    Page<Post> search(@Param("category") Category category,
+                       @Param("keyword") String keyword,
+                       Pageable pageable);
 }

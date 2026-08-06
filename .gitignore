@@ -41,5 +41,10 @@ http-client.private.env.json
 ### Environment ###
 .env
 .env.*
+*.env
 application-local.yaml
 application-secret.yaml
+
+### H2 local DB dumps ###
+*.mv.db
+*.trace.db
