@@ -7,6 +7,7 @@ import org.example.petinside.global.security.oauth2.CustomOidcUserService;
 import org.example.petinside.global.security.oauth2.OAuth2SuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -46,6 +47,12 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/error"
+                        ).permitAll()
+                        // 게시글 목록/상세, 댓글 목록 조회는 비회원도 가능
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/posts",
+                                "/api/v1/posts/*",
+                                "/api/v1/posts/*/comments"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
