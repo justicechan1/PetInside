@@ -48,3 +48,6 @@ application-secret.yaml
 ### H2 local DB dumps ###
 *.mv.db
 *.trace.db
+
+### AWS PEM key ###
+*.pem
