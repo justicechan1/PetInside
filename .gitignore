@@ -1,4 +1,5 @@
 HELP.md
+CLAUDE.md
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
@@ -39,5 +40,13 @@ out/
 ### Environment ###
 .env
 .env.*
+*.env
 application-local.yaml
 application-secret.yaml
+
+### H2 local DB dumps ###
+*.mv.db
+*.trace.db
+
+### AWS PEM key ###
+*.pem
