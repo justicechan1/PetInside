@@ -13,6 +13,7 @@ public class PostListResponse {
     private Long id;
     private String title;
     private String category;
+    private String authorNickname;
     private int viewCount;
     private int commentCount;
     private String thumbnailUrl;

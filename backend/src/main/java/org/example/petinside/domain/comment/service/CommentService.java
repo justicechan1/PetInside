@@ -10,6 +10,10 @@ import org.example.petinside.domain.post.entity.Post;
 import org.example.petinside.domain.post.repository.PostRepository;
 import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.domain.user.repository.UserRepository;
+import org.example.petinside.global.exception.CommentNotFoundException;
+import org.example.petinside.global.exception.CustomException;
+import org.example.petinside.global.exception.PostNotFoundException;
+import org.example.petinside.global.exception.UserNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,18 +36,18 @@ public class CommentService {
     public IdResponse createComment(Long userId, Long postId, CommentCreateRequest request) {
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다. id=" + userId));
+                .orElseThrow(() -> new UserNotFoundException(userId));
 
 
         Post post = postRepository.findById(postId)
                 .filter(p -> !p.isDeleted())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않거나 삭제된 게시글입니다. id=" + postId));
+                .orElseThrow(() -> new PostNotFoundException(postId));
 
         Comment parentComment = null;
         if (request.getParentId() != null) {
             parentComment = commentRepository.findById(request.getParentId())
                     .filter(c -> !c.isDeleted())
-                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 부모 댓글입니다. id=" + request.getParentId()));
+                    .orElseThrow(() -> new CommentNotFoundException(request.getParentId()));
         }
 
 
@@ -65,7 +69,7 @@ public class CommentService {
     public List<CommentResponse> getCommentsByPostId(Long postId) {
         // 게시글 존재 검증
         if (!postRepository.existsById(postId)) {
-            throw new IllegalArgumentException("존재하지 않는 게시글입니다. id=" + postId);
+            throw new PostNotFoundException(postId);
         }
 
         List<Comment> parentComments = commentRepository.findAllByPostIdAndParentIsNullAndIsDeletedFalseOrderByIdAsc(postId);
@@ -98,11 +102,11 @@ public class CommentService {
     public IdResponse deleteComment(Long userId, Long commentId) {
         Comment comment = commentRepository.findById(commentId)
                 .filter(c -> !c.isDeleted())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않거나 이미 삭제된 댓글입니다. id=" + commentId));
+                .orElseThrow(() -> new CommentNotFoundException(commentId));
 
         // 작성자 본인 확인
         if (!comment.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("해당 댓글의 삭제 권한이 없습니다.");
+            throw new CustomException(403, "해당 댓글의 삭제 권한이 없습니다.");
         }
 
         comment.delete();
