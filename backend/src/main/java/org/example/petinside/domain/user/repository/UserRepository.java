@@ -13,6 +13,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
     boolean existsByUsername(String username);
     boolean existsByNickname(String nickname);
+    boolean existsByNicknameAndIdNot(String nickname, Long id);
+    boolean existsByNicknameAndIdNot(String nickname, Long id);
     long countByCreatedAtAfter(LocalDateTime startOfDay);
 
     @Modifying
