@@ -12,5 +12,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Stri
     @Query("SELECT COUNT(DISTINCT r.user.id) FROM RefreshToken r WHERE r.createdAt >= :startOfDay")
     long countDistinctUsersLoggedInSince(@Param("startOfDay") LocalDateTime startOfDay);
 
+    // refreshToken 제거
     void deleteByUser(User user);
 }

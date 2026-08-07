@@ -24,19 +24,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtProvider jwtProvider;
 
+    // 요청이 들어오면 Authorization 헤더의 JWT를 꺼내서 검증
+    // 성공 시 SecurityContext에 인증 정보 주입
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
         String token = resolveToken(request);
 
+        // 유효한 토큰 형식이 헤더에 존재할 경우에만 인증
         if (token != null) {
+            // 토큰이 만료 / 위조 시 미인증 상태로 진행
             try {
                 JwtProvider.JwtPayload payload = jwtProvider.parseAccessToken(token);
 
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         payload.userId(),
-                        null,
+                        null, // 패스워드는 null 처리
                         List.of(new SimpleGrantedAuthority("ROLE_" + payload.role()))
                 );
                 SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -51,8 +55,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private String resolveToken(HttpServletRequest request) {
         String header = request.getHeader(HEADER);
         if (header != null && header.startsWith(PREFIX)) {
-            return header.substring(PREFIX.length());
+            return header.substring(PREFIX.length());  // "Bearer " 접두사 제거 후 토큰 값만 추출
         }
-        return null;
+        return null;  // 헤더 없거나 "Bearer "로 안 시작하면 미인증 요청으로 처리
     }
 }

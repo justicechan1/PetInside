@@ -57,7 +57,7 @@ public class AuthService {
         User user = userRepository.findByUsername(request.username())
                 .orElseThrow(() -> new InvalidCredentialsException(INVALID_CREDENTIALS_MESSAGE));
 
-        // 비밀번호 확인
+        // 비밀번호 확인 (소셜 로그인 계정은 일반 로그인 차단)
         if (user.getPassword() == null || !passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new InvalidCredentialsException(INVALID_CREDENTIALS_MESSAGE);
         }
@@ -65,6 +65,7 @@ public class AuthService {
         String accessToken = jwtProvider.createAccessToken(user.getId(), user.getRole());
         String refreshToken = jwtProvider.createRefreshToken(user.getId());
 
+        // 유저당 refreshToken 1개만 유저 (기존 토큰 있으면 제거 후 재발급)
         refreshTokenRepository.deleteByUser(user);
         refreshTokenRepository.save(RefreshToken.builder()
                 .id(UUID.randomUUID().toString())
