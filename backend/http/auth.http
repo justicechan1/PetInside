@@ -47,6 +47,10 @@ Content-Type: application/json
   "password": "Test1234!"
 }
 
+> {%
+client.global.set("accessToken", response.body.data.accessToken);
+%}
+
 ### 로그인 실패 - 존재하지 않는 아이디
 POST {{host}}/api/v1/auth/login
 Content-Type: application/json
@@ -64,3 +68,10 @@ Content-Type: application/json
   "username": "logintest01",
   "password": "WrongPassword1!"
 }
+
+### JWT 인증 성공 - 로그인 응답의 accessToken으로 보호된 API 접근 (위 "로그인 성공" 먼저 실행)
+GET {{host}}/api/v1/users/me
+Authorization: Bearer {{accessToken}}
+
+### JWT 인증 실패 - 토큰 없이 보호된 API 접근 시 401
+GET {{host}}/api/v1/users/me
