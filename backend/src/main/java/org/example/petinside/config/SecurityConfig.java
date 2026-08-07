@@ -36,9 +36,14 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(formLogin -> formLogin.disable())
-                // 회원가입, 로그인, 에러페이지 권한 허용
+                // 회원가입/로그인/토큰재발급/에러페이지 권한 허용 (로그아웃은 Access Token 필요하므로 제외)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**", "/error").permitAll()
+                        .requestMatchers(
+                                "/api/v1/auth/signup",
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/reissue", // accessToken을 새로 재발급
+                                "/error"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 // 인증되지 않은 사용자 401
