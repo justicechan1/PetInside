@@ -14,7 +14,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByUsername(String username);
     boolean existsByNickname(String nickname);
     boolean existsByNicknameAndIdNot(String nickname, Long id);
-    boolean existsByNicknameAndIdNot(String nickname, Long id);
     long countByCreatedAtAfter(LocalDateTime startOfDay);
 
     @Modifying
