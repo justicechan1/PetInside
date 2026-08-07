@@ -9,17 +9,25 @@ export default function AuthPage() {
     const [signupForm, setSignupForm] = useState({ username: '', nickname: '', password: REDACTED });
 
     const handleLogin = async () => {
-        const res = await axiosInstance.post('/api/v1/auth/login', loginForm);
-        localStorage.setItem('accessToken', res.data.data.accessToken);
-        const me = await axiosInstance.get('/api/v1/users/me');
-        localStorage.setItem('nickname', me.data.data.nickname);
-        navigate('/');
+        try {
+            const res = await axiosInstance.post('/api/v1/auth/login', loginForm);
+            localStorage.setItem('accessToken', res.data.data.accessToken);
+            const me = await axiosInstance.get('/api/v1/users/me');
+            localStorage.setItem('nickname', me.data.data.nickname);
+            navigate('/');
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '로그인에 실패했습니다.');
+        }
     };
 
     const handleSignup = async () => {
-        await axiosInstance.post('/api/v1/auth/signup', signupForm);
-        alert('회원가입 완료! 로그인해주세요.');
-        setTab('login');
+        try {
+            await axiosInstance.post('/api/v1/auth/signup', signupForm);
+            alert('회원가입 완료! 로그인해주세요.');
+            setTab('login');
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '회원가입에 실패했습니다.');
+        }
     };
 
     const inputStyle = {
