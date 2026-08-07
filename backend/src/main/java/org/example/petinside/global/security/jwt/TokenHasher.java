@@ -10,6 +10,7 @@ import java.util.HexFormat;
 @Component
 public class TokenHasher {
 
+    // 토큰을 SHA-256 알고리즘 사용 (단방향 해시)
     public String sha256Hex(String token) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
