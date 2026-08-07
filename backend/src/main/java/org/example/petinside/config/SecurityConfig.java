@@ -3,6 +3,7 @@ package org.example.petinside.config;
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.global.security.RestAuthenticationEntryPoint;
 import org.example.petinside.global.security.jwt.JwtAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.example.petinside.global.security.oauth2.CustomOidcUserService;
 import org.example.petinside.global.security.oauth2.OAuth2SuccessHandler;
 import org.springframework.context.annotation.Bean;
@@ -14,12 +15,19 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    @Value("${cors.allowed-origins}")
+    private String[] allowedOrigins;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
@@ -29,6 +37,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(request -> {
+                    var config = new CorsConfiguration();
+                    config.setAllowedOrigins(Arrays.asList(allowedOrigins));
+                    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                    config.setAllowedHeaders(List.of("*"));
+                    config.setAllowCredentials(true);
+                    return config;
+                }))
                 .csrf(csrf -> csrf.disable())
                 // OAuth2Login의 인가 요청(state)은 세션에 저장되므로 완전 STATELESS 대신 IF_REQUIRED 사용
                 // (API 인증 자체는 세션이 아니라 JwtAuthenticationFilter가 담당하므로 영향 없음)
