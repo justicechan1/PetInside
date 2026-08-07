@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import GNB from '../components/GNB';
-import { getPost, deletePost, PostDetail } from '../api/postApi';
+import { getPost, deletePost } from '../api/postApi';
+import type { PostDetail } from '../api/postApi';
 
 export default function PostDetailPage() {
     const { postId } = useParams<{ postId: string }>();

@@ -11,6 +11,8 @@ export default function AuthPage() {
     const handleLogin = async () => {
         const res = await axiosInstance.post('/api/v1/auth/login', loginForm);
         localStorage.setItem('accessToken', res.data.data.accessToken);
+        const me = await axiosInstance.get('/api/v1/users/me');
+        localStorage.setItem('nickname', me.data.data.nickname);
         navigate('/');
     };
 

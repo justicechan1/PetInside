@@ -25,8 +25,8 @@ export default function GNB() {
             </div>
 
             <nav style={{ display: 'flex', gap: 30 }}>
-                <span onClick={() => navigate('/qna')} style={{ cursor: 'pointer', fontWeight: 600 }}>Q&A</span>
-                <span onClick={() => navigate('/boast')} style={{ cursor: 'pointer', fontWeight: 600 }}>자랑하기</span>
+                <span onClick={() => navigate('/posts?category=QNA')} style={{ cursor: 'pointer', fontWeight: 600 }}>Q&A</span>
+                <span onClick={() => navigate('/posts?category=BOAST')} style={{ cursor: 'pointer', fontWeight: 600 }}>자랑하기</span>
             </nav>
 
             <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GNB from '../components/GNB';
-import { getPosts, PostListItem } from '../api/postApi';
+import { getPosts } from '../api/postApi';
+import type { PostListItem } from '../api/postApi';
 
 export default function PostListPage() {
     const navigate = useNavigate();
