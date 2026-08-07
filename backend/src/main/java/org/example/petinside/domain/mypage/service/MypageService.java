@@ -42,7 +42,7 @@ public class MypageService {
                 .orElse(null);
 
         return new UserInfoResponse(
-                user.getId(), user.getUsername(), user.getNickname(),
+                user.getUsername(), user.getNickname(),
                 user.getProfileImageUrl(), user.getRole(), user.getCreatedAt(),
                 provider
         );

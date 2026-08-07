@@ -30,7 +30,7 @@ public class MypageController {
     }
 
     // [F-05] 닉네임 변경 - @Valid로 빈 값 자동 검증
-    @PutMapping("/nickname")
+    @PatchMapping("/nickname")
     public ResponseEntity<ApiResponse<Void>> updateNickname(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody NicknameUpdateRequest request) {
@@ -39,7 +39,7 @@ public class MypageController {
     }
 
     // [F-06] 비밀번호 변경 - 기존 비밀번호 검증 후 새 비밀번호로 업데이트
-    @PutMapping("/password")
+    @PatchMapping("/password")
     public ResponseEntity<ApiResponse<Void>> updatePassword(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody PasswordUpdateRequest request) {
@@ -48,7 +48,7 @@ public class MypageController {
     }
 
     // [F-07] 프로필 사진 변경 - 클라이언트가 S3에 업로드 후 받은 URL을 전달
-    @PutMapping("/profile-image")
+    @PatchMapping("/profile-image")
     public ResponseEntity<ApiResponse<Void>> updateProfileImage(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody ProfileImageUpdateRequest request) {
