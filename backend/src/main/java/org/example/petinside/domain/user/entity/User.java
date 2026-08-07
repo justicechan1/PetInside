@@ -53,10 +53,21 @@ public class User {
         this.role = role;
     }
 
+    // 로컬 로그인 유저
     public static User createLocalUser(String username, String encodedPassword, String nickname) {
         return User.builder()
                 .username(username)
                 .password(encodedPassword)
+                .nickname(nickname)
+                .role("USER")
+                .build();
+    }
+
+    // 소셜 로그인 유저(로컬 비밀번호가 없음 (password=null))
+    public static User createSocialUser(String username, String nickname) {
+        return User.builder()
+                .username(username)
+                .password(null)
                 .nickname(nickname)
                 .role("USER")
                 .build();
