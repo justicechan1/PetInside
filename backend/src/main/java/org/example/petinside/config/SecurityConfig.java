@@ -34,7 +34,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(formLogin -> formLogin.disable())
-                // 회원가입/로그인/토큰재발급/구글 OAuth2 흐름/에러페이지 권한 허용 (로그아웃은 Access Token 필요하므로 제외)
+                // 회원가입/로그인/토큰재발급/구글 OAuth2 흐름/Swagger/에러페이지 권한 허용 (로그아웃은 Access Token 필요하므로 제외)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/v1/auth/signup",
@@ -42,6 +42,9 @@ public class SecurityConfig {
                                 "/api/v1/auth/reissue", // accessToken을 새로 재발급
                                 "/oauth2/**",
                                 "/login/oauth2/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
                                 "/error"
                         ).permitAll()
                         .anyRequest().authenticated()
