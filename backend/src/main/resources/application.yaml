@@ -24,6 +24,7 @@ spring:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
             scope:
+              - openid
               - email
               - profile
 
@@ -34,6 +35,10 @@ jwt:
   secret: ${JWT_SECRET}
   access-token-expiration: 3600000      # 1시간 (ms)
   refresh-token-expiration: 604800000   # 1주일 (ms)
+
+app:
+  oauth2:
+    redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:3000/oauth/callback}
 
 # --- H2 로컬 테스트로 되돌릴 때 아래 주석 해제, MySQL datasource 주석 처리 ---
 # spring:

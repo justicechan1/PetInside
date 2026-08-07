@@ -13,6 +13,7 @@ import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.global.exception.CustomException;
 import org.example.petinside.global.exception.DuplicateFieldException;
 import org.example.petinside.global.exception.InvalidCredentialsException;
+import org.example.petinside.global.exception.UserNotFoundException;
 import org.example.petinside.global.security.jwt.JwtProperties;
 import org.example.petinside.global.security.jwt.JwtProvider;
 import org.example.petinside.global.security.jwt.TokenHasher;
@@ -91,6 +92,14 @@ public class AuthService {
     @Transactional
     public void logout(Long userId) {
         refreshTokenRepository.deleteByUser(userRepository.getReferenceById(userId));
+    }
+
+    // 소셜 로그인: CustomOidcUserService가 이미 가입/조회를 끝낸 유저에게 accessToken/refreshToken만 발급
+    @Transactional
+    public LoginResponse socialLogin(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+        return issueTokens(user);
     }
 
     // accessToken/refreshToken 발급 + 유저당 refreshToken 1개만 유지(기존 토큰 있으면 제거 후 재발급)
