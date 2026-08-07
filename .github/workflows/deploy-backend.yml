@@ -25,23 +25,16 @@ jobs:
           chmod +x gradlew
           ./gradlew bootJar -x test
 
-      - name: Upload JAR to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_KEY }}
-          source: backend/build/libs/*.jar
-          target: /app/backend/
-          strip_components: 3
-
-      - name: Write .env and restart service
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_KEY }}
-          script: |
+      - name: Deploy to EC2
+        env:
+          EC2_KEY: ${{ secrets.EC2_KEY }}
+        run: |
+          echo "$EC2_KEY" > key.pem
+          chmod 600 key.pem
+          scp -i key.pem -o StrictHostKeyChecking=no \
+            backend/build/libs/*.jar \
+            ec2-user@${{ secrets.EC2_HOST }}:/app/backend/app.jar
+          ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} << 'ENDSSH'
             cat > /app/backend/.env << EOF
             DB_USERNAME=${{ secrets.DB_USERNAME }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
@@ -50,6 +43,6 @@ jobs:
             GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
             CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}
             EOF
-            mv /app/backend/app.jar /app/backend/app.jar.bak 2>/dev/null || true
-            mv /app/backend/*.jar /app/backend/app.jar
             sudo systemctl restart petinside-backend
+          ENDSSH
+          rm key.pem
