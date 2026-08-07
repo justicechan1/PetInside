@@ -1,5 +1,6 @@
 package org.example.petinside.domain.post.repository;
 
+import org.example.petinside.config.JpaAuditingConfig;
 import org.example.petinside.domain.post.entity.Category;
 import org.example.petinside.domain.post.entity.Post;
 import org.example.petinside.domain.user.entity.User;
@@ -9,13 +10,17 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
+@Import(JpaAuditingConfig.class)
 class PostRepositoryTest {
 
     @Autowired
@@ -95,5 +100,23 @@ class PostRepositoryTest {
         Page<Post> result = postRepository.search(null, null, pageable);
 
         assertThat(result.getContent()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("Pageable에 sort=viewCount,desc를 넘기면 조회수 내림차순으로 정렬된다")
+    void search_sortsByViewCountDescending_whenRequested() {
+        Post low = save(Category.QNA, "조회수 낮음", false);
+        Post high = save(Category.QNA, "조회수 높음", false);
+        Post mid = save(Category.QNA, "조회수 중간", false);
+        ReflectionTestUtils.setField(low, "viewCount", 1);
+        ReflectionTestUtils.setField(high, "viewCount", 100);
+        ReflectionTestUtils.setField(mid, "viewCount", 50);
+
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "viewCount"));
+
+        Page<Post> result = postRepository.search(null, null, pageable);
+
+        assertThat(result.getContent()).extracting(Post::getTitle)
+                .containsExactly("조회수 높음", "조회수 중간", "조회수 낮음");
     }
 }
