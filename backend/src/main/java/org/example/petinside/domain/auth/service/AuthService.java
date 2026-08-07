@@ -1,18 +1,22 @@
 package org.example.petinside.domain.auth.service;
 
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.domain.auth.dto.LoginRequest;
 import org.example.petinside.domain.auth.dto.LoginResponse;
+import org.example.petinside.domain.auth.dto.RefreshRequest;
 import org.example.petinside.domain.auth.dto.SignupRequest;
 import org.example.petinside.domain.auth.entity.RefreshToken;
 import org.example.petinside.domain.auth.repository.RefreshTokenRepository;
 import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.domain.user.repository.UserRepository;
+import org.example.petinside.global.exception.CustomException;
 import org.example.petinside.global.exception.DuplicateFieldException;
 import org.example.petinside.global.exception.InvalidCredentialsException;
 import org.example.petinside.global.security.jwt.JwtProperties;
 import org.example.petinside.global.security.jwt.JwtProvider;
 import org.example.petinside.global.security.jwt.TokenHasher;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +29,7 @@ import java.util.UUID;
 public class AuthService {
 
     private static final String INVALID_CREDENTIALS_MESSAGE = "아이디 또는 비밀번호가 일치하지 않습니다.";
+    private static final String INVALID_REFRESH_TOKEN_MESSAGE = "유효하지 않은 refreshToken입니다.";
     private static final String TOKEN_TYPE = "Bearer";
 
     private final UserRepository userRepository;
@@ -62,10 +67,37 @@ public class AuthService {
             throw new InvalidCredentialsException(INVALID_CREDENTIALS_MESSAGE);
         }
 
+        return issueTokens(user);
+    }
+
+    // 토큰 재발급: refreshToken 서명/만료 검증 + DB에 남아있는 토큰인지 대조 후 로테이션 발급
+    @Transactional
+    public LoginResponse reissue(RefreshRequest request) {
+        JwtProvider.JwtPayload payload;
+        try {
+            payload = jwtProvider.parseRefreshToken(request.refreshToken());
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new CustomException(HttpStatus.UNAUTHORIZED.value(), INVALID_REFRESH_TOKEN_MESSAGE);
+        }
+
+        RefreshToken saved = refreshTokenRepository.findByTokenValue(tokenHasher.sha256Hex(request.refreshToken()))
+                .filter(rt -> rt.getUser().getId().equals(payload.userId()))
+                .orElseThrow(() -> new CustomException(HttpStatus.UNAUTHORIZED.value(), INVALID_REFRESH_TOKEN_MESSAGE));
+
+        return issueTokens(saved.getUser());
+    }
+
+    // 로그아웃: 로그인된 유저(Access Token 인증 완료)의 refreshToken을 DB에서 제거해 재발급을 막는다
+    @Transactional
+    public void logout(Long userId) {
+        refreshTokenRepository.deleteByUser(userRepository.getReferenceById(userId));
+    }
+
+    // accessToken/refreshToken 발급 + 유저당 refreshToken 1개만 유지(기존 토큰 있으면 제거 후 재발급)
+    private LoginResponse issueTokens(User user) {
         String accessToken = jwtProvider.createAccessToken(user.getId(), user.getRole());
         String refreshToken = jwtProvider.createRefreshToken(user.getId());
 
-        // 유저당 refreshToken 1개만 유저 (기존 토큰 있으면 제거 후 재발급)
         refreshTokenRepository.deleteByUser(user);
         refreshTokenRepository.save(RefreshToken.builder()
                 .id(UUID.randomUUID().toString())

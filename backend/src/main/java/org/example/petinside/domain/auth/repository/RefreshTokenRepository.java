@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, String> {
 
@@ -15,4 +16,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Stri
 
     // refreshToken 제거
     void deleteByUser(User user);
+
+    // 재발급/로그아웃 시 DB에 살아있는 토큰인지 대조 (해시값 기준)
+    Optional<RefreshToken> findByTokenValue(String tokenValue);
 }

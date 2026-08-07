@@ -75,3 +75,59 @@ Authorization: Bearer {{accessToken}}
 
 ### JWT 인증 실패 - 토큰 없이 보호된 API 접근 시 401
 GET {{host}}/api/v1/users/me
+
+### 토큰 재발급 성공 (위 "로그인 성공" 먼저 실행해서 refreshToken 확보)
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "logintest01",
+  "password": "Test1234!"
+}
+
+> {%
+client.global.set("refreshToken", response.body.data.refreshToken);
+%}
+
+### 토큰 재발급 성공
+POST {{host}}/api/v1/auth/reissue
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+> {%
+client.global.set("rotatedRefreshToken", response.body.data.refreshToken);
+%}
+
+### 토큰 재발급 실패 - 로테이션으로 폐기된 이전 refreshToken 재사용 시 401
+POST {{host}}/api/v1/auth/reissue
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### 토큰 재발급 실패 - 위조/형식 오류 토큰
+POST {{host}}/api/v1/auth/reissue
+Content-Type: application/json
+
+{
+  "refreshToken": "invalid.token.value"
+}
+
+### 로그아웃 성공 (재발급으로 얻은 accessToken 필요 - "로그인 성공" 응답의 accessToken 재사용)
+POST {{host}}/api/v1/auth/logout
+Authorization: Bearer {{accessToken}}
+
+### 로그아웃 실패 - Access Token 없이 호출 시 401
+POST {{host}}/api/v1/auth/logout
+
+### 토큰 재발급 실패 - 로그아웃으로 폐기된 refreshToken 재사용 시 401
+POST {{host}}/api/v1/auth/reissue
+Content-Type: application/json
+
+{
+  "refreshToken": "{{rotatedRefreshToken}}"
+}
