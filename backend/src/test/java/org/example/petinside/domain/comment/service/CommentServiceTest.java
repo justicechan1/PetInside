@@ -2,6 +2,7 @@ package org.example.petinside.domain.comment.service;
 
 import org.example.petinside.domain.comment.dto.CommentCreateRequest;
 import org.example.petinside.domain.comment.dto.CommentResponse;
+import org.example.petinside.domain.comment.dto.CommentUpdateRequest;
 import org.example.petinside.domain.comment.entity.Comment;
 import org.example.petinside.domain.comment.repository.CommentRepository;
 import org.example.petinside.domain.post.dto.IdResponse;
@@ -193,6 +194,49 @@ class CommentServiceTest {
             assertThat(result.get(0).getChildren()).hasSize(1);
             assertThat(result.get(0).getChildren().get(0).getId()).isEqualTo(2L);
             assertThat(result.get(0).getChildren().get(0).getAuthorNickname()).isEqualTo("author-nick");
+        }
+    }
+
+    private CommentUpdateRequest updateRequest(String content) {
+        CommentUpdateRequest request = new CommentUpdateRequest();
+        ReflectionTestUtils.setField(request, "content", content);
+        return request;
+    }
+
+    @Nested
+    @DisplayName("updateComment")
+    class UpdateComment {
+
+        @Test
+        @DisplayName("작성자 본인이면 내용을 수정한다")
+        void updateComment_owner_success() {
+            Comment comment = buildComment(1L, post, author, null, false);
+            when(commentRepository.findById(1L)).thenReturn(Optional.of(comment));
+
+            IdResponse response = commentService.updateComment(1L, 1L, updateRequest("수정된 내용"));
+
+            assertThat(response.getId()).isEqualTo(1L);
+            assertThat(comment.getContent()).isEqualTo("수정된 내용");
+        }
+
+        @Test
+        @DisplayName("작성자가 아니면 예외가 발생한다")
+        void updateComment_notOwner_throws() {
+            Comment comment = buildComment(1L, post, author, null, false);
+            when(commentRepository.findById(1L)).thenReturn(Optional.of(comment));
+
+            assertThatThrownBy(() -> commentService.updateComment(2L, 1L, updateRequest("수정된 내용")))
+                    .isInstanceOf(CustomException.class);
+            assertThat(comment.getContent()).isEqualTo("내용");
+        }
+
+        @Test
+        @DisplayName("존재하지 않거나 삭제된 댓글이면 예외가 발생한다")
+        void updateComment_notFoundOrAlreadyDeleted_throws() {
+            when(commentRepository.findById(1L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> commentService.updateComment(1L, 1L, updateRequest("수정된 내용")))
+                    .isInstanceOf(CommentNotFoundException.class);
         }
     }
 

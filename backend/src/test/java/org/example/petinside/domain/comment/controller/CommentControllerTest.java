@@ -29,10 +29,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-// CommentController 슬라이스 테스트 — 02_api_spec.md 3.1~3.3 응답 코드/형식 검증. CommentService는 Mock.
+// CommentController 슬라이스 테스트 — 02_api_spec.md 3.1~3.4 응답 코드/형식 검증. CommentService는 Mock.
 @WebMvcTest(CommentController.class)
 @Import(SecurityConfig.class)
 class CommentControllerTest {
@@ -100,6 +101,71 @@ class CommentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/comments/{id} - 200")
+    void updateComment_ok() throws Exception {
+        when(commentService.updateComment(eq(1L), eq(1L), any())).thenReturn(new IdResponse(1L));
+
+        String body = """
+                {"content":"수정된 내용입니다."}
+                """;
+
+        mockMvc.perform(put("/api/v1/comments/{id}", 1L)
+                        .with(asUser(1L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(1));
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/comments/{id} - 내용이 비어있으면 400")
+    void updateComment_blankContent_badRequest() throws Exception {
+        String body = """
+                {"content":""}
+                """;
+
+        mockMvc.perform(put("/api/v1/comments/{id}", 1L)
+                        .with(asUser(1L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/comments/{id} - 작성자가 아니면 403")
+    void updateComment_forbidden() throws Exception {
+        when(commentService.updateComment(eq(2L), eq(1L), any()))
+                .thenThrow(new CustomException(403, "해당 댓글의 수정 권한이 없습니다."));
+
+        String body = """
+                {"content":"수정된 내용입니다."}
+                """;
+
+        mockMvc.perform(put("/api/v1/comments/{id}", 1L)
+                        .with(asUser(2L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/comments/{id} - 없는 댓글이면 404")
+    void updateComment_notFound() throws Exception {
+        when(commentService.updateComment(eq(1L), eq(999L), any()))
+                .thenThrow(new CommentNotFoundException(999L));
+
+        String body = """
+                {"content":"수정된 내용입니다."}
+                """;
+
+        mockMvc.perform(put("/api/v1/comments/{id}", 999L)
+                        .with(asUser(1L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isNotFound());
     }
 
     @Test

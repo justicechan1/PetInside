@@ -88,4 +88,11 @@ public class Post {
         this.images.add(image);
         image.setPost(this);
     }
+
+    public void updateImages(List<PostImage> newImages) {
+        this.images.clear();
+        for (PostImage image : newImages) {
+            addImage(image);
+        }
+    }
 }

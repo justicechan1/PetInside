@@ -3,6 +3,7 @@ package org.example.petinside.domain.comment.service;
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.domain.comment.dto.CommentCreateRequest;
 import org.example.petinside.domain.comment.dto.CommentResponse;
+import org.example.petinside.domain.comment.dto.CommentUpdateRequest;
 import org.example.petinside.domain.comment.entity.Comment;
 import org.example.petinside.domain.comment.repository.CommentRepository;
 import org.example.petinside.domain.post.dto.IdResponse;
@@ -48,6 +49,11 @@ public class CommentService {
             parentComment = commentRepository.findById(request.getParentId())
                     .filter(c -> !c.isDeleted())
                     .orElseThrow(() -> new CommentNotFoundException(request.getParentId()));
+
+            // 대댓글에 다시 답글을 다는 3단계 중첩 방지 (목록 조회가 2단계까지만 응답에 포함시킴)
+            if (parentComment.getParent() != null) {
+                throw new CustomException(400, "대댓글에는 답글을 작성할 수 없습니다.");
+            }
         }
 
 
@@ -93,6 +99,25 @@ public class CommentService {
                                 .collect(Collectors.toList())
                 ))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 댓글 및 대댓글 수정
+     */
+    @Transactional
+    public IdResponse updateComment(Long userId, Long commentId, CommentUpdateRequest request) {
+        Comment comment = commentRepository.findById(commentId)
+                .filter(c -> !c.isDeleted())
+                .orElseThrow(() -> new CommentNotFoundException(commentId));
+
+        // 작성자 본인 확인
+        if (!comment.getUser().getId().equals(userId)) {
+            throw new CustomException(403, "해당 댓글의 수정 권한이 없습니다.");
+        }
+
+        comment.update(request.getContent());
+
+        return new IdResponse(comment.getId());
     }
 
     /**

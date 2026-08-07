@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -50,9 +51,11 @@ public class PostService {
                 .build();
 
         if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
-            for (String url : request.getImageUrls()) {
+            List<String> urls = request.getImageUrls();
+            for (int i = 0; i < urls.size(); i++) {
                 PostImage image = PostImage.builder()
-                        .imageUrl(url)
+                        .imageUrl(urls.get(i))
+                        .sortOrder(i)
                         .build();
                 post.addImage(image);
             }
@@ -141,6 +144,18 @@ public class PostService {
                 request.getTitle(),
                 request.getContent()
         );
+
+        List<String> urls = request.getImageUrls();
+        List<PostImage> newImages = new ArrayList<>();
+        if (urls != null) {
+            for (int i = 0; i < urls.size(); i++) {
+                newImages.add(PostImage.builder()
+                        .imageUrl(urls.get(i))
+                        .sortOrder(i)
+                        .build());
+            }
+        }
+        post.updateImages(newImages);
 
         return new IdResponse(post.getId());
     }
