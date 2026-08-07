@@ -4,6 +4,8 @@ import AuthPage from './pages/AuthPage';
 import PostListPage from './pages/PostListPage';
 import PostDetailPage from './pages/PostDetailPage';
 import PostFormPage from './pages/PostFormPage';
+import MyPage from './pages/MyPage';
+import AdminPage from './pages/AdminPage';
 
 export default function App() {
     return (
@@ -15,6 +17,8 @@ export default function App() {
                 <Route path="/posts/new" element={<PostFormPage />} />
                 <Route path="/posts/:postId" element={<PostDetailPage />} />
                 <Route path="/posts/:postId/edit" element={<PostFormPage />} />
+                <Route path="/mypage" element={<MyPage />} />
+                <Route path="/admin" element={<AdminPage />} />
             </Routes>
         </BrowserRouter>
     );
