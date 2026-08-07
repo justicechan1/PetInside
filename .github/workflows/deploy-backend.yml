@@ -25,24 +25,22 @@ jobs:
           chmod +x gradlew
           ./gradlew bootJar -x test
 
-      - name: Deploy to EC2
-        env:
-          EC2_KEY: ${{ secrets.EC2_KEY }}
+      - name: Setup SSH key
         run: |
-          echo "$EC2_KEY" > key.pem
+          echo "${{ secrets.EC2_KEY }}" > key.pem
           chmod 600 key.pem
-          scp -i key.pem -o StrictHostKeyChecking=no \
+
+      - name: Upload JAR to EC2
+        run: |
+          scp -i key.pem -o StrictHostKeyChecking=no -o ServerAliveInterval=60 \
             backend/build/libs/*.jar \
             ec2-user@${{ secrets.EC2_HOST }}:/app/backend/app.jar
-          ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} << 'ENDSSH'
-            cat > /app/backend/.env << EOF
-            DB_USERNAME=${{ secrets.DB_USERNAME }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
-            CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}
-            EOF
-            sudo systemctl restart petinside-backend
-          ENDSSH
-          rm key.pem
+
+      - name: Write env and restart
+        run: |
+          ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} \
+            "printf 'DB_USERNAME=${{ secrets.DB_USERNAME }}\nDB_PASSWORD=${{ secrets.DB_PASSWORD }}\nJWT_SECRET=${{ secrets.JWT_SECRET }}\nGOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}\nGOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}\nCORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}\n' > /app/backend/.env && sudo systemctl restart petinside-backend"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f key.pem
