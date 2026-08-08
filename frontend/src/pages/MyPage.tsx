@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import GNB from '../components/GNB';
 import { getMyInfo, updateNickname, updatePassword, getMyPosts } from '../api/mypageApi';
@@ -21,6 +21,31 @@ export default function MyPage() {
     // 비밀번호 변경
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
+
+    // 프로필 이미지 변경
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setSelectedFile(file);
+        setPreviewUrl(URL.createObjectURL(file));
+    };
+
+    const handleProfileImageSave = async () => {
+        if (!selectedFile) return;
+        // TODO: S3 업로드 후 받은 URL을 updateProfileImage(url)에 전달
+        alert('이미지 업로드 기능은 팀 협의 후 연동 예정입니다.');
+    };
+
+    const handleProfileImageCancel = () => {
+        setSelectedFile(null);
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
 
     // 내 게시글
     const [posts, setPosts] = useState<MyPost[]>([]);
@@ -89,14 +114,36 @@ export default function MyPage() {
                         <section style={{ background: '#fafafa', borderRadius: 12, padding: 24 }}>
                             <h3 style={{ marginBottom: 16 }}>기본 정보</h3>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-                                <div style={{
-                                    width: 72, height: 72, borderRadius: '50%',
-                                    background: '#eee', display: 'flex', alignItems: 'center',
-                                    justifyContent: 'center', fontSize: 32, overflow: 'hidden',
-                                }}>
-                                    {userInfo?.profileImageUrl
-                                        ? <img src={userInfo.profileImageUrl} alt="프로필" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        : '👤'}
+                                <div style={{ position: 'relative', width: 72, height: 72, flexShrink: 0 }}>
+                                    <div style={{
+                                        width: 72, height: 72, borderRadius: '50%',
+                                        background: '#eee', display: 'flex', alignItems: 'center',
+                                        justifyContent: 'center', fontSize: 32, overflow: 'hidden',
+                                    }}>
+                                        {previewUrl
+                                            ? <img src={previewUrl} alt="미리보기" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            : userInfo?.profileImageUrl
+                                                ? <img src={userInfo.profileImageUrl} alt="프로필" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                : '👤'}
+                                    </div>
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        title="프로필 사진 변경"
+                                        style={{
+                                            position: 'absolute', bottom: 0, right: 0,
+                                            width: 24, height: 24, borderRadius: '50%',
+                                            border: 'none', background: 'var(--primary, #FF8C00)',
+                                            color: '#fff', fontSize: 12, cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}
+                                    >✏️</button>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleFileSelect}
+                                        style={{ display: 'none' }}
+                                    />
                                 </div>
                                 <div>
                                     <div style={{ fontWeight: 700, fontSize: 18 }}>{userInfo?.nickname}</div>
@@ -106,6 +153,20 @@ export default function MyPage() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* 파일 선택 시 저장/취소 버튼 표시 */}
+                            {selectedFile && (
+                                <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                                    <button onClick={handleProfileImageSave} style={{
+                                        padding: '8px 20px', border: 'none', borderRadius: 8,
+                                        background: 'var(--primary, #FF8C00)', color: '#fff', cursor: 'pointer', fontWeight: 600,
+                                    }}>저장</button>
+                                    <button onClick={handleProfileImageCancel} style={{
+                                        padding: '8px 20px', border: '1px solid #ddd', borderRadius: 8,
+                                        background: '#fff', cursor: 'pointer',
+                                    }}>취소</button>
+                                </div>
+                            )}
                         </section>
 
                         {/* 닉네임 변경 */}
