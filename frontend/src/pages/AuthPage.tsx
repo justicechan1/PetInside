@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axiosInstance from '../api/axiosInstance';
+import axiosInstance, { baseURL } from '../api/axiosInstance';
 
 export default function AuthPage() {
     const navigate = useNavigate();
@@ -19,6 +19,10 @@ export default function AuthPage() {
         } catch (e: any) {
             alert(e.response?.data?.message ?? '로그인에 실패했습니다.');
         }
+    };
+
+    const handleGoogleLogin = () => {
+        window.location.href = `${baseURL}/oauth2/authorization/google`;
     };
 
     const handleSignup = async () => {
@@ -66,7 +70,8 @@ export default function AuthPage() {
 
                         <div style={{ textAlign: 'center', color: 'var(--text-gray)', margin: '4px 0' }}>또는</div>
 
-                        <button style={{ padding: 14, border: '1px solid var(--border)', borderRadius: 8, background: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: 15 }}>
+                        <button onClick={handleGoogleLogin}
+                                style={{ padding: 14, border: '1px solid var(--border)', borderRadius: 8, background: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: 15 }}>
                             <span style={{ color: '#4285F4' }}>G</span>  구글로 계속하기
                         </button>
                     </div>
