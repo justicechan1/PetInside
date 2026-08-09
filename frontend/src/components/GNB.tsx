@@ -1,13 +1,21 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axiosInstance from '../api/axiosInstance';
 
 export default function GNB() {
     const navigate = useNavigate();
     const isLoggedIn = !!localStorage.getItem('accessToken');
     const [dropdownOpen, setDropdownOpen] = useState(false);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        try {
+            await axiosInstance.post('/api/v1/auth/logout');
+        } catch {
+            // accessToken이 이미 만료됐어도 클라이언트 쪽 로그아웃은 계속 진행
+        }
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('nickname');
         setDropdownOpen(false);
         navigate('/');
         window.location.reload();
