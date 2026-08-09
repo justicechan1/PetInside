@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axiosInstance from '../api/axiosInstance';
+import axiosInstance, { baseURL } from '../api/axiosInstance';
 
 export default function AuthPage() {
     const navigate = useNavigate();
@@ -9,15 +9,30 @@ export default function AuthPage() {
     const [signupForm, setSignupForm] = useState({ username: '', nickname: '', password: REDACTED });
 
     const handleLogin = async () => {
-        const res = await axiosInstance.post('/api/v1/auth/login', loginForm);
-        localStorage.setItem('accessToken', res.data.data.accessToken);
-        navigate('/');
+        try {
+            const res = await axiosInstance.post('/api/v1/auth/login', loginForm);
+            localStorage.setItem('accessToken', res.data.data.accessToken);
+            localStorage.setItem('refreshToken', res.data.data.refreshToken);
+            const me = await axiosInstance.get('/api/v1/users/me');
+            localStorage.setItem('nickname', me.data.data.nickname);
+            navigate('/');
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '로그인에 실패했습니다.');
+        }
+    };
+
+    const handleGoogleLogin = () => {
+        window.location.href = `${baseURL}/oauth2/authorization/google`;
     };
 
     const handleSignup = async () => {
-        await axiosInstance.post('/api/v1/auth/signup', signupForm);
-        alert('회원가입 완료! 로그인해주세요.');
-        setTab('login');
+        try {
+            await axiosInstance.post('/api/v1/auth/signup', signupForm);
+            alert('회원가입 완료! 로그인해주세요.');
+            setTab('login');
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '회원가입에 실패했습니다.');
+        }
     };
 
     const inputStyle = {
@@ -55,7 +70,8 @@ export default function AuthPage() {
 
                         <div style={{ textAlign: 'center', color: 'var(--text-gray)', margin: '4px 0' }}>또는</div>
 
-                        <button style={{ padding: 14, border: '1px solid var(--border)', borderRadius: 8, background: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: 15 }}>
+                        <button onClick={handleGoogleLogin}
+                                style={{ padding: 14, border: '1px solid var(--border)', borderRadius: 8, background: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: 15 }}>
                             <span style={{ color: '#4285F4' }}>G</span>  구글로 계속하기
                         </button>
                     </div>

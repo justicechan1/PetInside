@@ -1,13 +1,21 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axiosInstance from '../api/axiosInstance';
 
 export default function GNB() {
     const navigate = useNavigate();
     const isLoggedIn = !!localStorage.getItem('accessToken');
     const [dropdownOpen, setDropdownOpen] = useState(false);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        try {
+            await axiosInstance.post('/api/v1/auth/logout');
+        } catch {
+            // accessToken이 이미 만료됐어도 클라이언트 쪽 로그아웃은 계속 진행
+        }
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('nickname');
         setDropdownOpen(false);
         navigate('/');
         window.location.reload();
@@ -25,8 +33,8 @@ export default function GNB() {
             </div>
 
             <nav style={{ display: 'flex', gap: 30 }}>
-                <span onClick={() => navigate('/qna')} style={{ cursor: 'pointer', fontWeight: 600 }}>Q&A</span>
-                <span onClick={() => navigate('/boast')} style={{ cursor: 'pointer', fontWeight: 600 }}>자랑하기</span>
+                <span onClick={() => navigate('/posts?category=QNA')} style={{ cursor: 'pointer', fontWeight: 600 }}>Q&A</span>
+                <span onClick={() => navigate('/posts?category=BOAST')} style={{ cursor: 'pointer', fontWeight: 600 }}>자랑하기</span>
             </nav>
 
             <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>

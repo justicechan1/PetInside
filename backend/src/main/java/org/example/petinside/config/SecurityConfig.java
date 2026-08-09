@@ -40,7 +40,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(request -> {
                     var config = new CorsConfiguration();
                     config.setAllowedOrigins(Arrays.asList(allowedOrigins));
-                    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                    config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
                     config.setAllowedHeaders(List.of("*"));
                     config.setAllowCredentials(true);
                     return config;
@@ -57,6 +57,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/signup",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/reissue", // accessToken을 새로 재발급
+                                "/api/v1/auth/oauth2/exchange", // 소셜 로그인 콜백 code를 토큰으로 교환
                                 "/oauth2/**",
                                 "/login/oauth2/**",
                                 "/swagger-ui/**",

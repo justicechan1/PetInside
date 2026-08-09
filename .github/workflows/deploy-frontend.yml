@@ -24,20 +24,17 @@ jobs:
           npm ci
           VITE_API_URL=http://${{ secrets.EC2_HOST }} npm run build
 
-      - name: Upload to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_KEY }}
-          source: frontend/dist/*
-          target: /app/frontend/
-          strip_components: 2
-
-      - name: Reload Nginx
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_KEY }}
-          script: sudo systemctl reload nginx
+      - name: Deploy to EC2
+        env:
+          EC2_KEY: ${{ secrets.EC2_KEY }}
+        run: |
+          echo "$EC2_KEY" > key.pem
+          chmod 600 key.pem
+          ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} \
+            "sudo chown -R ec2-user:ec2-user /app/frontend"
+          scp -i key.pem -o StrictHostKeyChecking=no -r \
+            frontend/dist/. \
+            ec2-user@${{ secrets.EC2_HOST }}:/app/frontend/
+          ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} \
+            "sudo chown -R nginx:nginx /app/frontend && sudo systemctl reload nginx"
+          rm key.pem
