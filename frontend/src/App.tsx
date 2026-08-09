@@ -7,6 +7,7 @@ import PostDetailPage from './pages/PostDetailPage';
 import PostFormPage from './pages/PostFormPage';
 import MyPage from './pages/MyPage';
 import AdminPage from './pages/AdminPage';
+import ProtectedAdminRoute from "./components/ProtectedAdminRoute.tsx";
 
 export default function App() {
     return (
@@ -20,7 +21,7 @@ export default function App() {
                 <Route path="/posts/:postId" element={<PostDetailPage />} />
                 <Route path="/posts/:postId/edit" element={<PostFormPage />} />
                 <Route path="/mypage" element={<MyPage />} />
-                <Route path="/admin" element={<AdminPage />} />
+                <Route path="/admin" element={<ProtectedAdminRoute><AdminPage /></ProtectedAdminRoute>}/>
             </Routes>
         </BrowserRouter>
     );
