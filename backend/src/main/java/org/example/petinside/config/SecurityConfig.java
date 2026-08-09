@@ -57,6 +57,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/signup",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/reissue", // accessToken을 새로 재발급
+                                "/api/v1/auth/oauth2/exchange", // 소셜 로그인 콜백 code를 토큰으로 교환
                                 "/oauth2/**",
                                 "/login/oauth2/**",
                                 "/swagger-ui/**",

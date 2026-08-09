@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.domain.auth.dto.LoginRequest;
 import org.example.petinside.domain.auth.dto.LoginResponse;
+import org.example.petinside.domain.auth.dto.OAuth2ExchangeRequest;
 import org.example.petinside.domain.auth.dto.RefreshRequest;
 import org.example.petinside.domain.auth.dto.SignupRequest;
 import org.example.petinside.domain.auth.service.AuthService;
@@ -49,6 +50,15 @@ public class AuthController {
 
         return ResponseEntity
                 .ok(ApiResponse.success(HttpStatus.OK.value(), "토큰 재발급 성공", response));
+    }
+
+    // 소셜 로그인 콜백에서 받은 1회용 code를 실제 accessToken/refreshToken으로 교환 (permitAll)
+    @PostMapping("/oauth2/exchange")
+    public ResponseEntity<ApiResponse<LoginResponse>> exchangeOAuth2Code(@Valid @RequestBody OAuth2ExchangeRequest request) {
+        LoginResponse response = authService.exchangeOAuth2Code(request.code());
+
+        return ResponseEntity
+                .ok(ApiResponse.success(HttpStatus.OK.value(), "로그인 성공", response));
     }
 
     // 로그아웃: Access Token 필요 (permitAll 아님, JwtAuthenticationFilter가 인증 처리)
