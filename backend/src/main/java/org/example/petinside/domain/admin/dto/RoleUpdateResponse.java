@@ -1,4 +1,6 @@
 package org.example.petinside.domain.admin.dto;
 
-public record RoleUpdateResponse(Long id, String role) {
+import org.example.petinside.domain.admin.entity.Role;
+
+public record RoleUpdateResponse(Long id, Role role) {
 }
