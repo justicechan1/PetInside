@@ -7,7 +7,6 @@ import PostDetailPage from './pages/PostDetailPage';
 import PostFormPage from './pages/PostFormPage';
 import MyPage from './pages/MyPage';
 import AdminPage from './pages/AdminPage';
-import OAuthCallbackPage from './pages/OAuthCallbackPage';
 
 export default function App() {
     return (
@@ -22,7 +21,6 @@ export default function App() {
                 <Route path="/posts/:postId/edit" element={<PostFormPage />} />
                 <Route path="/mypage" element={<MyPage />} />
                 <Route path="/admin" element={<AdminPage />} />
-                <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
             </Routes>
         </BrowserRouter>
     );
