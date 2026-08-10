@@ -28,9 +28,6 @@ public class RefreshToken {
     @Column(name = "token_value", nullable = false, unique = true)
     private String tokenValue;
 
-    @Column(name = "is_revoked", nullable = false)
-    private boolean isRevoked = false;
-
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -44,10 +41,5 @@ public class RefreshToken {
         this.user = user;
         this.tokenValue = tokenValue;
         this.expiresAt = expiresAt;
-        this.isRevoked = false;
-    }
-
-    public void revoke() {
-        this.isRevoked = true;
     }
 }
