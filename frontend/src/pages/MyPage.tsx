@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import GNB from '../components/GNB';
-import { getMyInfo, updateNickname, updatePassword, getMyPosts } from '../api/mypageApi';
+import { getMyInfo, updateNickname, updatePassword, updateProfileImage, getMyPosts } from '../api/mypageApi';
+import { uploadImage } from '../api/imageApi';
 import type { UserInfo, MyPost } from '../api/mypageApi';
 import { isAuthenticated } from '../utils/auth';
 
@@ -53,10 +54,16 @@ export default function MyPage() {
         setPreviewUrl(URL.createObjectURL(file));
     };
 
-    const handleProfileImageSave = () => {
+    const handleProfileImageSave = async () => {
         if (!selectedFile) return;
-        // TODO: S3 업로드 후 받은 URL을 updateProfileImage(url)에 전달
-        alert('이미지 업로드 기능은 팀 협의 후 연동 예정입니다.');
+        try {
+            const url = await uploadImage(selectedFile);
+            await updateProfileImage(url);
+            setUserInfo(prev => prev ? { ...prev, profileImageUrl: url } : prev);
+            handleProfileImageCancel();
+        } catch {
+            alert('프로필 이미지 변경에 실패했습니다.');
+        }
     };
 
     const handleProfileImageCancel = () => {
