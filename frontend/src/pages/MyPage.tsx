@@ -63,8 +63,8 @@ export default function MyPage() {
             await updateProfileImage(url);
             setUserInfo(prev => prev ? { ...prev, profileImageUrl: url } : prev);
             handleProfileImageCancel();
-        } catch {
-            setImageError('프로필 이미지 변경에 실패했습니다.');
+        } catch (e: any) {
+            setImageError(e.response?.data?.message ?? '프로필 이미지 변경에 실패했습니다.');
         }
     };
 
