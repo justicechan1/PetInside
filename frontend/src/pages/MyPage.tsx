@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import GNB from '../components/GNB';
 import { getMyInfo, updateNickname, updatePassword, getMyPosts } from '../api/mypageApi';
 import type { UserInfo, MyPost } from '../api/mypageApi';
+import { isAuthenticated } from '../utils/auth';
 
 type Tab = 'profile' | 'posts';
 
@@ -11,8 +12,8 @@ export default function MyPage() {
     const [tab, setTab] = useState<Tab>('profile');
 
     useEffect(() => {
-        if (!localStorage.getItem('accessToken')) navigate('/login');
-    }, []);
+        if (!isAuthenticated()) navigate('/login');
+    }, [navigate]);
 
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [nickname, setNickname] = useState('');
