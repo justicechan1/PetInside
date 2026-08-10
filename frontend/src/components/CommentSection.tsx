@@ -24,6 +24,7 @@ export default function CommentSection({ postId }: { postId: number }) {
 
     const [comments, setComments] = useState<CommentItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [newContent, setNewContent] = useState('');
     const [replyTargetId, setReplyTargetId] = useState<number | null>(null);
     const [replyContent, setReplyContent] = useState('');
@@ -32,7 +33,11 @@ export default function CommentSection({ postId }: { postId: number }) {
 
     const loadComments = () => {
         setLoading(true);
-        getComments(postId).then(setComments).finally(() => setLoading(false));
+        setError(false);
+        getComments(postId)
+            .then(setComments)
+            .catch(() => setError(true))
+            .finally(() => setLoading(false));
     };
 
     useEffect(() => {
@@ -41,30 +46,46 @@ export default function CommentSection({ postId }: { postId: number }) {
 
     const handleCreate = async () => {
         if (!newContent.trim()) return;
-        await createComment(postId, { content: newContent });
-        setNewContent('');
-        loadComments();
+        try {
+            await createComment(postId, { content: newContent });
+            setNewContent('');
+            loadComments();
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '댓글 등록에 실패했습니다.');
+        }
     };
 
     const handleReplySubmit = async (parentId: number) => {
         if (!replyContent.trim()) return;
-        await createComment(postId, { content: replyContent, parentId });
-        setReplyContent('');
-        setReplyTargetId(null);
-        loadComments();
+        try {
+            await createComment(postId, { content: replyContent, parentId });
+            setReplyContent('');
+            setReplyTargetId(null);
+            loadComments();
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '답글 등록에 실패했습니다.');
+        }
     };
 
     const handleEditSubmit = async (commentId: number) => {
         if (!editContent.trim()) return;
-        await updateComment(commentId, { content: editContent });
-        setEditTargetId(null);
-        loadComments();
+        try {
+            await updateComment(commentId, { content: editContent });
+            setEditTargetId(null);
+            loadComments();
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '댓글 수정에 실패했습니다.');
+        }
     };
 
     const handleDelete = async (commentId: number) => {
         if (!confirm('댓글을 삭제할까요?')) return;
-        await deleteComment(commentId);
-        loadComments();
+        try {
+            await deleteComment(commentId);
+            loadComments();
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '댓글 삭제에 실패했습니다.');
+        }
     };
 
     const renderComment = (comment: CommentItem, isReply: boolean) => {
@@ -142,6 +163,8 @@ export default function CommentSection({ postId }: { postId: number }) {
 
             {loading ? (
                 <p style={{ color: '#999', fontSize: 14 }}>댓글을 불러오는 중...</p>
+            ) : error ? (
+                <p style={{ color: '#e03131', fontSize: 14 }}>댓글을 불러오지 못했습니다. 게시글이 삭제되었을 수 있습니다.</p>
             ) : comments.length === 0 ? (
                 <p style={{ color: '#999', fontSize: 14 }}>아직 댓글이 없습니다.</p>
             ) : (
