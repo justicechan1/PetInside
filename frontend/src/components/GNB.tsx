@@ -1,11 +1,28 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import axiosInstance from '../api/axiosInstance';
+import { useNavigate } from 'react-router-dom';
+
+function getRoleFromToken(): string | null {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return null;
+    try {
+        const payload = token.split('.')[1];
+        return JSON.parse(atob(payload)).role;
+    } catch {
+        return null;
+    }
+}
 
 export default function GNB() {
     const navigate = useNavigate();
     const isLoggedIn = !!localStorage.getItem('accessToken');
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [role, setRole] = useState<string | null>(null);
+
+    useEffect(() => {
+        setRole(getRoleFromToken());
+    }, []);
+
 
     const handleLogout = async () => {
         try {
@@ -45,6 +62,21 @@ export default function GNB() {
                             글쓰기
                         </button>
 
+                        {role === 'ADMIN' && (
+                            <button onClick={() => navigate('/admin')}
+                                    style={{
+                                        padding: '8px 16px',
+                                        border: '1px solid var(--primary)',
+                                        borderRadius: 8,
+                                        background: 'white',
+                                        color: 'var(--primary)',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer'
+                                    }}>
+                                관리자 페이지
+                            </button>
+                        )}
+
                         {/* 프로필 동그라미 */}
                         <div style={{ position: 'relative' }}>
                             <div onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -56,6 +88,7 @@ export default function GNB() {
                                  }}>
                                 👤
                             </div>
+
 
                             {/* 드롭다운 */}
                             {dropdownOpen && (
