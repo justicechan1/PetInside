@@ -48,5 +48,9 @@ application-secret.yaml
 *.mv.db
 *.trace.db
 
+### Local image uploads (app.upload.dir default) ###
+/backend/uploads/
+/uploads/
+
 ### AWS PEM key ###
 *.pem
