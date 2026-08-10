@@ -131,48 +131,43 @@ export default function MyPage() {
                             }} />
 
                             {/* 아바타 + 정보 */}
-                            <div style={{ padding: '0 28px 24px', marginTop: -40 }}>
-                                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
-                                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                                        <div style={{
-                                            width: 80, height: 80, borderRadius: '50%',
-                                            border: '3px solid #fff',
-                                            background: '#eee', display: 'flex', alignItems: 'center',
-                                            justifyContent: 'center', fontSize: 36, overflow: 'hidden',
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                                        }}>
-                                            {previewUrl
-                                                ? <img src={previewUrl} alt="미리보기" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                : userInfo?.profileImageUrl
-                                                    ? <img src={userInfo.profileImageUrl} alt="프로필" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    : '👤'}
-                                        </div>
-                                        <button
-                                            onClick={() => fileInputRef.current?.click()}
-                                            title="프로필 사진 변경"
-                                            style={{
-                                                position: 'absolute', bottom: 2, right: 2,
-                                                width: 24, height: 24, borderRadius: '50%',
-                                                border: '2px solid #fff',
-                                                background: 'var(--primary, #FF8C00)',
-                                                color: '#fff', fontSize: 11, cursor: 'pointer',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            }}
-                                        >✏️</button>
-                                        <input ref={fileInputRef} type="file" accept="image/*"
-                                            onChange={handleFileSelect} style={{ display: 'none' }} />
+                            <div style={{ padding: '0 28px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: -44 }}>
+                                <div style={{ position: 'relative' }}>
+                                    <div style={{
+                                        width: 88, height: 88, borderRadius: '50%',
+                                        border: '4px solid #fff',
+                                        background: '#eee', display: 'flex', alignItems: 'center',
+                                        justifyContent: 'center', fontSize: 40, overflow: 'hidden',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                    }}>
+                                        {previewUrl
+                                            ? <img src={previewUrl} alt="미리보기" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            : userInfo?.profileImageUrl
+                                                ? <img src={userInfo.profileImageUrl} alt="프로필" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                : '👤'}
                                     </div>
-                                    <div style={{ paddingBottom: 4 }}>
-                                        <div style={{ fontWeight: 700, fontSize: 20 }}>{userInfo?.nickname}</div>
-                                        <div style={{ color: '#999', fontSize: 14, marginTop: 2 }}>{userInfo?.username}</div>
-                                    </div>
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        title="프로필 사진 변경"
+                                        style={{
+                                            position: 'absolute', bottom: 4, right: 4,
+                                            width: 26, height: 26, borderRadius: '50%',
+                                            border: '2px solid #fff',
+                                            background: 'var(--primary, #FF8C00)',
+                                            color: '#fff', fontSize: 11, cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}
+                                    >✏️</button>
+                                    <input ref={fileInputRef} type="file" accept="image/*"
+                                        onChange={handleFileSelect} style={{ display: 'none' }} />
                                 </div>
 
-                                <div style={{
-                                    marginTop: 16, padding: '12px 16px', background: '#f8f8f8',
-                                    borderRadius: 10, fontSize: 13, color: '#888',
-                                }}>
-                                    가입일 {userInfo ? new Date(userInfo.createdAt).toLocaleDateString() : '-'}
+                                <div style={{ marginTop: 12, textAlign: 'center' }}>
+                                    <div style={{ fontWeight: 700, fontSize: 20 }}>{userInfo?.nickname}</div>
+                                    <div style={{ color: '#999', fontSize: 14, marginTop: 4 }}>{userInfo?.username}</div>
+                                    <div style={{ fontSize: 12, color: '#bbb', marginTop: 6 }}>
+                                        가입일 {userInfo ? new Date(userInfo.createdAt).toLocaleDateString() : '-'}
+                                    </div>
                                 </div>
 
                                 {selectedFile && (
