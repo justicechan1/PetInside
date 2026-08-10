@@ -22,7 +22,7 @@ jobs:
         working-directory: frontend
         run: |
           npm ci
-          VITE_API_URL=http://${{ secrets.EC2_HOST }} npm run build
+          VITE_API_URL=https://${{ secrets.EC2_HOST }} npm run build
 
       - name: Deploy to EC2
         env:
