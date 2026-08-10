@@ -1,5 +1,7 @@
 package org.example.petinside.domain.mypage.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.domain.mypage.dto.MyPostResponse;
@@ -15,7 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.example.petinside.global.response.ApiResponse;
 
-// 마이페이지 관련 API 엔드포인트 - /api/v1/users/me 하위 모든 요청 처리
+@Tag(name = "마이페이지", description = "내 정보 조회 및 수정 API (JWT 인증 필요)")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/users/me")
@@ -23,13 +25,13 @@ public class MypageController {
 
     private final MypageService mypageService;
 
-    // [F-05~08] @AuthenticationPrincipal: JWT 필터에서 꺼낸 로그인 사용자 ID를 자동 주입
+    @Operation(summary = "내 정보 조회", description = "로그인한 사용자의 닉네임, 프로필 이미지, 소셜 로그인 여부 등을 반환합니다.")
     @GetMapping
     public ResponseEntity<ApiResponse<UserInfoResponse>> getMyInfo(@AuthenticationPrincipal Long userId) {
         return ResponseEntity.ok(ApiResponse.success(200, "조회 성공", mypageService.getMyInfo(userId)));
     }
 
-    // [F-05] 닉네임 변경 - @Valid로 빈 값 자동 검증
+    @Operation(summary = "닉네임 변경", description = "닉네임을 변경합니다. 다른 사용자가 사용 중인 닉네임은 사용할 수 없습니다.")
     @PatchMapping("/nickname")
     public ResponseEntity<ApiResponse<Void>> updateNickname(
             @AuthenticationPrincipal Long userId,
@@ -38,7 +40,7 @@ public class MypageController {
         return ResponseEntity.ok(ApiResponse.success(200, "닉네임이 변경되었습니다."));
     }
 
-    // [F-06] 비밀번호 변경 - 기존 비밀번호 검증 후 새 비밀번호로 업데이트
+    @Operation(summary = "비밀번호 변경", description = "현재 비밀번호를 검증한 후 새 비밀번호로 변경합니다. 소셜 로그인 사용자는 사용할 수 없습니다.")
     @PatchMapping("/password")
     public ResponseEntity<ApiResponse<Void>> updatePassword(
             @AuthenticationPrincipal Long userId,
@@ -47,7 +49,7 @@ public class MypageController {
         return ResponseEntity.ok(ApiResponse.success(200, "비밀번호가 변경되었습니다."));
     }
 
-    // [F-07] 프로필 사진 변경 - 클라이언트가 S3에 업로드 후 받은 URL을 전달
+    @Operation(summary = "프로필 이미지 변경", description = "프로필 이미지 URL을 변경합니다. 이미지는 클라이언트에서 스토리지에 업로드 후 URL을 전달합니다.")
     @PatchMapping("/profile-image")
     public ResponseEntity<ApiResponse<Void>> updateProfileImage(
             @AuthenticationPrincipal Long userId,
@@ -56,7 +58,7 @@ public class MypageController {
         return ResponseEntity.ok(ApiResponse.success(200, "프로필 이미지가 변경되었습니다."));
     }
 
-    // [F-08] 내 게시글 목록 조회 - keyword(제목 검색), category(QNA/BOAST) 선택적 필터링
+    @Operation(summary = "내 게시글 목록 조회", description = "내가 작성한 게시글을 최신순으로 조회합니다. category(QNA/BOAST)와 keyword(제목 검색)로 필터링할 수 있습니다.")
     @GetMapping("/posts")
     public ResponseEntity<ApiResponse<Page<MyPostResponse>>> getMyPosts(
             @AuthenticationPrincipal Long userId,
