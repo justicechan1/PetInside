@@ -26,6 +26,7 @@ export default function MyPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [imageError, setImageError] = useState('');
 
     const [posts, setPosts] = useState<MyPost[]>([]);
     const [totalPages, setTotalPages] = useState(0);
@@ -56,13 +57,14 @@ export default function MyPage() {
 
     const handleProfileImageSave = async () => {
         if (!selectedFile) return;
+        setImageError('');
         try {
             const url = await uploadImage(selectedFile);
             await updateProfileImage(url);
             setUserInfo(prev => prev ? { ...prev, profileImageUrl: url } : prev);
             handleProfileImageCancel();
         } catch {
-            alert('프로필 이미지 변경에 실패했습니다.');
+            setImageError('프로필 이미지 변경에 실패했습니다.');
         }
     };
 
@@ -184,15 +186,20 @@ export default function MyPage() {
                                 </div>
 
                                 {selectedFile && (
-                                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                                        <button onClick={handleProfileImageSave} style={{
-                                            padding: '8px 20px', border: 'none', borderRadius: 8,
-                                            background: 'var(--primary, #FF8C00)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-                                        }}>저장</button>
-                                        <button onClick={handleProfileImageCancel} style={{
-                                            padding: '8px 20px', border: '1px solid #ddd', borderRadius: 8,
-                                            background: '#fff', cursor: 'pointer', fontSize: 13,
-                                        }}>취소</button>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginTop: 12 }}>
+                                        <div style={{ display: 'flex', gap: 8 }}>
+                                            <button onClick={handleProfileImageSave} style={{
+                                                padding: '8px 20px', border: 'none', borderRadius: 8,
+                                                background: 'var(--primary, #FF8C00)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+                                            }}>저장</button>
+                                            <button onClick={handleProfileImageCancel} style={{
+                                                padding: '8px 20px', border: '1px solid #ddd', borderRadius: 8,
+                                                background: '#fff', cursor: 'pointer', fontSize: 13,
+                                            }}>취소</button>
+                                        </div>
+                                        {imageError && (
+                                            <p style={{ margin: 0, fontSize: 13, color: '#f44336' }}>{imageError}</p>
+                                        )}
                                     </div>
                                 )}
                             </div>
