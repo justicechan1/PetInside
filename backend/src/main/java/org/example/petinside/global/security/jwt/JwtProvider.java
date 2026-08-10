@@ -3,14 +3,12 @@ package org.example.petinside.global.security.jwt;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
 
 @Component
-@RequiredArgsConstructor
 public class JwtProvider {
 
     private static final String CLAIM_TYPE = "type";
@@ -20,8 +18,11 @@ public class JwtProvider {
 
     // JWT 설정 정보
     private final JwtProperties jwtProperties;
-    private SecretKey secretKey() {
-        return Keys.hmacShaKeyFor(jwtProperties.secret().getBytes());
+    private final SecretKey secretKey;
+
+    public JwtProvider(JwtProperties jwtProperties) {
+        this.jwtProperties = jwtProperties;
+        this.secretKey = Keys.hmacShaKeyFor(jwtProperties.secret().getBytes());
     }
 
     // AccessToken 생성
@@ -33,7 +34,7 @@ public class JwtProvider {
                 .claim(CLAIM_ROLE, role)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + jwtProperties.accessTokenExpiration()))
-                .signWith(secretKey())
+                .signWith(secretKey)
                 .compact();
     }
 
@@ -45,7 +46,7 @@ public class JwtProvider {
                 .claim(CLAIM_TYPE, TYPE_REFRESH)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + jwtProperties.refreshTokenExpiration()))
-                .signWith(secretKey())
+                .signWith(secretKey)
                 .compact();
     }
 
@@ -61,7 +62,7 @@ public class JwtProvider {
 
     private JwtPayload parse(String token, String expectedType) {
         Claims claims = Jwts.parser()
-                .verifyWith(secretKey())
+                .verifyWith(secretKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
