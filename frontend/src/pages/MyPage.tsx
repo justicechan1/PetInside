@@ -74,6 +74,7 @@ export default function MyPage() {
             await updateNickname(nickname);
             alert('닉네임이 변경되었습니다.');
             localStorage.setItem('nickname', nickname);
+            window.dispatchEvent(new StorageEvent('storage', { key: 'nickname', newValue: nickname }));
             setUserInfo(prev => prev ? { ...prev, nickname } : prev);
         } catch (e: any) {
             setNicknameError(e.response?.data?.message ?? '닉네임 변경에 실패했습니다.');

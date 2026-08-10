@@ -8,9 +8,16 @@ export default function GNB() {
     const isLoggedIn = !!localStorage.getItem('accessToken');
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [role, setRole] = useState<string | null>(null);
+    const [nickname, setNickname] = useState<string | null>(() => localStorage.getItem('nickname'));
 
     useEffect(() => {
         setRole(getRoleFromToken());
+    }, []);
+
+    useEffect(() => {
+        const onStorage = () => setNickname(localStorage.getItem('nickname'));
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
     }, []);
 
 
@@ -76,7 +83,7 @@ export default function GNB() {
                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
                                      cursor: 'pointer', fontWeight: 'bold', fontSize: 16
                                  }}>
-                                👤
+                                {nickname ? nickname[0].toUpperCase() : '👤'}
                             </div>
 
 
