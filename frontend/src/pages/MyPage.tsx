@@ -53,7 +53,7 @@ export default function MyPage() {
         setPreviewUrl(URL.createObjectURL(file));
     };
 
-    const handleProfileImageSave = async () => {
+    const handleProfileImageSave = () => {
         if (!selectedFile) return;
         // TODO: S3 업로드 후 받은 URL을 updateProfileImage(url)에 전달
         alert('이미지 업로드 기능은 팀 협의 후 연동 예정입니다.');
