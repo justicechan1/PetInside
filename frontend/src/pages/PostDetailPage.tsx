@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import GNB from '../components/GNB';
+import CommentSection from '../components/CommentSection';
 import { getPost, deletePost } from '../api/postApi';
 import type { PostDetail } from '../api/postApi';
 
@@ -81,6 +82,8 @@ export default function PostDetailPage() {
                         }}>삭제</button>
                     </div>
                 )}
+
+                <CommentSection postId={Number(postId)} />
             </div>
         </div>
     );
