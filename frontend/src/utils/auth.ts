@@ -8,3 +8,14 @@ export function getRoleFromToken(): string | null {
         return null;
     }
 }
+
+export function isAuthenticated(): boolean {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return false;
+    try {
+        JSON.parse(atob(token.split('.')[1]));
+        return true;
+    } catch {
+        return false;
+    }
+}
