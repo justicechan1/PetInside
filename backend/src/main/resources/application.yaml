@@ -44,6 +44,13 @@ app:
   oauth2:
     redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:3000/oauth/callback}
 
+aws:
+  region: ${AWS_REGION:ap-northeast-2}
+  s3:
+    bucket: ${S3_BUCKET_NAME:}
+    # presigned URL 유효시간(초) - 이 시간 안에 프론트가 PUT까지 끝내야 함
+    presign-expiration-seconds: ${S3_PRESIGN_EXPIRATION_SECONDS:300}
+
 # --- H2 로컬 테스트로 되돌릴 때 아래 주석 해제, MySQL datasource 주석 처리 ---
 # spring:
 #   datasource:
