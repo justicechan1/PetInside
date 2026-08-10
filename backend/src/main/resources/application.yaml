@@ -29,11 +29,18 @@ spring:
               - email
               - profile
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
 server:
   port: 8080
+  # nginx 등 리버스 프록시 뒤에서 X-Forwarded-* 헤더로 원 요청의 scheme/host를 복원 (이미지 절대 URL 생성에 필요)
+  forward-headers-strategy: framework
 
 jwt:
   secret: ${JWT_SECRET}
@@ -43,13 +50,9 @@ jwt:
 app:
   oauth2:
     redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:3000/oauth/callback}
-
-aws:
-  region: ${AWS_REGION:ap-northeast-2}
-  s3:
-    bucket: ${S3_BUCKET_NAME:}
-    # presigned URL 유효시간(초) - 이 시간 안에 프론트가 PUT까지 끝내야 함
-    presign-expiration-seconds: ${S3_PRESIGN_EXPIRATION_SECONDS:300}
+  # 로컬 디스크 이미지 업로드 - EC2 재배포(scp)는 app.jar만 교체하므로 이 폴더는 그대로 보존됨
+  upload:
+    dir: ${UPLOAD_DIR:./uploads}
 
 # --- H2 로컬 테스트로 되돌릴 때 아래 주석 해제, MySQL datasource 주석 처리 ---
 # spring:

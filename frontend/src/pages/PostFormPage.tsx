@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import GNB from '../components/GNB';
 import { createPost, updatePost, getPost } from '../api/postApi';
+import { uploadImage } from '../api/imageApi';
+
+const MAX_IMAGES = 5;
 
 export default function PostFormPage() {
     const { postId } = useParams<{ postId: string }>();
@@ -11,7 +14,10 @@ export default function PostFormPage() {
     const [category, setCategory] = useState('QNA');
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
+    const [imageUrls, setImageUrls] = useState<string[]>([]);
+    const [uploading, setUploading] = useState(false);
     const [loading, setLoading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (!isEdit) return;
@@ -19,8 +25,34 @@ export default function PostFormPage() {
             setCategory(post.category);
             setTitle(post.title);
             setContent(post.content);
+            setImageUrls(post.imageUrls ?? []);
         });
     }, [postId]);
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        e.target.value = ''; // 같은 파일 연속 선택 가능하도록 초기화
+        if (files.length === 0) return;
+
+        if (imageUrls.length + files.length > MAX_IMAGES) {
+            alert(`이미지는 최대 ${MAX_IMAGES}장까지 첨부할 수 있습니다.`);
+            return;
+        }
+
+        setUploading(true);
+        try {
+            const uploaded = await Promise.all(files.map(uploadImage));
+            setImageUrls(prev => [...prev, ...uploaded]);
+        } catch {
+            alert('이미지 업로드에 실패했습니다.');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleRemoveImage = (url: string) => {
+        setImageUrls(prev => prev.filter(u => u !== url));
+    };
 
     const handleSubmit = async () => {
         if (!title.trim() || !content.trim()) {
@@ -30,10 +62,10 @@ export default function PostFormPage() {
         setLoading(true);
         try {
             if (isEdit) {
-                await updatePost(Number(postId), { category, title, content });
+                await updatePost(Number(postId), { category, title, content, imageUrls });
                 navigate(`/posts/${postId}`);
             } else {
-                const res = await createPost({ category, title, content });
+                const res = await createPost({ category, title, content, imageUrls });
                 navigate(`/posts/${res.data.id}`);
             }
         } finally {
@@ -77,12 +109,47 @@ export default function PostFormPage() {
                     style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid #ddd', fontSize: 15, resize: 'vertical', boxSizing: 'border-box' }}
                 />
 
+                {/* 이미지 */}
+                <div style={{ marginTop: 16 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                        {imageUrls.map(url => (
+                            <div key={url} style={{ position: 'relative', width: 100, height: 100 }}>
+                                <img src={url} alt="" style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8 }} />
+                                <button onClick={() => handleRemoveImage(url)} style={{
+                                    position: 'absolute', top: -8, right: -8, width: 22, height: 22, borderRadius: '50%',
+                                    border: 'none', background: '#333', color: '#fff', cursor: 'pointer', lineHeight: 1,
+                                }}>×</button>
+                            </div>
+                        ))}
+                        {imageUrls.length < MAX_IMAGES && (
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                                style={{
+                                    width: 100, height: 100, borderRadius: 8, border: '1px dashed #ccc',
+                                    background: '#fafafa', cursor: 'pointer', fontSize: 13, color: '#999',
+                                }}
+                            >
+                                {uploading ? '업로드 중...' : '+ 이미지 추가'}
+                            </button>
+                        )}
+                    </div>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        multiple
+                        onChange={handleFileSelect}
+                        style={{ display: 'none' }}
+                    />
+                </div>
+
                 {/* 버튼 */}
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
                     <button onClick={() => navigate(-1)} style={{
                         padding: '10px 24px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', cursor: 'pointer',
                     }}>취소</button>
-                    <button onClick={handleSubmit} disabled={loading} style={{
+                    <button onClick={handleSubmit} disabled={loading || uploading} style={{
                         padding: '10px 24px', borderRadius: 8, border: 'none',
                         background: 'var(--primary, #FF8C00)', color: '#fff', cursor: 'pointer', fontWeight: 600,
                     }}>

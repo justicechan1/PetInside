@@ -63,7 +63,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
-                                "/error"
+                                "/error",
+                                "/images/**" // 로컬 디스크에 업로드된 이미지 정적 서빙 - 비회원도 조회 가능해야 함
                         ).permitAll()
                         // 게시글 목록/상세, 댓글 목록 조회는 비회원도 가능
                         .requestMatchers(HttpMethod.GET,

@@ -9,6 +9,7 @@ export default function PostDetailPage() {
     const navigate = useNavigate();
     const [post, setPost] = useState<PostDetail | null>(null);
     const [loading, setLoading] = useState(true);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     const nickname = localStorage.getItem('nickname');
 
@@ -17,6 +18,15 @@ export default function PostDetailPage() {
             .then(setPost)
             .finally(() => setLoading(false));
     }, [postId]);
+
+    useEffect(() => {
+        if (!previewUrl) return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setPreviewUrl(null);
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [previewUrl]);
 
     const handleDelete = async () => {
         if (!confirm('게시글을 삭제할까요?')) return;
@@ -63,7 +73,13 @@ export default function PostDetailPage() {
                 {post.imageUrls?.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
                         {post.imageUrls.map((url, i) => (
-                            <img key={i} src={url} alt="" style={{ width: 200, height: 200, objectFit: 'cover', borderRadius: 8 }} />
+                            <img
+                                key={i}
+                                src={url}
+                                alt=""
+                                onClick={() => setPreviewUrl(url)}
+                                style={{ width: 200, height: 200, objectFit: 'cover', borderRadius: 8, cursor: 'zoom-in' }}
+                            />
                         ))}
                     </div>
                 )}
@@ -82,6 +98,32 @@ export default function PostDetailPage() {
                     </div>
                 )}
             </div>
+
+            {/* 이미지 확대 모달 */}
+            {previewUrl && (
+                <div
+                    onClick={() => setPreviewUrl(null)}
+                    style={{
+                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 1000, cursor: 'zoom-out', padding: 24, boxSizing: 'border-box',
+                    }}
+                >
+                    <img
+                        src={previewUrl}
+                        alt=""
+                        style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: 4 }}
+                    />
+                    <button
+                        onClick={() => setPreviewUrl(null)}
+                        style={{
+                            position: 'fixed', top: 20, right: 24, width: 40, height: 40, borderRadius: '50%',
+                            border: 'none', background: 'rgba(255,255,255,0.15)', color: '#fff',
+                            fontSize: 22, cursor: 'pointer', lineHeight: 1,
+                        }}
+                    >×</button>
+                </div>
+            )}
         </div>
     );
 }
