@@ -16,6 +16,7 @@ export default function MyPage() {
 
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [nickname, setNickname] = useState('');
+    const [nicknameError, setNicknameError] = useState('');
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [passwordError, setPasswordError] = useState('');
@@ -65,13 +66,16 @@ export default function MyPage() {
     };
 
     const handleNicknameUpdate = async () => {
+        setNicknameError('');
+        if (!nickname.trim()) { setNicknameError('닉네임을 입력해주세요.'); return; }
+        if (nickname === userInfo?.nickname) { setNicknameError('현재 닉네임과 동일합니다.'); return; }
         try {
             await updateNickname(nickname);
             alert('닉네임이 변경되었습니다.');
             localStorage.setItem('nickname', nickname);
             setUserInfo(prev => prev ? { ...prev, nickname } : prev);
         } catch (e: any) {
-            alert(e.response?.data?.message ?? '닉네임 변경에 실패했습니다.');
+            setNicknameError(e.response?.data?.message ?? '닉네임 변경에 실패했습니다.');
         }
     };
 
@@ -190,13 +194,18 @@ export default function MyPage() {
                             <div style={{ padding: '20px 24px' }}>
                                 <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14, color: '#222' }}>닉네임 변경</div>
                                 <div style={{ display: 'flex', gap: 8 }}>
-                                    <input value={nickname} onChange={e => setNickname(e.target.value)}
-                                        placeholder="새 닉네임" style={{ ...inputStyle, flex: 1 }} />
+                                    <input value={nickname}
+                                        onChange={e => { setNickname(e.target.value); setNicknameError(''); }}
+                                        placeholder="새 닉네임"
+                                        style={{ ...inputStyle, flex: 1, borderColor: nicknameError ? '#f44336' : '#e0e0e0' }} />
                                     <button onClick={handleNicknameUpdate} style={{
                                         padding: '11px 20px', border: 'none', borderRadius: 8, whiteSpace: 'nowrap',
                                         background: 'var(--primary, #FF8C00)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 14,
                                     }}>변경</button>
                                 </div>
+                                {nicknameError && (
+                                    <p style={{ margin: '8px 0 0', fontSize: 13, color: '#f44336' }}>{nicknameError}</p>
+                                )}
                             </div>
                         </div>
 
