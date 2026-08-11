@@ -1,6 +1,7 @@
 package org.example.petinside.domain.admin.service;
 
 import lombok.RequiredArgsConstructor;
+import org.example.petinside.domain.admin.entity.Role;
 import org.example.petinside.global.exception.CommentNotFoundException;
 import org.example.petinside.global.exception.PostNotFoundException;
 import org.example.petinside.global.exception.UserNotFoundException;
@@ -35,10 +36,10 @@ public class AdminService {
 
     // F-15: 권한 부여
     @Transactional
-    public RoleUpdateResponse updateRole(Long userId, String role) {
+    public RoleUpdateResponse updateRole(Long userId, Role role) {
         userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
-        userRepository.updateRole(userId, role);
+        userRepository.updateRole(userId, role.name());
         return new RoleUpdateResponse(userId, role);
     }
 

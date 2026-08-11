@@ -1,6 +1,7 @@
 package org.example.petinside.domain.admin.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import org.example.petinside.domain.admin.entity.Role;
 
-public record RoleUpdateRequest(@NotBlank String role) {
+public record RoleUpdateRequest(@NotNull Role role) {
 }

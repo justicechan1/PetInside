@@ -1,13 +1,35 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import axiosInstance from '../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
+import { getRoleFromToken } from '../utils/auth';
 
 export default function GNB() {
     const navigate = useNavigate();
     const isLoggedIn = !!localStorage.getItem('accessToken');
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [role, setRole] = useState<string | null>(null);
+    const [nickname, setNickname] = useState<string | null>(() => localStorage.getItem('nickname'));
 
-    const handleLogout = () => {
+    useEffect(() => {
+        setRole(getRoleFromToken());
+    }, []);
+
+    useEffect(() => {
+        const onStorage = () => setNickname(localStorage.getItem('nickname'));
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, []);
+
+
+    const handleLogout = async () => {
+        try {
+            await axiosInstance.post('/api/v1/auth/logout');
+        } catch {
+            // accessToken이 이미 만료됐어도 클라이언트 쪽 로그아웃은 계속 진행
+        }
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('nickname');
         setDropdownOpen(false);
         navigate('/');
         window.location.reload();
@@ -25,8 +47,8 @@ export default function GNB() {
             </div>
 
             <nav style={{ display: 'flex', gap: 30 }}>
-                <span onClick={() => navigate('/qna')} style={{ cursor: 'pointer', fontWeight: 600 }}>Q&A</span>
-                <span onClick={() => navigate('/boast')} style={{ cursor: 'pointer', fontWeight: 600 }}>자랑하기</span>
+                <span onClick={() => navigate('/posts?category=QNA')} style={{ cursor: 'pointer', fontWeight: 600 }}>Q&A</span>
+                <span onClick={() => navigate('/posts?category=BOAST')} style={{ cursor: 'pointer', fontWeight: 600 }}>자랑하기</span>
             </nav>
 
             <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
@@ -37,6 +59,21 @@ export default function GNB() {
                             글쓰기
                         </button>
 
+                        {role === 'ADMIN' && (
+                            <button onClick={() => navigate('/admin')}
+                                    style={{
+                                        padding: '8px 16px',
+                                        border: '1px solid var(--primary)',
+                                        borderRadius: 8,
+                                        background: 'white',
+                                        color: 'var(--primary)',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer'
+                                    }}>
+                                관리자 페이지
+                            </button>
+                        )}
+
                         {/* 프로필 동그라미 */}
                         <div style={{ position: 'relative' }}>
                             <div onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -46,8 +83,9 @@ export default function GNB() {
                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
                                      cursor: 'pointer', fontWeight: 'bold', fontSize: 16
                                  }}>
-                                👤
+                                {nickname ? nickname[0].toUpperCase() : '👤'}
                             </div>
+
 
                             {/* 드롭다운 */}
                             {dropdownOpen && (
