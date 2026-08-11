@@ -1,14 +1,24 @@
 package org.example.petinside.domain.auth.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.domain.auth.dto.LoginRequest;
 import org.example.petinside.domain.auth.dto.LoginResponse;
+import org.example.petinside.domain.auth.dto.OAuth2ExchangeRequest;
 import org.example.petinside.domain.auth.dto.RefreshRequest;
 import org.example.petinside.domain.auth.dto.SignupRequest;
 import org.example.petinside.domain.auth.service.AuthService;
 import org.example.petinside.global.response.ApiResponse;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "인증", description = "회원가입, 로그인, 토큰 재발급/로그아웃 API")
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -23,7 +34,27 @@ public class AuthController {
 
     private final AuthService authService;
 
-    // 회원가입
+    @Operation(
+            summary = "회원가입",
+            description = """
+                    로컬 계정으로 회원가입합니다. 인증 불필요.
+                    - username: 영문 소문자 + 숫자, 4~20자
+                    - password: REDACTED 이상, 영문 + 숫자 + 특수문자 포함
+                    - nickname: 공백 없이 2~10자
+                    """
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "201", description = "회원가입 성공",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, examples = @ExampleObject(
+                            value = "{\"status\":201,\"message\":\"회원가입 성공\",\"data\":null}"))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400", description = "형식 위반 / 필수값 누락 / 아이디 또는 닉네임 중복",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, examples = @ExampleObject(
+                            value = "{\"status\":400,\"message\":\"이미 사용 중인 아이디입니다.\",\"data\":null}"))
+            )
+    })
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<Void>> signup(@Valid @RequestBody SignupRequest request) {
         authService.signup(request);
@@ -33,7 +64,18 @@ public class AuthController {
                 .body(ApiResponse.<Void>success(HttpStatus.CREATED.value(), "회원가입 성공"));
     }
 
-    // 로그인
+    @Operation(summary = "로그인", description = "아이디/비밀번호로 로그인하여 accessToken(1시간)/refreshToken(1주일)을 발급받습니다. 인증 불필요.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200", description = "로그인 성공",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = LoginResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401", description = "아이디 또는 비밀번호 불일치",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, examples = @ExampleObject(
+                            value = "{\"status\":401,\"message\":\"아이디 또는 비밀번호가 일치하지 않습니다.\",\"data\":null}"))
+            )
+    })
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
@@ -42,7 +84,18 @@ public class AuthController {
                 .ok(ApiResponse.success(HttpStatus.OK.value(), "로그인 성공", response));
     }
 
-    // 토큰 재발급: Refresh Token 필요, Access Token 불필요 (permitAll)
+    @Operation(summary = "토큰 재발급", description = "유효한 refreshToken으로 accessToken/refreshToken을 재발급합니다. Access Token 불필요.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200", description = "토큰 재발급 성공",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = LoginResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401", description = "refreshToken 만료 또는 위조",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, examples = @ExampleObject(
+                            value = "{\"status\":401,\"message\":\"유효하지 않거나 만료된 refreshToken입니다.\",\"data\":null}"))
+            )
+    })
     @PostMapping("/reissue")
     public ResponseEntity<ApiResponse<LoginResponse>> reissue(@Valid @RequestBody RefreshRequest request) {
         LoginResponse response = authService.reissue(request);
@@ -51,9 +104,42 @@ public class AuthController {
                 .ok(ApiResponse.success(HttpStatus.OK.value(), "토큰 재발급 성공", response));
     }
 
-    // 로그아웃: Access Token 필요 (permitAll 아님, JwtAuthenticationFilter가 인증 처리)
+    @Operation(summary = "소셜 로그인 code 교환", description = "소셜 로그인 콜백에서 받은 1회용 code를 실제 accessToken/refreshToken으로 교환합니다. 인증 불필요.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200", description = "로그인 성공",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = LoginResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401", description = "유효하지 않거나 만료된 code",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, examples = @ExampleObject(
+                            value = "{\"status\":401,\"message\":\"유효하지 않거나 만료된 code입니다.\",\"data\":null}"))
+            )
+    })
+    @PostMapping("/oauth2/exchange")
+    public ResponseEntity<ApiResponse<LoginResponse>> exchangeOAuth2Code(@Valid @RequestBody OAuth2ExchangeRequest request) {
+        LoginResponse response = authService.exchangeOAuth2Code(request.code());
+
+        return ResponseEntity
+                .ok(ApiResponse.success(HttpStatus.OK.value(), "로그인 성공", response));
+    }
+
+    @Operation(summary = "로그아웃", description = "현재 accessToken 사용자의 refreshToken을 폐기합니다. Access Token 필요.")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200", description = "로그아웃 성공",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, examples = @ExampleObject(
+                            value = "{\"status\":200,\"message\":\"로그아웃 성공\",\"data\":null}"))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401", description = "Access Token 없음 또는 만료",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)
+            )
+    })
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(@AuthenticationPrincipal Long userId) {
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId) {
         authService.logout(userId);
 
         return ResponseEntity

@@ -17,6 +17,7 @@ import org.example.petinside.global.exception.UserNotFoundException;
 import org.example.petinside.global.security.jwt.JwtProperties;
 import org.example.petinside.global.security.jwt.JwtProvider;
 import org.example.petinside.global.security.jwt.TokenHasher;
+import org.example.petinside.global.security.oauth2.OAuth2AuthCodeStore;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class AuthService {
     private final JwtProvider jwtProvider;
     private final TokenHasher tokenHasher;
     private final JwtProperties jwtProperties;
+    private final OAuth2AuthCodeStore oAuth2AuthCodeStore;
 
     @Transactional
     public void signup(SignupRequest request) {
@@ -94,9 +96,12 @@ public class AuthService {
         refreshTokenRepository.deleteByUser(userRepository.getReferenceById(userId));
     }
 
-    // 소셜 로그인: CustomOidcUserService가 이미 가입/조회를 끝낸 유저에게 accessToken/refreshToken만 발급
+    // 소셜 로그인 콜백에서 발급된 1회용 code를 실제 accessToken/refreshToken으로 교환
     @Transactional
-    public LoginResponse socialLogin(Long userId) {
+    public LoginResponse exchangeOAuth2Code(String code) {
+        Long userId = oAuth2AuthCodeStore.consume(code)
+                .orElseThrow(() -> new CustomException(HttpStatus.UNAUTHORIZED.value(), "유효하지 않거나 만료된 code입니다."));
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
         return issueTokens(user);

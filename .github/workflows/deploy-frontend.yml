@@ -22,7 +22,7 @@ jobs:
         working-directory: frontend
         run: |
           npm ci
-          VITE_API_URL=http://${{ secrets.EC2_HOST }} npm run build
+          VITE_API_URL=https://${{ secrets.EC2_HOST }} npm run build
 
       - name: Deploy to EC2
         env:
@@ -30,9 +30,11 @@ jobs:
         run: |
           echo "$EC2_KEY" > key.pem
           chmod 600 key.pem
+          ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} \
+            "sudo chown -R ec2-user:ec2-user /app/frontend"
           scp -i key.pem -o StrictHostKeyChecking=no -r \
             frontend/dist/. \
             ec2-user@${{ secrets.EC2_HOST }}:/app/frontend/
           ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} \
-            "sudo systemctl reload nginx"
+            "sudo chown -R nginx:nginx /app/frontend && sudo systemctl reload nginx"
           rm key.pem
