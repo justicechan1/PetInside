@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.petinside.global.security.RestAuthenticationEntryPoint;
 import org.example.petinside.global.security.jwt.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
+import org.example.petinside.global.security.oauth2.CustomAuthorizationRequestResolver;
 import org.example.petinside.global.security.oauth2.CustomOidcUserService;
 import org.example.petinside.global.security.oauth2.OAuth2SuccessHandler;
 import org.springframework.context.annotation.Bean;
@@ -33,6 +34,7 @@ public class SecurityConfig {
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final CustomOidcUserService customOidcUserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final CustomAuthorizationRequestResolver customAuthorizationRequestResolver;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -78,6 +80,8 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e.authenticationEntryPoint(restAuthenticationEntryPoint))
                 // 구글 OAuth2 로그인: 유저 정보 조회/자동가입은 CustomOidcUserService, 성공 후 JWT 발급은 OAuth2SuccessHandler
                 .oauth2Login(oauth2 -> oauth2
+                        // 로그아웃 후 재로그인 시 구글 세션으로 자동 로그인되지 않도록 매번 계정 선택 화면을 강제
+                        .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(customAuthorizationRequestResolver))
                         .userInfoEndpoint(userInfo -> userInfo.oidcUserService(customOidcUserService))
                         .successHandler(oAuth2SuccessHandler)
                 )
