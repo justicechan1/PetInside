@@ -76,7 +76,7 @@ Authorization: Bearer {{accessToken}}
 ### JWT 인증 실패 - 토큰 없이 보호된 API 접근 시 401
 GET {{host}}/api/v1/users/me
 
-### 토큰 재발급 성공 (위 "로그인 성공" 먼저 실행해서 refreshToken 확보)
+### 토큰 재발급 성공 (위 "로그인 성공"을 먼저 실행 - refreshToken은 쿠키로 자동 저장/전송됨, IntelliJ HTTP Client 쿠키 잼 사용)
 POST {{host}}/api/v1/auth/login
 Content-Type: application/json
 
@@ -85,49 +85,19 @@ Content-Type: application/json
   "password": "Test1234!"
 }
 
-> {%
-client.global.set("refreshToken", response.body.data.refreshToken);
-%}
-
-### 토큰 재발급 성공
+### 토큰 재발급 성공 (refreshToken 쿠키가 브라우저/클라이언트에 의해 자동 전송됨, Body 없음)
 POST {{host}}/api/v1/auth/reissue
-Content-Type: application/json
 
-{
-  "refreshToken": "{{refreshToken}}"
-}
-
-> {%
-client.global.set("rotatedRefreshToken", response.body.data.refreshToken);
-%}
-
-### 토큰 재발급 실패 - 로테이션으로 폐기된 이전 refreshToken 재사용 시 401
+### 토큰 재발급 실패 - 위조/형식 오류 토큰 (쿠키를 직접 덮어써서 테스트)
 POST {{host}}/api/v1/auth/reissue
-Content-Type: application/json
+Cookie: refreshToken=invalid.token.value
 
-{
-  "refreshToken": "{{refreshToken}}"
-}
-
-### 토큰 재발급 실패 - 위조/형식 오류 토큰
-POST {{host}}/api/v1/auth/reissue
-Content-Type: application/json
-
-{
-  "refreshToken": "invalid.token.value"
-}
-
-### 로그아웃 성공 (재발급으로 얻은 accessToken 필요 - "로그인 성공" 응답의 accessToken 재사용)
+### 로그아웃 성공 (accessToken 헤더 + refreshToken 쿠키 둘 다 필요 - 위 로그인/재발급 먼저 실행)
 POST {{host}}/api/v1/auth/logout
 Authorization: Bearer {{accessToken}}
 
 ### 로그아웃 실패 - Access Token 없이 호출 시 401
 POST {{host}}/api/v1/auth/logout
 
-### 토큰 재발급 실패 - 로그아웃으로 폐기된 refreshToken 재사용 시 401
+### 토큰 재발급 실패 - 로그아웃으로 폐기된 refreshToken 쿠키 재사용 시 401 (위 로그아웃 먼저 실행)
 POST {{host}}/api/v1/auth/reissue
-Content-Type: application/json
-
-{
-  "refreshToken": "{{rotatedRefreshToken}}"
-}
