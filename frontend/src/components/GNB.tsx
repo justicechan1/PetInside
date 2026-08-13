@@ -28,7 +28,6 @@ export default function GNB() {
             // accessToken이 이미 만료됐어도 클라이언트 쪽 로그아웃은 계속 진행
         }
         localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
         localStorage.removeItem('nickname');
         setDropdownOpen(false);
         navigate('/');
