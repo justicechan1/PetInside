@@ -27,6 +27,11 @@ public class Subscription {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    // 이 구독이 정기결제에 사용 중인 빌링키. 빌링키는 사용자 소유라 재구독 시 재사용될 수 있다.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "billing_key_id", nullable = false)
+    private BillingKey billingKey;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SubscriptionStatus status;
@@ -52,17 +57,19 @@ public class Subscription {
     private LocalDateTime updatedAt;
 
     @Builder
-    private Subscription(User user, LocalDateTime startAt, LocalDateTime nextBillingAt) {
+    private Subscription(User user, BillingKey billingKey, LocalDateTime startAt, LocalDateTime nextBillingAt) {
         this.user = user;
+        this.billingKey = billingKey;
         this.status = SubscriptionStatus.ACTIVE;
         this.startAt = startAt;
         this.nextBillingAt = nextBillingAt;
     }
 
-    // 빌링키 발급 + 1회차 결제 성공 시 구독 시작 (F-21)
-    public static Subscription activate(User user, LocalDateTime startAt, LocalDateTime nextBillingAt) {
+    // 이미 검증·저장된 빌링키로 1회차 결제 성공 시 구독 시작 (F-21)
+    public static Subscription activate(User user, BillingKey billingKey, LocalDateTime startAt, LocalDateTime nextBillingAt) {
         return Subscription.builder()
                 .user(user)
+                .billingKey(billingKey)
                 .startAt(startAt)
                 .nextBillingAt(nextBillingAt)
                 .build();

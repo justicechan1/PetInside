@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as PortOne from '@portone/browser-sdk/v2';
 import GNB from '../components/GNB';
-import { prepareSubscription, completeSubscription } from '../api/subscriptionApi';
-import type { SubscriptionCompleteResult } from '../api/subscriptionApi';
+import { prepareBillingKey, createBillingKey, createSubscription } from '../api/subscriptionApi';
+import type { SubscriptionResult } from '../api/subscriptionApi';
 import { isAuthenticated } from '../utils/auth';
 
 export default function SubscriptionPage() {
@@ -18,7 +18,7 @@ export default function SubscriptionPage() {
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [result, setResult] = useState<SubscriptionCompleteResult | null>(null);
+    const [result, setResult] = useState<SubscriptionResult | null>(null);
 
     const handleSubscribe = async () => {
         setError('');
@@ -29,13 +29,15 @@ export default function SubscriptionPage() {
 
         setLoading(true);
         try {
-            const prepared = await prepareSubscription();
+            // 1. 카드 등록(빌링키 발급) 시도 사실을 먼저 서버에 남김 - 이 SDK 호출 도중 이탈해도
+            //    BillingKey.Issued 웹훅 + issueId로 서버가 복구할 수 있도록 하기 위함
+            const prepared = await prepareBillingKey();
 
             const issued = await PortOne.requestIssueBillingKey({
                 storeId: prepared.storeId,
                 channelKey: prepared.channelKey,
                 billingKeyMethod: 'CARD',
-                issueId: `issue-${prepared.paymentId}`,
+                issueId: prepared.issueId,
                 issueName: 'PetInside 구독 카드 등록',
                 customer: { fullName, phoneNumber, email },
             });
@@ -45,8 +47,12 @@ export default function SubscriptionPage() {
                 return;
             }
 
-            const completed = await completeSubscription(prepared.paymentId, issued.billingKey);
-            setResult(completed);
+            // 2. 발급된 빌링키를 서버가 재조회로 검증하고 암호화 저장
+            const billingKey = await createBillingKey(prepared.issueId, issued.billingKey);
+
+            // 3. 검증된 빌링키로 1회차 결제 실행 + 구독 시작
+            const subscription = await createSubscription(billingKey.billingKeyId);
+            setResult(subscription);
         } catch (e: any) {
             setError(e.response?.data?.message ?? '구독 처리 중 오류가 발생했습니다.');
         } finally {

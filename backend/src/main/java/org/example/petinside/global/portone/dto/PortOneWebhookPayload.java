@@ -10,7 +10,8 @@ public record PortOneWebhookPayload(
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Data(
             String paymentId,
-            String billingKey
+            String billingKey,
+            String issueId
     ) {
     }
 }
