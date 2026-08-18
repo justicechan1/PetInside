@@ -1,6 +1,7 @@
 package org.example.petinside.domain.subscription.service;
 
 import lombok.RequiredArgsConstructor;
+import org.example.petinside.domain.payment.dto.PaymentPrepareResponse;
 import org.example.petinside.domain.payment.entity.Payment;
 import org.example.petinside.domain.payment.service.PaymentService;
 import org.example.petinside.domain.subscription.dto.SubscriptionCompleteResponse;
@@ -76,6 +77,35 @@ public class SubscriptionService {
 
         LocalDateTime now = LocalDateTime.now();
         Subscription subscription = Subscription.activate(user, billingKey, now, now.plusMonths(1));
+        subscriptionRepository.save(subscription);
+        payment.linkSubscription(subscription);
+
+        return new SubscriptionCompleteResponse(subscription.getId(), subscription.getStatus(), subscription.getNextBillingAt());
+    }
+
+    // 1개월 이용권 단건 구매 준비. 빌링키 없이 일반결제 채널로 카드결제창을 바로 연다.
+    @Transactional
+    public PaymentPrepareResponse prepareOneTime(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+
+        if (subscriptionRepository.existsByUserAndStatus(user, SubscriptionStatus.ACTIVE)) {
+            throw new CustomException(HttpStatus.CONFLICT.value(), "이미 활성 구독이 존재합니다.");
+        }
+
+        return paymentService.prepare(userId);
+    }
+
+    // 단건결제 완료검증 후 1개월짜리(자동갱신 없는) 구독 생성
+    @Transactional
+    public SubscriptionCompleteResponse completeOneTime(Long userId, String paymentId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+
+        Payment payment = paymentService.verifyAndMarkPaid(userId, paymentId);
+
+        LocalDateTime now = LocalDateTime.now();
+        Subscription subscription = Subscription.purchaseOneTime(user, now, now.plusMonths(1));
         subscriptionRepository.save(subscription);
         payment.linkSubscription(subscription);
 

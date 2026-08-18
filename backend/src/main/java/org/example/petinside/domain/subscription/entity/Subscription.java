@@ -27,9 +27,9 @@ public class Subscription {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    // 이 구독이 정기결제에 사용 중인 빌링키. 빌링키는 사용자 소유라 재구독 시 재사용될 수 있다.
+    // 정기결제(자동갱신) 구독만 빌링키를 가진다. 단건(1개월 이용권) 구매는 카드 등록 자체가 없어 null.
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "billing_key_id", nullable = false)
+    @JoinColumn(name = "billing_key_id")
     private BillingKey billingKey;
 
     @Enumerated(EnumType.STRING)
@@ -57,21 +57,34 @@ public class Subscription {
     private LocalDateTime updatedAt;
 
     @Builder
-    private Subscription(User user, BillingKey billingKey, LocalDateTime startAt, LocalDateTime nextBillingAt) {
+    private Subscription(User user, BillingKey billingKey, LocalDateTime startAt, LocalDateTime nextBillingAt, LocalDateTime canceledAt) {
         this.user = user;
         this.billingKey = billingKey;
         this.status = SubscriptionStatus.ACTIVE;
         this.startAt = startAt;
         this.nextBillingAt = nextBillingAt;
+        this.canceledAt = canceledAt;
     }
 
-    // 이미 검증·저장된 빌링키로 1회차 결제 성공 시 구독 시작 (F-21)
+    // 이미 검증·저장된 빌링키로 1회차 결제 성공 시 정기구독 시작 (F-21)
     public static Subscription activate(User user, BillingKey billingKey, LocalDateTime startAt, LocalDateTime nextBillingAt) {
         return Subscription.builder()
                 .user(user)
                 .billingKey(billingKey)
                 .startAt(startAt)
                 .nextBillingAt(nextBillingAt)
+                .build();
+    }
+
+    // 1개월 이용권 단건 구매. 자동 갱신이 없으므로 생성 시점에 이미 해지 예약된 상태로 시작해
+    // 다음 배치 때 canceledAt+nextBillingAt(=만료일) 기준으로 자동 만료되게 한다.
+    public static Subscription purchaseOneTime(User user, LocalDateTime startAt, LocalDateTime expiresAt) {
+        return Subscription.builder()
+                .user(user)
+                .billingKey(null)
+                .startAt(startAt)
+                .nextBillingAt(expiresAt)
+                .canceledAt(startAt)
                 .build();
     }
 
