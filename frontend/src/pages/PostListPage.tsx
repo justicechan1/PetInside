@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GNB from '../components/GNB';
+import Avatar from '../components/Avatar';
 import { getPosts } from '../api/postApi';
 import type { PostListItem } from '../api/postApi';
 
@@ -82,9 +83,22 @@ export default function PostListPage() {
                             <div key={post.id} onClick={() => navigate(`/posts/${post.id}`)} style={{
                                 padding: '16px 20px', borderRadius: 10, border: '1px solid #eee',
                                 cursor: 'pointer', background: '#fff',
-                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16,
                             }}>
-                                <div>
+                                {post.thumbnailUrl ? (
+                                    <img
+                                        src={post.thumbnailUrl}
+                                        alt=""
+                                        style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }}
+                                    />
+                                ) : (
+                                    <div style={{
+                                        width: 64, height: 64, borderRadius: 8, flexShrink: 0,
+                                        background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        color: '#ccc', fontSize: 22,
+                                    }}>🐾</div>
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
                                     <span style={{
                                         fontSize: 12, padding: '2px 8px', borderRadius: 10, marginRight: 8,
                                         background: post.category === 'QNA' ? '#E3F2FD' : '#FFF3E0',
@@ -93,11 +107,12 @@ export default function PostListPage() {
                                         {post.category === 'QNA' ? 'Q&A' : '자랑'}
                                     </span>
                                     <span style={{ fontWeight: 600 }}>{post.title}</span>
-                                    <div style={{ fontSize: 13, color: '#999', marginTop: 4 }}>
+                                    <div style={{ fontSize: 13, color: '#999', marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <Avatar imageUrl={post.authorProfileImageUrl} nickname={post.authorNickname} size={18} />
                                         {post.authorNickname} · {new Date(post.createdAt).toLocaleDateString()}
                                     </div>
                                 </div>
-                                <div style={{ fontSize: 13, color: '#999', textAlign: 'right' }}>
+                                <div style={{ fontSize: 13, color: '#999', textAlign: 'right', flexShrink: 0 }}>
                                     <div>조회 {post.viewCount}</div>
                                     <div>댓글 {post.commentCount}</div>
                                 </div>

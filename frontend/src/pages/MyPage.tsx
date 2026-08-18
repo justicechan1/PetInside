@@ -62,6 +62,8 @@ export default function MyPage() {
             const url = await uploadImage(selectedFile);
             await updateProfileImage(url);
             setUserInfo(prev => prev ? { ...prev, profileImageUrl: url } : prev);
+            localStorage.setItem('profileImageUrl', url);
+            window.dispatchEvent(new StorageEvent('storage', { key: 'profileImageUrl', newValue: url }));
             handleProfileImageCancel();
         } catch (e: any) {
             setImageError(e.response?.data?.message ?? '프로필 이미지 변경에 실패했습니다.');

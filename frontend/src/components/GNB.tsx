@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 import { getRoleFromToken } from '../utils/auth';
+import Avatar from './Avatar';
 
 export default function GNB() {
     const navigate = useNavigate();
@@ -9,13 +10,17 @@ export default function GNB() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [role, setRole] = useState<string | null>(null);
     const [nickname, setNickname] = useState<string | null>(() => localStorage.getItem('nickname'));
+    const [profileImageUrl, setProfileImageUrl] = useState<string | null>(() => localStorage.getItem('profileImageUrl') || null);
 
     useEffect(() => {
         setRole(getRoleFromToken());
     }, []);
 
     useEffect(() => {
-        const onStorage = () => setNickname(localStorage.getItem('nickname'));
+        const onStorage = () => {
+            setNickname(localStorage.getItem('nickname'));
+            setProfileImageUrl(localStorage.getItem('profileImageUrl') || null);
+        };
         window.addEventListener('storage', onStorage);
         return () => window.removeEventListener('storage', onStorage);
     }, []);
@@ -29,6 +34,7 @@ export default function GNB() {
         }
         localStorage.removeItem('accessToken');
         localStorage.removeItem('nickname');
+        localStorage.removeItem('profileImageUrl');
         setDropdownOpen(false);
         navigate('/');
         window.location.reload();
@@ -75,14 +81,8 @@ export default function GNB() {
 
                         {/* 프로필 동그라미 */}
                         <div style={{ position: 'relative' }}>
-                            <div onClick={() => setDropdownOpen(!dropdownOpen)}
-                                 style={{
-                                     width: 40, height: 40, borderRadius: '50%',
-                                     background: 'var(--primary)', color: 'white',
-                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                     cursor: 'pointer', fontWeight: 'bold', fontSize: 16
-                                 }}>
-                                {nickname ? nickname[0].toUpperCase() : '👤'}
+                            <div onClick={() => setDropdownOpen(!dropdownOpen)} style={{ cursor: 'pointer' }}>
+                                <Avatar imageUrl={profileImageUrl} nickname={nickname ?? ''} size={40} />
                             </div>
 
 
