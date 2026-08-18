@@ -40,8 +40,9 @@ public class PortOneClient {
 
     private Optional<PortOnePaymentDetail> findInPaymentList(String paymentId) {
         try {
+            // 이 테스트 상점은 여러 팀이 공용으로 써서 건수가 많을 수 있어, 최신순 정렬 + 넉넉한 페이지 크기로 찾는다.
             PortOnePaymentListResponse response = client().get()
-                    .uri("/payments?page.size=100")
+                    .uri("/payments?page.size=1000&sort.by=REQUESTED_AT&sort.order=DESC")
                     .retrieve()
                     .body(PortOnePaymentListResponse.class);
             return response.items().stream()
@@ -75,7 +76,7 @@ public class PortOneClient {
     private Optional<PortOneBillingKeyDetail> findInBillingKeyList(String billingKey) {
         try {
             PortOneBillingKeyListResponse response = client().get()
-                    .uri("/billing-keys?page.size=100")
+                    .uri("/billing-keys?page.size=1000")
                     .retrieve()
                     .body(PortOneBillingKeyListResponse.class);
             return response.items().stream()
