@@ -60,6 +60,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/reissue", // accessToken을 새로 재발급
                                 "/api/v1/auth/oauth2/exchange", // 소셜 로그인 콜백 code를 토큰으로 교환
+                                "/api/v1/payments/webhook", // PortOne 서버가 호출 - JWT 대신 웹훅 서명으로 검증
                                 "/oauth2/**",
                                 "/login/oauth2/**",
                                 "/swagger-ui/**",

@@ -54,3 +54,7 @@ application-secret.yaml
 
 ### AWS PEM key ###
 *.pem
+
+### Local-only docs (not for git) ###
+portone1.md
+portone2.md
