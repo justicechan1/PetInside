@@ -14,12 +14,15 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @Component
 @RequiredArgsConstructor
 public class PortOneClient {
 
     private static final String BASE_URL = "https://api.portone.io";
+    private static final int LIST_LOOKUP_RETRY_COUNT = 4;
+    private static final long LIST_LOOKUP_RETRY_DELAY_MS = 1500;
 
     private final PortOneProperties portOneProperties;
 
@@ -33,7 +36,7 @@ public class PortOneClient {
                     .retrieve()
                     .body(PortOnePaymentDetail.class);
         } catch (RestClientException e) {
-            return findInPaymentList(paymentId)
+            return retryWithDelay(() -> findInPaymentList(paymentId))
                     .orElseThrow(() -> new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 결제 정보를 조회할 수 없습니다."));
         }
     }
@@ -68,7 +71,7 @@ public class PortOneClient {
                     .retrieve()
                     .body(PortOneBillingKeyDetail.class);
         } catch (RestClientException e) {
-            return findInBillingKeyList(billingKey)
+            return retryWithDelay(() -> findInBillingKeyList(billingKey))
                     .orElseThrow(() -> new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 빌링키 정보를 조회할 수 없습니다."));
         }
     }
@@ -85,6 +88,24 @@ public class PortOneClient {
         } catch (RestClientException e) {
             return Optional.empty();
         }
+    }
+
+    // 방금 발급/결제된 건은 목록조회에도 바로 안 잡히는 인덱싱 지연이 있어(단건조회 API 자체는 영구적으로 깨져있는 것과 별개 문제),
+    // 못 찾으면 짧은 간격으로 몇 번 더 재시도한다.
+    private <T> Optional<T> retryWithDelay(Supplier<Optional<T>> lookup) {
+        for (int attempt = 1; attempt <= LIST_LOOKUP_RETRY_COUNT; attempt++) {
+            Optional<T> result = lookup.get();
+            if (result.isPresent() || attempt == LIST_LOOKUP_RETRY_COUNT) {
+                return result;
+            }
+            try {
+                Thread.sleep(LIST_LOOKUP_RETRY_DELAY_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return Optional.empty();
+            }
+        }
+        return Optional.empty();
     }
 
     // 빌링키로 1회차 결제를 실행(서버→PortOne 직접 호출이라 프론트 결제창을 거치지 않는다)
