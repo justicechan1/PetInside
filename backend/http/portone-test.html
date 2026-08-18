@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>PortOne 테스트 결제 (프론트 없이 결제 흐름만 검증용)</title>
+<script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+</head>
+<body style="font-family: sans-serif; max-width: 480px; margin: 40px auto;">
+<h2>PortOne 테스트 결제</h2>
+<p>payment.http의 <code>prepare</code> 응답값을 그대로 복사해서 채워넣고 "결제하기"를 누르세요.</p>
+
+<label>storeId<br><input id="storeId" style="width:100%" /></label><br><br>
+<label>channelKey<br><input id="channelKey" style="width:100%" /></label><br><br>
+<label>paymentId<br><input id="paymentId" style="width:100%" /></label><br><br>
+<label>amount<br><input id="amount" type="number" value="9900" style="width:100%" /></label><br><br>
+<label>결제수단 (채널에 맞게 선택)<br>
+  <select id="payMethod" style="width:100%">
+    <option value="CARD">CARD - KG이니시스(INICIS) 채널용</option>
+    <option value="EASY_PAY">EASY_PAY(카카오페이) - 카카오페이 채널용</option>
+  </select>
+</label><br><br>
+
+<button onclick="pay()">단건결제 (옛 테스트용)</button>
+<button onclick="issueBillingKey()">빌링키 발급 - CARD (구독 테스트용)</button>
+<button onclick="issueBillingKeyAndPayByPhone()">빌링키 발급+결제 - 휴대폰 인증 (이니시스 카드 미계약 시)</button>
+
+<pre id="result" style="white-space: pre-wrap; background:#f5f5f5; padding:12px; margin-top:20px;"></pre>
+
+<script>
+async function pay() {
+  const storeId = document.getElementById('storeId').value.trim();
+  const channelKey = document.getElementById('channelKey').value.trim();
+  const paymentId = document.getElementById('paymentId').value.trim();
+  const amount = Number(document.getElementById('amount').value);
+  const payMethod = document.getElementById('payMethod').value;
+  const resultEl = document.getElementById('result');
+
+  resultEl.textContent = '결제창 여는 중...';
+
+  const request = {
+    storeId,
+    channelKey,
+    paymentId,
+    orderName: 'PetInside 구독 테스트 결제',
+    totalAmount: amount,
+    currency: 'CURRENCY_KRW',
+    payMethod,
+    customer: {
+      fullName: '포트원',
+      phoneNumber: '010-0000-1234',
+      email: 'test@portone.io',
+    },
+  };
+  if (payMethod === 'EASY_PAY') {
+    request.easyPay = { easyPayProvider: 'KAKAOPAY' };
+  } else {
+    // CARD로 요청해도 이니시스 결제창이 카카오페이 등 간편결제를 같이 띄워서
+    // 실수로 실제 카카오페이 잔액이 빠져나갈 수 있어 카드결제창에서 간편결제 노출을 끔
+    request.bypass = { inicis_v2: { acceptmethod: ['noeasypay'] } };
+  }
+
+  try {
+    const response = await PortOne.requestPayment(request);
+
+    resultEl.textContent = JSON.stringify(response, null, 2);
+
+    if (response.code != null) {
+      resultEl.textContent += '\n\n결제 실패 (message 확인)';
+    } else {
+      resultEl.textContent += '\n\n결제창 완료. 이제 payment.http의 complete 호출로 백엔드에서 단건조회 검증하세요.';
+    }
+  } catch (e) {
+    resultEl.textContent = '에러: ' + e.message;
+  }
+}
+
+async function issueBillingKey() {
+  const storeId = document.getElementById('storeId').value.trim();
+  const channelKey = document.getElementById('channelKey').value.trim();
+  const payMethod = document.getElementById('payMethod').value;
+  const resultEl = document.getElementById('result');
+
+  resultEl.textContent = '빌링키 발급창 여는 중...';
+
+  // 공식 문서(KG이니시스 SDK 카드 빌링키 발급 예제)와 동일한 형태로 맞춤
+  const request = {
+    storeId,
+    channelKey,
+    billingKeyMethod: 'CARD',
+    issueId: 'test-issueId-' + Date.now(),
+    issueName: 'PetInside 구독 카드 등록',
+    customer: {
+      fullName: '포트원',
+      phoneNumber: '010-0000-1234',
+      email: 'test@portone.io',
+    },
+  };
+
+  try {
+    const response = await PortOne.requestIssueBillingKey(request);
+    resultEl.textContent = JSON.stringify(response, null, 2);
+
+    if (response.code != null) {
+      resultEl.textContent += '\n\n발급 실패 (message 확인)';
+    } else {
+      resultEl.textContent += '\n\n빌링키 발급 완료. billingKey 값을 복사해서 subscription.http의 complete 요청에 사용하세요 (paymentId는 prepare 응답 값 그대로).';
+    }
+  } catch (e) {
+    resultEl.textContent = '에러: ' + e.message;
+  }
+}
+
+async function issueBillingKeyAndPayByPhone() {
+  const storeId = document.getElementById('storeId').value.trim();
+  const channelKey = document.getElementById('channelKey').value.trim();
+  const paymentId = document.getElementById('paymentId').value.trim();
+  const amount = Number(document.getElementById('amount').value);
+  const resultEl = document.getElementById('result');
+
+  resultEl.textContent = '휴대폰 인증창 여는 중... (paymentId는 subscription.http의 prepare 응답 값을 그대로 사용해야 함)';
+
+  const request = {
+    storeId,
+    channelKey,
+    paymentId,
+    orderName: 'PetInside 구독 결제',
+    totalAmount: amount,
+    currency: 'CURRENCY_KRW',
+    billingKeyAndPayMethod: 'MOBILE',
+    productType: 'DIGITAL',
+    customer: {
+      fullName: '테스트유저',
+      phoneNumber: '01012345678',
+      email: 'test@example.com',
+    },
+  };
+
+  try {
+    const response = await PortOne.requestIssueBillingKeyAndPay(request);
+    resultEl.textContent = JSON.stringify(response, null, 2);
+
+    if (response.code != null) {
+      resultEl.textContent += '\n\n실패 (message 확인)';
+    } else {
+      resultEl.textContent += '\n\n발급+결제 완료. billingKey 값을 복사해서 subscription.http의 complete 요청에 사용하세요 (paymentId는 이 폼에 입력한 값 그대로).';
+    }
+  } catch (e) {
+    resultEl.textContent = '에러: ' + e.message;
+  }
+}
+</script>
+</body>
+</html>
