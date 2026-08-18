@@ -86,9 +86,6 @@ export default function SubscriptionPage() {
                 currency: 'CURRENCY_KRW',
                 payMethod: 'CARD',
                 customer: { fullName, phoneNumber, email },
-                // 카드결제창에 간편결제(카카오페이 등)가 같이 노출되면 실수로 실제 결제가
-                // 발생할 수 있어(테스트 채널에서도 간편결제는 실결제로 처리됨) 꺼둔다.
-                bypass: { inicis_v2: { acceptmethod: ['noeasypay'] } },
             });
 
             if (!paid || paid.code != null) {
