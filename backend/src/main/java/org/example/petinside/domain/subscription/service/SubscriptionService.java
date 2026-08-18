@@ -19,7 +19,6 @@ import org.example.petinside.global.portone.BillingKeyEncryptor;
 import org.example.petinside.global.portone.PortOneClient;
 import org.example.petinside.global.portone.PortOneProperties;
 import org.example.petinside.global.portone.dto.PortOneBillingKeyPaymentRequest;
-import org.example.petinside.global.portone.dto.PortOnePaymentDetail;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,7 +61,7 @@ public class SubscriptionService {
         Payment payment = paymentService.createReadyPayment(userId);
         String rawBillingKey = billingKeyEncryptor.decrypt(billingKey.getBillingKeyEncrypted());
 
-        PortOnePaymentDetail chargeResult = portOneClient.payWithBillingKey(payment.getPaymentId(), new PortOneBillingKeyPaymentRequest(
+        portOneClient.payWithBillingKey(payment.getPaymentId(), new PortOneBillingKeyPaymentRequest(
                 rawBillingKey,
                 portOneProperties.storeId(),
                 portOneProperties.channelKeySubscription(),
@@ -72,8 +71,9 @@ public class SubscriptionService {
                 payment.getCurrency()
         ));
 
-        // 완료 API/웹훅과 같은 검증 로직(PaymentService.finalizeByDetail)을 그대로 탄다.
-        paymentService.finalizeByDetail(payment, chargeResult);
+        // 빌링키 결제 요청의 즉시 응답은 카드사 승인이 최종 확정(PAID)되기 전 중간 상태일 수 있어 신뢰하지 않는다.
+        // 완료 API/웹훅과 같은 검증 로직(PaymentService.verifyAndMarkPaid = 재조회 + finalizeByDetail)을 그대로 탄다.
+        paymentService.verifyAndMarkPaid(userId, payment.getPaymentId());
 
         LocalDateTime now = LocalDateTime.now();
         Subscription subscription = Subscription.activate(user, billingKey, now, now.plusMonths(1));
