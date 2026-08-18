@@ -51,7 +51,7 @@ public class PaymentService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
 
-        // 이니시스 oid 파라미터 제한(1~40자)에 맞춰 UUID는 하이픈 없이 사용
+        //파라미터 제한(1~40자)에 맞춰 UUID는 하이픈 없이 사용
         String paymentId = portOneProperties.paymentIdPrefix() + "-SUB-" + UUID.randomUUID().toString().replace("-", "");
         Payment payment = Payment.createReady(user, paymentId, 1, PLAN_AMOUNT, CURRENCY);
         return paymentRepository.save(payment);
@@ -79,7 +79,7 @@ public class PaymentService {
         return payment;
     }
 
-    // 완료 API든(F-21) 웹훅이든 같은 동기화 로직을 타야 한다는 원칙(가이드 4번)에 따라 검증 기준을 한 곳에 둔다.
+    // 완료 API(F-21) 웹훅이든 같은 동기화 로직을 타야 한다는 원칙에 따라 검증 기준을 한 곳에 둠
     public void finalizeByDetail(Payment payment, PortOnePaymentDetail detail) {
         boolean verified = PAID_STATUS.equalsIgnoreCase(detail.status())
                 && detail.amount() != null && detail.amount().total() == payment.getAmount()

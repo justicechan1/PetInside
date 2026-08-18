@@ -83,7 +83,7 @@ public class PaymentWebhookService {
         billingKeyService.verifyAndStore(intent, data.billingKey());
     }
 
-    // 관리자 콘솔 수동 환불 등으로 발생한 취소는 해지 유예 없이 구독을 즉시 차단한다(CLAUDE.md F-20).
+    // 관리자 콘솔 수동 환불 등으로 발생한 취소는 해지 유예 없이 구독을 즉시 차단한다
     private void handleCancelled(Payment payment) {
         Subscription subscription = payment.getSubscription();
         if (subscription != null) {
