@@ -1,0 +1,41 @@
+### 로그인 (payment 테스트용 accessToken 확보 - 기존 회원 계정으로 로그인)
+POST http://localhost:8080/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "paytest01",
+  "password": "Test1234!"
+}
+
+> {%
+client.global.set("accessToken", response.body.data.accessToken);
+%}
+
+### 결제 준비 - paymentId/storeId/channelKey/amount 발급 (프론트가 이 값으로 PortOne 결제창 호출)
+POST http://localhost:8080/api/v1/payments/prepare
+Authorization: Bearer {{accessToken}}
+
+> {%
+client.global.set("paymentId", response.body.data.paymentId);
+%}
+
+### 결제 준비 실패 - Access Token 없이 호출 시 401
+POST http://localhost:8080/api/v1/payments/prepare
+
+### 결제 완료 검증 - 위 prepare로 받은 paymentId로 실제 PortOne 테스트 결제(카드 4242 4242 4242 4242)를 먼저 완료한 뒤 실행
+POST http://localhost:8080/api/v1/payments/complete
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "paymentId": "{{paymentId}}"
+}
+
+### 결제 완료 검증 실패 - 존재하지 않는 paymentId
+POST http://localhost:8080/api/v1/payments/complete
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "paymentId": "PETINSIDE-SUB-nonexistent"
+}

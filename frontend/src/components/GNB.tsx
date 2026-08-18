@@ -98,6 +98,10 @@ export default function GNB() {
                                          style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
                                         마이페이지
                                     </div>
+                                    <div onClick={() => { navigate('/subscription'); setDropdownOpen(false); }}
+                                         style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
+                                        구독
+                                    </div>
                                     <div onClick={handleLogout}
                                          style={{ padding: '12px 16px', cursor: 'pointer', color: '#E03131' }}>
                                         로그아웃
