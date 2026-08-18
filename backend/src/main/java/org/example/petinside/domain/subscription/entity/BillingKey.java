@@ -5,9 +5,12 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.example.petinside.domain.user.entity.User;
 
 import java.time.LocalDateTime;
 
+// 빌링키는 특정 구독 건이 아니라 사용자에게 귀속된다. 구독을 해지했다가 재구독해도
+// 카드가 그대로면 재등록 없이 같은 빌링키를 재사용할 수 있어야 하기 때문(Subscription이 이 값을 참조).
 @Entity
 @Table(name = "billing_key")
 @Getter
@@ -19,8 +22,8 @@ public class BillingKey {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subscription_id", nullable = false)
-    private Subscription subscription;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     // PortOne 빌링키 원문은 절대 저장하지 않고 BillingKeyEncryptor로 암호화한 값만 저장
     @Column(name = "billing_key_encrypted", nullable = false)
@@ -36,16 +39,16 @@ public class BillingKey {
     private LocalDateTime revokedAt;
 
     @Builder
-    private BillingKey(Subscription subscription, String billingKeyEncrypted, LocalDateTime issuedAt) {
-        this.subscription = subscription;
+    private BillingKey(User user, String billingKeyEncrypted, LocalDateTime issuedAt) {
+        this.user = user;
         this.billingKeyEncrypted = billingKeyEncrypted;
         this.isActive = true;
         this.issuedAt = issuedAt;
     }
 
-    public static BillingKey issue(Subscription subscription, String billingKeyEncrypted, LocalDateTime issuedAt) {
+    public static BillingKey issue(User user, String billingKeyEncrypted, LocalDateTime issuedAt) {
         return BillingKey.builder()
-                .subscription(subscription)
+                .user(user)
                 .billingKeyEncrypted(billingKeyEncrypted)
                 .issuedAt(issuedAt)
                 .build();
