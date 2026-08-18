@@ -24,7 +24,7 @@ import java.util.UUID;
 public class PaymentService {
 
     // 요금제는 아직 고정 요금 하나뿐 (구독 요금제 다양화는 범위 밖)
-    static final int PLAN_AMOUNT = 9900;
+    static final int PLAN_AMOUNT = 1000;
     static final String CURRENCY = "KRW";
     private static final String PAID_STATUS = "PAID";
 
