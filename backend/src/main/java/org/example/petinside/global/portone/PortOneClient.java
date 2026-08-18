@@ -3,6 +3,7 @@ package org.example.petinside.global.portone;
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.global.exception.CustomException;
 import org.example.petinside.global.portone.dto.PortOneBillingKeyDetail;
+import org.example.petinside.global.portone.dto.PortOneBillingKeyListResponse;
 import org.example.petinside.global.portone.dto.PortOneBillingKeyPaymentRequest;
 import org.example.petinside.global.portone.dto.PortOnePayWithBillingKeyResponse;
 import org.example.petinside.global.portone.dto.PortOnePaymentDetail;
@@ -58,6 +59,7 @@ public class PortOneClient {
     }
 
     // 프론트에서 발급된 빌링키를 그대로 신뢰하지 않고, 발급 상태(ISSUED)와 소속 Store를 재확인한다.
+    // 결제 단건조회와 같은 이유로(이 테스트 환경의 단건조회 API 이슈) 실패 시 목록조회로 한 번 더 확인한다.
     public PortOneBillingKeyDetail getBillingKeyDetail(String billingKey) {
         try {
             return client().get()
@@ -65,7 +67,22 @@ public class PortOneClient {
                     .retrieve()
                     .body(PortOneBillingKeyDetail.class);
         } catch (RestClientException e) {
-            throw new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 빌링키 정보를 조회할 수 없습니다.");
+            return findInBillingKeyList(billingKey)
+                    .orElseThrow(() -> new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 빌링키 정보를 조회할 수 없습니다."));
+        }
+    }
+
+    private Optional<PortOneBillingKeyDetail> findInBillingKeyList(String billingKey) {
+        try {
+            PortOneBillingKeyListResponse response = client().get()
+                    .uri("/billing-keys?page.size=100")
+                    .retrieve()
+                    .body(PortOneBillingKeyListResponse.class);
+            return response.items().stream()
+                    .filter(item -> billingKey.equals(item.billingKey()))
+                    .findFirst();
+        } catch (RestClientException e) {
+            return Optional.empty();
         }
     }
 
