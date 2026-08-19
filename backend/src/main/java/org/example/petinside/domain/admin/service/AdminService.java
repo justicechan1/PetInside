@@ -106,7 +106,7 @@ public class AdminService {
         posts.forEach(Post::delete);
 
         //회원의 댓글 soft 삭제
-        List<Comment> comments = commentRepository.findAllByAuthorIdAndIsDeletedFalse(userId);
+        List<Comment> comments = commentRepository.findAllByUserIdAndIsDeletedFalse(userId);
         comments.forEach(Comment::delete);
 
         //회원 삭제
