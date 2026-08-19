@@ -8,6 +8,7 @@ public record PortOnePaymentDetail(
         String status,
         String storeId,
         String currency,
+        String transactionId,
         Amount amount
 ) {
     @JsonIgnoreProperties(ignoreUnknown = true)
