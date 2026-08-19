@@ -6,16 +6,20 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.domain.payment.dto.PaymentCompleteRequest;
 import org.example.petinside.domain.payment.dto.PaymentCompleteResponse;
+import org.example.petinside.domain.payment.dto.PaymentHistoryResponse;
 import org.example.petinside.domain.payment.dto.PaymentPrepareResponse;
 import org.example.petinside.domain.payment.service.PaymentService;
 import org.example.petinside.global.response.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 // 빌링키/정기결제가 붙기 전 단계: 결제 준비 + PortOne 단건조회 완료검증까지만 다룸.
 // 6단계(빌링키)에서 /api/v1/subscriptions/prepare, complete 로 흡수될 예정
@@ -45,5 +49,13 @@ public class PaymentController {
 
         return ResponseEntity
                 .ok(ApiResponse.success(HttpStatus.OK.value(), "결제가 확인되었습니다", response));
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<PaymentHistoryResponse>>> history(@AuthenticationPrincipal Long userId) {
+        List<PaymentHistoryResponse> response = paymentService.getHistory(userId);
+
+        return ResponseEntity
+                .ok(ApiResponse.success(HttpStatus.OK.value(), "결제 내역 조회 성공", response));
     }
 }

@@ -6,6 +6,7 @@ import org.example.petinside.domain.payment.entity.Payment;
 import org.example.petinside.domain.payment.service.PaymentService;
 import org.example.petinside.domain.subscription.dto.SubscriptionCompleteResponse;
 import org.example.petinside.domain.subscription.dto.SubscriptionCreateRequest;
+import org.example.petinside.domain.subscription.dto.SubscriptionMeResponse;
 import org.example.petinside.domain.subscription.entity.BillingKey;
 import org.example.petinside.domain.subscription.entity.Subscription;
 import org.example.petinside.domain.subscription.entity.SubscriptionStatus;
@@ -110,5 +111,12 @@ public class SubscriptionService {
         payment.linkSubscription(subscription);
 
         return new SubscriptionCompleteResponse(subscription.getId(), subscription.getStatus(), subscription.getNextBillingAt());
+    }
+
+    // F-25: 내 구독 상태 조회. 정기/단건 구분 없이 가장 최근 구독 1건 기준.
+    public SubscriptionMeResponse getMySubscription(Long userId) {
+        return subscriptionRepository.findFirstByUserIdOrderByIdDesc(userId)
+                .map(SubscriptionMeResponse::from)
+                .orElseGet(SubscriptionMeResponse::none);
     }
 }
