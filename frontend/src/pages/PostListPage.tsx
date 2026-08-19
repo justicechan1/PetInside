@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GNB from '../components/GNB';
 import Avatar from '../components/Avatar';
+import { profilePath } from '../utils/profileNav';
 import { getPosts } from '../api/postApi';
 import type { PostListItem } from '../api/postApi';
 
@@ -108,8 +109,14 @@ export default function PostListPage() {
                                     </span>
                                     <span style={{ fontWeight: 600 }}>{post.title}</span>
                                     <div style={{ fontSize: 13, color: '#999', marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <Avatar imageUrl={post.authorProfileImageUrl} nickname={post.authorNickname} size={18} />
-                                        {post.authorNickname} · {new Date(post.createdAt).toLocaleDateString()}
+                                        <span
+                                            onClick={e => { e.stopPropagation(); navigate(profilePath(post.authorId, post.authorNickname)); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+                                        >
+                                            <Avatar imageUrl={post.authorProfileImageUrl} nickname={post.authorNickname} size={18} />
+                                            {post.authorNickname}
+                                        </span>
+                                        · {new Date(post.createdAt).toLocaleDateString()}
                                     </div>
                                 </div>
                                 <div style={{ fontSize: 13, color: '#999', textAlign: 'right', flexShrink: 0 }}>

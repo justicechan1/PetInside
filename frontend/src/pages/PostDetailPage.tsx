@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import GNB from '../components/GNB';
 import Avatar from '../components/Avatar';
+import { profilePath } from '../utils/profileNav';
 import CommentSection from '../components/CommentSection';
 import { getPost, deletePost } from '../api/postApi';
 import type { PostDetail } from '../api/postApi';
@@ -60,7 +61,10 @@ export default function PostDetailPage() {
                     </span>
                     <h1 style={{ margin: '8px 0', fontSize: 24 }}>{post.title}</h1>
                     <div style={{ color: '#999', fontSize: 14, display: 'flex', gap: 16, alignItems: 'center' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span
+                            onClick={() => navigate(profilePath(post.authorId, post.authorNickname))}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+                        >
                             <Avatar imageUrl={post.authorProfileImageUrl} nickname={post.authorNickname} size={22} />
                             {post.authorNickname}
                         </span>

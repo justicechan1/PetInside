@@ -11,7 +11,10 @@ import org.example.petinside.domain.mypage.dto.MyPostResponse;
 import org.example.petinside.domain.mypage.dto.NicknameUpdateRequest;
 import org.example.petinside.domain.mypage.dto.PasswordUpdateRequest;
 import org.example.petinside.domain.mypage.dto.ProfileImageUpdateRequest;
+import org.example.petinside.domain.mypage.dto.PublicProfileResponse;
 import org.example.petinside.domain.mypage.dto.UserInfoResponse;
+import org.example.petinside.domain.subscription.entity.SubscriptionStatus;
+import org.example.petinside.domain.subscription.repository.SubscriptionRepository;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.domain.user.repository.SocialAccountRepository;
 import org.example.petinside.domain.post.repository.PostRepository;
@@ -21,6 +24,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 // 마이페이지 비즈니스 로직 - 내 정보 조회/수정, 게시글 목록 처리
 @Service
 @RequiredArgsConstructor
@@ -29,6 +34,7 @@ public class MypageService {
     private final UserRepository userRepository;
     private final PostRepository postRepository;
     private final SocialAccountRepository socialAccountRepository;
+    private final SubscriptionRepository subscriptionRepository;
     private final PasswordEncoder passwordEncoder;
 
     // 내 정보 조회 - User + SocialAccount 두 테이블을 조회해 소셜 로그인 여부 포함
@@ -115,5 +121,33 @@ public class MypageService {
                             thumbnail, post.getCreatedAt()
                     );
                 });
+    }
+
+    // [F-33] 타 사용자 공개 프로필 조회 - username/password/role 등 민감 정보는 응답에 포함하지 않음
+    public PublicProfileResponse getPublicProfile(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(404, "존재하지 않는 회원입니다."));
+
+        long postCount = postRepository.countByAuthorIdAndIsDeletedFalse(userId);
+
+        // 인증뱃지 도메인(F-29~31)이 아직 없어 항상 빈 배열로 응답 - 구현되면 여기에 조회 로직 추가
+        List<String> badges = List.of();
+
+        String membershipTier = subscriptionRepository.existsByUserAndStatus(user, SubscriptionStatus.ACTIVE)
+                ? "SUBSCRIBER"
+                : null;
+
+        return new PublicProfileResponse(
+                user.getId(), user.getNickname(), user.getProfileImageUrl(),
+                postCount, badges, membershipTier
+        );
+    }
+
+    // [F-33] 타 사용자 작성 게시글 목록 조회 - getMyPosts와 동일 쿼리를 재사용, 본인 확인 없이 공개 조회
+    public Page<MyPostResponse> getPublicPosts(Long userId, String keyword, String category, Pageable pageable) {
+        if (!userRepository.existsById(userId)) {
+            throw new CustomException(404, "존재하지 않는 회원입니다.");
+        }
+        return getMyPosts(userId, keyword, category, pageable);
     }
 }
