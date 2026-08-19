@@ -10,8 +10,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
-// 같은 paymentId로 PortOne에 실제 승인을 시도한 각 건. PortOne이 부여하는 transactionId로 식별한다.
-// 한 Payment(paymentId)에 여러 PaymentTransaction이 생길 수 있다(portone1.md 1단계 원칙).
+// 같은 paymentId로 PortOne에 실제 승인을 시도한 각 건. PortOne이 부여하는 transactionId로 식별.
 @Entity
 @Table(name = "payment_transaction")
 @Getter

@@ -20,7 +20,7 @@ public class PaymentWebhookController {
 
     private final PaymentWebhookService paymentWebhookService;
 
-    // 서명 검증에 원본 바디 문자열이 그대로 필요하므로 DTO가 아닌 String으로 받는다.
+    // 서명 검증에 원본 바디 문자열이 그대로 필요하므로 DTO가 아닌 String으로 받음.
     @PostMapping("/webhook")
     public ResponseEntity<ApiResponse<Void>> webhook(
             @RequestBody String rawBody,
