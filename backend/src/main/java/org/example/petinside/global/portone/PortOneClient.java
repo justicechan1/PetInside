@@ -28,10 +28,7 @@ public class PortOneClient {
 
     private final PortOneProperties portOneProperties;
 
-    // PortOne 결제 단건 조회. 프론트/웹훅의 결과를 그대로 믿지 않고 이 응답으로 최종 확정한다.
-    // 주의: 이 테스트 환경에서는 GET /payments/{id}가 존재하는 건도 404를 내거나, 200이 와도 아직
-    // 카드사 승인이 최종 확정(PAID/FAILED)되기 전 중간 상태를 돌려줄 때가 있다. 그래서 예외 발생 여부와
-    // 무관하게 "최종 상태가 아니면" 재시도한다.
+    // PortOne 결제 단건 조회. 프론트/웹훅의 결과를 그대로 믿지 않고 이 응답으로 최종 확정.
     public PortOnePaymentDetail getPaymentDetail(String paymentId) {
         PortOnePaymentDetail last = null;
         for (int attempt = 1; attempt <= SETTLE_RETRY_COUNT; attempt++) {
@@ -60,7 +57,6 @@ public class PortOneClient {
 
     private Optional<PortOnePaymentDetail> findInPaymentList(String paymentId) {
         try {
-            // 이 테스트 상점은 여러 팀이 공용으로 써서 건수가 많을 수 있어, 최신순 정렬 + 넉넉한 페이지 크기로 찾는다.
             PortOnePaymentListResponse response = client().get()
                     .uri("/payments?page.size=1000&sort.by=REQUESTED_AT&sort.order=DESC")
                     .retrieve()
