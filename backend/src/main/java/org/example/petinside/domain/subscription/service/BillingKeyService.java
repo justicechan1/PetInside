@@ -36,8 +36,8 @@ public class BillingKeyService {
     private final PortOneProperties portOneProperties;
     private final BillingKeyEncryptor billingKeyEncryptor;
 
-    // 프론트가 requestIssueBillingKey를 호출하기 전에, "누가 발급을 시도했는지"를 먼저 서버에 남겨둔다.
-    // 발급 성공 뒤 프론트가 이탈해도 BillingKey.Issued 웹훅 + issueId로 복구할 수 있게 하기 위함.
+    // 프론트가 requestIssueBillingKey를 호출하기 전에, 누가 발급을 시도했는지를 먼저 서버에 남겨둔다.
+    // 발급 성공 뒤 프론트가 이탈해도 복구할 수 있게 하기 위함.
     @Transactional
     public BillingKeyPrepareResponse prepare(Long userId) {
         User user = userRepository.findById(userId)
@@ -63,7 +63,7 @@ public class BillingKeyService {
         return new BillingKeyCreateResponse(billingKey.getId());
     }
 
-    // 완료 API든 BillingKey.Issued 웹훅 복구 경로든 같은 검증·저장 로직을 공유한다.
+    // 완료 API든 BillingKey.Issued 웹훅 복구 경로든 같은 검증·저장 로직을 공유.
     @Transactional
     public BillingKey verifyAndStore(BillingKeyIssuanceIntent intent, String rawBillingKey) {
         PortOneBillingKeyDetail detail = portOneClient.getBillingKeyDetail(rawBillingKey);
