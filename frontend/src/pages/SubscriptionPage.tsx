@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as PortOne from '@portone/browser-sdk/v2';
 import GNB from '../components/GNB';
+import { baseURL } from '../api/axiosInstance';
 import {
     prepareBillingKey, createBillingKey, createSubscription,
     prepareOneTimePurchase, completeOneTimePurchase,
@@ -87,6 +88,8 @@ export default function SubscriptionPage() {
                 // 모바일(REDIRECTION 전용 PG)에서 결제창이 이 URL로 복귀 - issueId는 우리가 붙인 쿼리라
                 // PortOne이 결과 파라미터를 이어붙여도 그대로 남아있음
                 redirectUrl: `${window.location.origin}/subscription/redirect?mode=billing-key&issueId=${encodeURIComponent(prepared.issueId)}`,
+                // 콘솔에 웹훅 URL을 등록하지 않아도, 이 결제 건에 한해 이 주소로 웹훅을 보내달라고 개별 지정
+                noticeUrls: [`${baseURL}/api/v1/payments/webhook`],
             });
 
             if (!issued || issued.code != null) {
@@ -129,6 +132,7 @@ export default function SubscriptionPage() {
                 payMethod: 'CARD',
                 customer: { fullName, phoneNumber, email },
                 redirectUrl: `${window.location.origin}/subscription/redirect?mode=one-time`,
+                noticeUrls: [`${baseURL}/api/v1/payments/webhook`],
             });
 
             if (!paid || paid.code != null) {
