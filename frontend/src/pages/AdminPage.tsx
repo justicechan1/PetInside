@@ -90,6 +90,7 @@ export default function AdminPage() {
         fontSize: 14, width: 180,
     };
 
+
     return (
         <div>
             <GNB />
