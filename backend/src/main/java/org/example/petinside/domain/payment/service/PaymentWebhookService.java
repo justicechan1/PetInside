@@ -61,7 +61,7 @@ public class PaymentWebhookService {
             return;
         }
 
-        // 완료 API와 동일하게: 웹훅 본문을 그대로 믿지 않고 PortOne을 재조회해서 동기화한다(가이드 원칙).
+        // 완료 API와 동일하게: 웹훅 본문을 그대로 믿지 않고 PortOne을 재조회해서 동기화.
         if (payment.getStatus() == PaymentStatus.READY) {
             PortOnePaymentDetail detail = portOneClient.getPaymentDetail(payment.getPaymentId());
             paymentService.finalizeByDetail(payment, detail);
@@ -69,7 +69,7 @@ public class PaymentWebhookService {
         // 이미 PAID/FAILED로 처리된 결제에 대한 중복 웹훅은 별도 처리 없이 무처리(멱등)
     }
 
-    // 프론트가 requestIssueBillingKey 성공 후 /billing-keys 호출 전에 이탈한 경우를 복구한다.
+    // 프론트가 requestIssueBillingKey 성공 후 /billing-keys 호출 전에 이탈한 경우를 복구.
     private void handleBillingKeyIssued(PortOneWebhookPayload.Data data) {
         if (data.issueId() == null || data.billingKey() == null) {
             return;
@@ -83,7 +83,7 @@ public class PaymentWebhookService {
         billingKeyService.verifyAndStore(intent, data.billingKey());
     }
 
-    // 관리자 콘솔 수동 환불 등으로 발생한 취소는 해지 유예 없이 구독을 즉시 차단한다
+    // 관리자 콘솔 수동 환불 등으로 발생한 취소는 해지 유예 없이 구독을 즉시 차단
     private void handleCancelled(Payment payment) {
         Subscription subscription = payment.getSubscription();
         if (subscription != null) {

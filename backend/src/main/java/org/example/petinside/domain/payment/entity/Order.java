@@ -11,8 +11,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
-// 사용자가 "결제하고 싶다"고 시작한 구매 의도(서버 확정 금액 포함) 하나. 결제 시도(Payment)와 분리해서,
-// 한 주문에 결제 재시도가 여러 번 있었던 이력을 남길 수 있게 한다(portone1.md 1단계 원칙).
+// 사용자가 시작한 구매 의도(서버 확정 금액 포함) 하나. 결제 시도(Payment)와 분리해서,
+// 한 주문에 결제 재시도가 여러 번 있었던 이력을 남길 수 있게 함.
 @Entity
 @Table(name = "orders")
 @Getter

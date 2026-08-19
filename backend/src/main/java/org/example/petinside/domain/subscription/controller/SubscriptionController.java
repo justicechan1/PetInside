@@ -48,7 +48,7 @@ public class SubscriptionController {
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "구독이 시작되었습니다", response));
     }
 
-    // 자동 갱신 없는 1개월 이용권. 빌링키 없이 결제창을 바로 연다.
+    // 자동 갱신 없는 1개월 이용권. 빌링키 없이 결제창을 바로 염.
     @PostMapping("/one-time/prepare")
     public ResponseEntity<ApiResponse<PaymentPrepareResponse>> prepareOneTime(@AuthenticationPrincipal Long userId) {
         PaymentPrepareResponse response = subscriptionService.prepareOneTime(userId);

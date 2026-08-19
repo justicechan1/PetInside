@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 // 매일 자정: 해지 예약(canceledAt)됐고 만료 시점(nextBillingAt)이 지난 구독을 EXPIRED로 전환.
-// 1개월 단건 이용권은 생성 시점에 이미 canceledAt이 채워져 있어 이 배치로 자동 만료된다.
+// 1개월 단건 이용권은 생성 시점에 이미 canceledAt이 채워져 있어 이 배치로 자동 만료.
 @Component
 @RequiredArgsConstructor
 public class SubscriptionExpirationScheduler {

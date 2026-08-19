@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 // 빌링키/정기결제가 붙기 전 단계: 결제 준비 + PortOne 단건조회 완료검증까지만 다룸.
-// 6단계(빌링키)에서 /api/v1/subscriptions/prepare, complete 로 흡수될 예정
 @Tag(name = "결제(임시)", description = "구독 없이 결제 준비/완료검증만 먼저 검증하는 단계용 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
