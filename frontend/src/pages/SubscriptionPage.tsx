@@ -5,13 +5,30 @@ import GNB from '../components/GNB';
 import {
     prepareBillingKey, createBillingKey, createSubscription,
     prepareOneTimePurchase, completeOneTimePurchase,
-    getMySubscription, getPaymentHistory,
+    getMySubscription,
     cancelSubscription, resumeSubscription,
 } from '../api/subscriptionApi';
-import type { SubscriptionResult, SubscriptionMeResult, PaymentHistoryItem } from '../api/subscriptionApi';
+import type { SubscriptionResult, SubscriptionMeResult } from '../api/subscriptionApi';
 import { isAuthenticated } from '../utils/auth';
 
 type Mode = 'RECURRING' | 'ONE_TIME';
+
+const formatKoreanDate = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+};
+
+const formatISODate = (iso: string) => {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+const addDays = (iso: string, days: number) => {
+    const d = new Date(iso);
+    d.setDate(d.getDate() + days);
+    return d.toISOString();
+};
 
 export default function SubscriptionPage() {
     const navigate = useNavigate();
@@ -29,16 +46,13 @@ export default function SubscriptionPage() {
     const [result, setResult] = useState<SubscriptionResult | null>(null);
 
     const [mySubscription, setMySubscription] = useState<SubscriptionMeResult | null>(null);
-    const [history, setHistory] = useState<PaymentHistoryItem[]>([]);
     const [statusLoading, setStatusLoading] = useState(true);
     const [cancelLoading, setCancelLoading] = useState(false);
 
     const loadStatus = async () => {
         setStatusLoading(true);
         try {
-            const [subscription, payments] = await Promise.all([getMySubscription(), getPaymentHistory()]);
-            setMySubscription(subscription);
-            setHistory(payments);
+            setMySubscription(await getMySubscription());
         } catch {
             // 조회 실패는 조용히 무시하고 구매 폼을 그대로 보여준다
         } finally {
@@ -86,7 +100,7 @@ export default function SubscriptionPage() {
             // 3. 검증된 빌링키로 1회차 결제 실행 + 구독 시작
             const subscription = await createSubscription(billingKey.billingKeyId);
             setResult(subscription);
-            loadStatus();
+            await loadStatus();
         } catch (e: any) {
             setError(e.response?.data?.message ?? '구독 처리 중 오류가 발생했습니다.');
         } finally {
@@ -124,7 +138,7 @@ export default function SubscriptionPage() {
 
             const subscription = await completeOneTimePurchase(prepared.paymentId);
             setResult(subscription);
-            loadStatus();
+            await loadStatus();
         } catch (e: any) {
             setError(e.response?.data?.message ?? '결제 처리 중 오류가 발생했습니다.');
         } finally {
@@ -177,15 +191,25 @@ export default function SubscriptionPage() {
     });
 
     const isActiveSubscriber = mySubscription?.hasSubscription && mySubscription.status === 'ACTIVE';
-    const paymentStatusLabel: Record<PaymentHistoryItem['status'], string> = {
-        READY: '준비중', PAID: '결제완료', FAILED: '실패',
+
+    const benefitBoxStyle: React.CSSProperties = {
+        marginTop: 16, padding: '14px 16px', borderRadius: 10,
+        background: '#fff8ec', border: '1px solid #ffe1b3', fontSize: 13, color: '#9a6a1f',
     };
 
     return (
         <div style={{ background: '#f8f8f8', minHeight: '100vh' }}>
             <GNB />
             <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 16px' }}>
-                <h2 style={{ marginBottom: 20 }}>PetInside 구독</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                    <h2 style={{ margin: 0 }}>PetInside 구독</h2>
+                    <button onClick={() => navigate('/subscription/history')} style={{
+                        border: 'none', background: 'none', color: '#666', fontSize: 13,
+                        fontWeight: 600, cursor: 'pointer', textDecoration: 'underline',
+                    }}>
+                        결제 내역
+                    </button>
+                </div>
 
                 {statusLoading ? (
                     <div style={cardStyle}>
@@ -197,15 +221,25 @@ export default function SubscriptionPage() {
                             {mySubscription?.type === 'RECURRING' ? '정기결제 구독 중 🎉' : '이용권 이용 중 🎉'}
                         </p>
                         <p style={{ color: '#666', fontSize: 14 }}>상태: {result?.status ?? mySubscription?.status}</p>
-                        {mySubscription?.startAt && (
-                            <p style={{ color: '#666', fontSize: 14 }}>
-                                시작일: {new Date(mySubscription.startAt).toLocaleString()}
-                            </p>
+                        {mySubscription?.startAt && mySubscription?.nextBillingAt && (
+                            <>
+                                <p style={{ color: '#666', fontSize: 14 }}>
+                                    결제일: {formatKoreanDate(mySubscription.startAt)}
+                                </p>
+                                <p style={{ color: '#666', fontSize: 14 }}>
+                                    구독 기간: {formatISODate(mySubscription.startAt)} ~ {formatISODate(mySubscription.nextBillingAt)}
+                                </p>
+                                {mySubscription.type === 'RECURRING' && (
+                                    <p style={{ color: '#666', fontSize: 14 }}>
+                                        다음 결제일: {formatISODate(addDays(mySubscription.nextBillingAt, 1))}
+                                    </p>
+                                )}
+                            </>
                         )}
-                        <p style={{ color: '#666', fontSize: 14 }}>
-                            {mySubscription?.type === 'RECURRING' ? '다음 결제일' : '이용 만료일'}:{' '}
-                            {new Date(result?.nextBillingAt ?? mySubscription?.nextBillingAt ?? '').toLocaleString()}
-                        </p>
+
+                        <div style={benefitBoxStyle}>
+                            구독 혜택은 현재 준비 중이에요. 확정되는 대로 이 화면에서 안내해드릴게요.
+                        </div>
 
                         {mySubscription?.type === 'RECURRING' && (
                             <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
@@ -274,35 +308,9 @@ export default function SubscriptionPage() {
                             }}>
                             {loading ? '처리 중...' : mode === 'ONE_TIME' ? '1개월 이용권 구매하기' : '구독 시작하기'}
                         </button>
-                    </div>
-                )}
 
-                {history.length > 0 && (
-                    <div style={{ ...cardStyle, marginTop: 16 }}>
-                        <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>결제 내역</p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {history.map(item => (
-                                <div key={item.paymentId} style={{
-                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                    padding: '10px 0', borderTop: '1px solid #f0f0f0',
-                                }}>
-                                    <div>
-                                        <p style={{ fontSize: 14, fontWeight: 600 }}>
-                                            {item.amount.toLocaleString()}{item.currency === 'KRW' ? '원' : ` ${item.currency}`}
-                                        </p>
-                                        <p style={{ fontSize: 12, color: '#999' }}>
-                                            {new Date(item.paidAt ?? item.createdAt).toLocaleString()}
-                                        </p>
-                                    </div>
-                                    <span style={{
-                                        fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 12,
-                                        color: item.status === 'PAID' ? '#2e7d32' : item.status === 'FAILED' ? '#c62828' : '#666',
-                                        background: item.status === 'PAID' ? '#e8f5e9' : item.status === 'FAILED' ? '#ffebee' : '#f0f0f0',
-                                    }}>
-                                        {paymentStatusLabel[item.status]}
-                                    </span>
-                                </div>
-                            ))}
+                        <div style={benefitBoxStyle}>
+                            구독하면 어떤 혜택이 있는지는 현재 준비 중이에요. 확정되는 대로 안내해드릴게요.
                         </div>
                     </div>
                 )}
