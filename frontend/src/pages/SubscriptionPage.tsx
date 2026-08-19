@@ -6,6 +6,7 @@ import {
     prepareBillingKey, createBillingKey, createSubscription,
     prepareOneTimePurchase, completeOneTimePurchase,
     getMySubscription, getPaymentHistory,
+    cancelSubscription, resumeSubscription,
 } from '../api/subscriptionApi';
 import type { SubscriptionResult, SubscriptionMeResult, PaymentHistoryItem } from '../api/subscriptionApi';
 import { isAuthenticated } from '../utils/auth';
@@ -30,6 +31,7 @@ export default function SubscriptionPage() {
     const [mySubscription, setMySubscription] = useState<SubscriptionMeResult | null>(null);
     const [history, setHistory] = useState<PaymentHistoryItem[]>([]);
     const [statusLoading, setStatusLoading] = useState(true);
+    const [cancelLoading, setCancelLoading] = useState(false);
 
     const loadStatus = async () => {
         setStatusLoading(true);
@@ -130,6 +132,34 @@ export default function SubscriptionPage() {
         }
     };
 
+    const handleCancel = async () => {
+        if (!mySubscription?.subscriptionId) return;
+        setCancelLoading(true);
+        setError('');
+        try {
+            await cancelSubscription(mySubscription.subscriptionId);
+            await loadStatus();
+        } catch (e: any) {
+            setError(e.response?.data?.message ?? '구독 해지 처리 중 오류가 발생했습니다.');
+        } finally {
+            setCancelLoading(false);
+        }
+    };
+
+    const handleResume = async () => {
+        if (!mySubscription?.subscriptionId) return;
+        setCancelLoading(true);
+        setError('');
+        try {
+            await resumeSubscription(mySubscription.subscriptionId);
+            await loadStatus();
+        } catch (e: any) {
+            setError(e.response?.data?.message ?? '구독 재개 처리 중 오류가 발생했습니다.');
+        } finally {
+            setCancelLoading(false);
+        }
+    };
+
     const inputStyle: React.CSSProperties = {
         padding: '11px 14px', border: '1px solid #e0e0e0', borderRadius: 8,
         fontSize: 14, width: '100%', boxSizing: 'border-box', background: '#fff',
@@ -176,6 +206,36 @@ export default function SubscriptionPage() {
                             {mySubscription?.type === 'RECURRING' ? '다음 결제일' : '이용 만료일'}:{' '}
                             {new Date(result?.nextBillingAt ?? mySubscription?.nextBillingAt ?? '').toLocaleString()}
                         </p>
+
+                        {mySubscription?.type === 'RECURRING' && (
+                            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
+                                {mySubscription.canceledAt ? (
+                                    <>
+                                        <p style={{ fontSize: 13, color: '#f44336', marginBottom: 10 }}>
+                                            해지 예약됨 — 다음 결제일 이후 자동 만료됩니다.
+                                        </p>
+                                        <button onClick={handleResume} disabled={cancelLoading} style={{
+                                            width: '100%', padding: '11px', border: '1px solid var(--primary, #FF8C00)',
+                                            borderRadius: 8, background: '#fff', color: 'var(--primary, #FF8C00)',
+                                            fontWeight: 700, fontSize: 14, cursor: cancelLoading ? 'default' : 'pointer',
+                                        }}>
+                                            {cancelLoading ? '처리 중...' : '구독 재개하기'}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button onClick={handleCancel} disabled={cancelLoading} style={{
+                                        width: '100%', padding: '11px', border: '1px solid #e0e0e0',
+                                        borderRadius: 8, background: '#fff', color: '#666',
+                                        fontWeight: 700, fontSize: 14, cursor: cancelLoading ? 'default' : 'pointer',
+                                    }}>
+                                        {cancelLoading ? '처리 중...' : '구독 해지하기'}
+                                    </button>
+                                )}
+                                {error && (
+                                    <p style={{ margin: '10px 0 0', fontSize: 13, color: '#f44336' }}>{error}</p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div style={cardStyle}>
