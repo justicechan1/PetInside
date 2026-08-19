@@ -5,8 +5,9 @@ import GNB from '../components/GNB';
 import {
     prepareBillingKey, createBillingKey, createSubscription,
     prepareOneTimePurchase, completeOneTimePurchase,
+    getMySubscription, getPaymentHistory,
 } from '../api/subscriptionApi';
-import type { SubscriptionResult } from '../api/subscriptionApi';
+import type { SubscriptionResult, SubscriptionMeResult, PaymentHistoryItem } from '../api/subscriptionApi';
 import { isAuthenticated } from '../utils/auth';
 
 type Mode = 'RECURRING' | 'ONE_TIME';
@@ -25,6 +26,27 @@ export default function SubscriptionPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [result, setResult] = useState<SubscriptionResult | null>(null);
+
+    const [mySubscription, setMySubscription] = useState<SubscriptionMeResult | null>(null);
+    const [history, setHistory] = useState<PaymentHistoryItem[]>([]);
+    const [statusLoading, setStatusLoading] = useState(true);
+
+    const loadStatus = async () => {
+        setStatusLoading(true);
+        try {
+            const [subscription, payments] = await Promise.all([getMySubscription(), getPaymentHistory()]);
+            setMySubscription(subscription);
+            setHistory(payments);
+        } catch {
+            // 조회 실패는 조용히 무시하고 구매 폼을 그대로 보여준다
+        } finally {
+            setStatusLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isAuthenticated()) loadStatus();
+    }, []);
 
     const handleSubscribe = async () => {
         setError('');
@@ -46,6 +68,9 @@ export default function SubscriptionPage() {
                 issueId: prepared.issueId,
                 issueName: 'PetInside 구독 카드 등록',
                 customer: { fullName, phoneNumber, email },
+                // 모바일(REDIRECTION 전용 PG)에서 결제창이 이 URL로 복귀 - issueId는 우리가 붙인 쿼리라
+                // PortOne이 결과 파라미터를 이어붙여도 그대로 남아있음
+                redirectUrl: `${window.location.origin}/subscription/redirect?mode=billing-key&issueId=${encodeURIComponent(prepared.issueId)}`,
             });
 
             if (!issued || issued.code != null) {
@@ -59,6 +84,7 @@ export default function SubscriptionPage() {
             // 3. 검증된 빌링키로 1회차 결제 실행 + 구독 시작
             const subscription = await createSubscription(billingKey.billingKeyId);
             setResult(subscription);
+            loadStatus();
         } catch (e: any) {
             setError(e.response?.data?.message ?? '구독 처리 중 오류가 발생했습니다.');
         } finally {
@@ -86,6 +112,7 @@ export default function SubscriptionPage() {
                 currency: 'CURRENCY_KRW',
                 payMethod: 'CARD',
                 customer: { fullName, phoneNumber, email },
+                redirectUrl: `${window.location.origin}/subscription/redirect?mode=one-time`,
             });
 
             if (!paid || paid.code != null) {
@@ -95,6 +122,7 @@ export default function SubscriptionPage() {
 
             const subscription = await completeOneTimePurchase(prepared.paymentId);
             setResult(subscription);
+            loadStatus();
         } catch (e: any) {
             setError(e.response?.data?.message ?? '결제 처리 중 오류가 발생했습니다.');
         } finally {
@@ -118,20 +146,35 @@ export default function SubscriptionPage() {
         color: active ? '#fff' : '#333',
     });
 
+    const isActiveSubscriber = mySubscription?.hasSubscription && mySubscription.status === 'ACTIVE';
+    const paymentStatusLabel: Record<PaymentHistoryItem['status'], string> = {
+        READY: '준비중', PAID: '결제완료', FAILED: '실패',
+    };
+
     return (
         <div style={{ background: '#f8f8f8', minHeight: '100vh' }}>
             <GNB />
             <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 16px' }}>
                 <h2 style={{ marginBottom: 20 }}>PetInside 구독</h2>
 
-                {result ? (
+                {statusLoading ? (
+                    <div style={cardStyle}>
+                        <p style={{ color: '#666', fontSize: 14 }}>불러오는 중...</p>
+                    </div>
+                ) : result || isActiveSubscriber ? (
                     <div style={cardStyle}>
                         <p style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
-                            {mode === 'ONE_TIME' ? '이용권이 시작되었습니다 🎉' : '구독이 시작되었습니다 🎉'}
+                            {mySubscription?.type === 'RECURRING' ? '정기결제 구독 중 🎉' : '이용권 이용 중 🎉'}
                         </p>
-                        <p style={{ color: '#666', fontSize: 14 }}>상태: {result.status}</p>
+                        <p style={{ color: '#666', fontSize: 14 }}>상태: {result?.status ?? mySubscription?.status}</p>
+                        {mySubscription?.startAt && (
+                            <p style={{ color: '#666', fontSize: 14 }}>
+                                시작일: {new Date(mySubscription.startAt).toLocaleString()}
+                            </p>
+                        )}
                         <p style={{ color: '#666', fontSize: 14 }}>
-                            {mode === 'ONE_TIME' ? '이용 만료일' : '다음 결제일'}: {new Date(result.nextBillingAt).toLocaleString()}
+                            {mySubscription?.type === 'RECURRING' ? '다음 결제일' : '이용 만료일'}:{' '}
+                            {new Date(result?.nextBillingAt ?? mySubscription?.nextBillingAt ?? '').toLocaleString()}
                         </p>
                     </div>
                 ) : (
@@ -171,6 +214,36 @@ export default function SubscriptionPage() {
                             }}>
                             {loading ? '처리 중...' : mode === 'ONE_TIME' ? '1개월 이용권 구매하기' : '구독 시작하기'}
                         </button>
+                    </div>
+                )}
+
+                {history.length > 0 && (
+                    <div style={{ ...cardStyle, marginTop: 16 }}>
+                        <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>결제 내역</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {history.map(item => (
+                                <div key={item.paymentId} style={{
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    padding: '10px 0', borderTop: '1px solid #f0f0f0',
+                                }}>
+                                    <div>
+                                        <p style={{ fontSize: 14, fontWeight: 600 }}>
+                                            {item.amount.toLocaleString()}{item.currency === 'KRW' ? '원' : ` ${item.currency}`}
+                                        </p>
+                                        <p style={{ fontSize: 12, color: '#999' }}>
+                                            {new Date(item.paidAt ?? item.createdAt).toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <span style={{
+                                        fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 12,
+                                        color: item.status === 'PAID' ? '#2e7d32' : item.status === 'FAILED' ? '#c62828' : '#666',
+                                        background: item.status === 'PAID' ? '#e8f5e9' : item.status === 'FAILED' ? '#ffebee' : '#f0f0f0',
+                                    }}>
+                                        {paymentStatusLabel[item.status]}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

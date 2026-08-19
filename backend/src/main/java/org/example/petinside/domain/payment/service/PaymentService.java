@@ -2,9 +2,15 @@ package org.example.petinside.domain.payment.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.domain.payment.dto.PaymentCompleteResponse;
+import org.example.petinside.domain.payment.dto.PaymentHistoryResponse;
 import org.example.petinside.domain.payment.dto.PaymentPrepareResponse;
+import org.example.petinside.domain.payment.entity.Order;
 import org.example.petinside.domain.payment.entity.Payment;
+import org.example.petinside.domain.payment.entity.PaymentStatus;
+import org.example.petinside.domain.payment.entity.PaymentTransaction;
+import org.example.petinside.domain.payment.repository.OrderRepository;
 import org.example.petinside.domain.payment.repository.PaymentRepository;
+import org.example.petinside.domain.payment.repository.PaymentTransactionRepository;
 import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.global.exception.CustomException;
@@ -17,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -28,7 +35,9 @@ public class PaymentService {
     static final String CURRENCY = "KRW";
     private static final String PAID_STATUS = "PAID";
 
+    private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
+    private final PaymentTransactionRepository paymentTransactionRepository;
     private final UserRepository userRepository;
     private final PortOneClient portOneClient;
     private final PortOneProperties portOneProperties;
@@ -45,15 +54,27 @@ public class PaymentService {
         return new PaymentCompleteResponse(payment.getPaymentId(), payment.getStatus(), payment.getAmount(), payment.getCurrency(), payment.getPaidAt());
     }
 
-    // 구독 준비(F-21)에서도 재사용: 결제 준비 자체는 빌링키 유무와 무관하게 동일
+    // F-24: 결제 내역 조회. 최신순. 이탈/미완료로 영영 READY로 남은 시도는 노출하지 않는다.
+    public List<PaymentHistoryResponse> getHistory(Long userId) {
+        return paymentRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .filter(payment -> !payment.isReady())
+                .map(PaymentHistoryResponse::from)
+                .toList();
+    }
+
+    // 구독 준비(F-21)에서도 재사용: 결제 준비 자체는 빌링키 유무와 무관하게 동일.
+    // 주문(Order)과 결제 시도(Payment)를 분리해서, 같은 주문에 결제 재시도가 여러 번 있었던
+    // 이력을 남길 수 있게 한다(portone1.md 1단계 원칙).
     @Transactional
     public Payment createReadyPayment(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
 
+        Order order = orderRepository.save(Order.ready(user, PLAN_AMOUNT, CURRENCY));
+
         //파라미터 제한(1~40자)에 맞춰 UUID는 하이픈 없이 사용
         String paymentId = portOneProperties.paymentIdPrefix() + "-SUB-" + UUID.randomUUID().toString().replace("-", "");
-        Payment payment = Payment.createReady(user, paymentId, 1, PLAN_AMOUNT, CURRENCY);
+        Payment payment = Payment.createReady(user, order, paymentId, 1, PLAN_AMOUNT, CURRENCY);
         return paymentRepository.save(payment);
     }
 
@@ -86,11 +107,17 @@ public class PaymentService {
                 && CURRENCY.equalsIgnoreCase(detail.currency())
                 && portOneProperties.storeId().equals(detail.storeId());
 
+        // PortOne이 부여한 승인 시도(transactionId)를 결과와 무관하게 기록한다(portone1.md 1단계 원칙).
+        paymentTransactionRepository.save(PaymentTransaction.record(
+                payment, detail.transactionId(), verified ? PaymentStatus.PAID : PaymentStatus.FAILED));
+
         if (!verified) {
             payment.markFailed();
+            payment.getOrder().markFailed();
             throw new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 결제 정보가 주문과 일치하지 않습니다.");
         }
 
         payment.markPaid(LocalDateTime.now());
+        payment.getOrder().markCompleted();
     }
 }
