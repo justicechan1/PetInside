@@ -27,7 +27,7 @@ public class Subscription {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    // 정기결제(자동갱신) 구독만 빌링키를 가진다. 단건(1개월 이용권) 구매는 카드 등록 자체가 없어 null.
+    // 정기결제(자동갱신) 구독만 빌링키를 가짐. 단건(1개월 이용권) 구매는 카드 등록 자체가 없어 null.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "billing_key_id")
     private BillingKey billingKey;
@@ -77,7 +77,7 @@ public class Subscription {
     }
 
     // 1개월 이용권 단건 구매. 자동 갱신이 없으므로 생성 시점에 이미 해지 예약된 상태로 시작해
-    // 다음 배치 때 canceledAt+nextBillingAt(=만료일) 기준으로 자동 만료되게 한다.
+    // 다음 배치 때 canceledAt+nextBillingAt(=만료일) 기준으로 자동 만료되게 함.
     public static Subscription purchaseOneTime(User user, LocalDateTime startAt, LocalDateTime expiresAt) {
         return Subscription.builder()
                 .user(user)

@@ -28,7 +28,7 @@ public class Payment {
     private User user;
 
     // 이 결제 시도가 어떤 주문에 대한 것인지. 주문과 결제 시도를 분리해서, 한 주문에 결제 재시도가
-    // 여러 번 있었던 이력을 남길 수 있게 한다(portone1.md 1단계 원칙).
+    // 여러 번 있었던 이력을 남길 수 있게 함.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;

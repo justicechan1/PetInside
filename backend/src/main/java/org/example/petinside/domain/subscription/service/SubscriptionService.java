@@ -40,8 +40,8 @@ public class SubscriptionService {
     private final PortOneProperties portOneProperties;
     private final BillingKeyEncryptor billingKeyEncryptor;
 
-    // 이미 검증·저장된 빌링키(billingKeyId)로 1회차 결제를 실행하고 구독을 시작한다.
-    // 빌링키 발급(카드 등록) 자체는 별도 API(BillingKeyController)에서 이미 끝난 상태여야 한다.
+    // 이미 검증·저장된 빌링키(billingKeyId)로 1회차 결제를 실행하고 구독을 시작.
+    // 빌링키 발급(카드 등록) 자체는 별도 API(BillingKeyController)에서 이미 끝난 상태.
     @Transactional
     public SubscriptionCompleteResponse create(Long userId, SubscriptionCreateRequest request) {
         User user = userRepository.findById(userId)
@@ -72,8 +72,7 @@ public class SubscriptionService {
                 payment.getCurrency()
         ));
 
-        // 빌링키 결제 요청의 즉시 응답은 카드사 승인이 최종 확정(PAID)되기 전 중간 상태일 수 있어 신뢰하지 않는다.
-        // 완료 API/웹훅과 같은 검증 로직(PaymentService.verifyAndMarkPaid = 재조회 + finalizeByDetail)을 그대로 탄다.
+        // 빌링키 결제 요청의 즉시 응답은 카드사 승인이 최종 확정(PAID)되기 전 중간 상태일 수 있어 신뢰하지 않음.
         paymentService.verifyAndMarkPaid(userId, payment.getPaymentId());
 
         LocalDateTime now = LocalDateTime.now();
@@ -84,7 +83,7 @@ public class SubscriptionService {
         return new SubscriptionCompleteResponse(subscription.getId(), subscription.getStatus(), subscription.getNextBillingAt());
     }
 
-    // 1개월 이용권 단건 구매 준비. 빌링키 없이 일반결제 채널로 카드결제창을 바로 연다.
+    // 1개월 이용권 단건 구매 준비. 빌링키 없이 일반결제 채널로 카드결제창을 바로 염.
     @Transactional
     public PaymentPrepareResponse prepareOneTime(Long userId) {
         User user = userRepository.findById(userId)
