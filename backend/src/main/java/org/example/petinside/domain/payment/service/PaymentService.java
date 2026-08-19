@@ -2,6 +2,7 @@ package org.example.petinside.domain.payment.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.domain.payment.dto.PaymentCompleteResponse;
+import org.example.petinside.domain.payment.dto.PaymentHistoryResponse;
 import org.example.petinside.domain.payment.dto.PaymentPrepareResponse;
 import org.example.petinside.domain.payment.entity.Order;
 import org.example.petinside.domain.payment.entity.Payment;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -50,6 +52,14 @@ public class PaymentService {
     public PaymentCompleteResponse complete(Long userId, String paymentId) {
         Payment payment = verifyAndMarkPaid(userId, paymentId);
         return new PaymentCompleteResponse(payment.getPaymentId(), payment.getStatus(), payment.getAmount(), payment.getCurrency(), payment.getPaidAt());
+    }
+
+    // F-24: 결제 내역 조회. 최신순. 이탈/미완료로 영영 READY로 남은 시도는 노출하지 않는다.
+    public List<PaymentHistoryResponse> getHistory(Long userId) {
+        return paymentRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .filter(payment -> !payment.isReady())
+                .map(PaymentHistoryResponse::from)
+                .toList();
     }
 
     // 구독 준비(F-21)에서도 재사용: 결제 준비 자체는 빌링키 유무와 무관하게 동일.
