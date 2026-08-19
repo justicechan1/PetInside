@@ -92,4 +92,18 @@ public class Subscription {
     public void expireImmediately() {
         this.status = SubscriptionStatus.EXPIRED;
     }
+
+    // F-23: 정기결제(자동갱신) 해지 예약. 이미 승인된 회차는 그대로 두고, 다음 결제만 막음.
+    // 1개월 이용권은 애초에 생성 시점부터 canceledAt이 채워져 있어 대상이 아님.
+    public boolean isRecurring() {
+        return billingKey != null;
+    }
+
+    public void cancel() {
+        this.canceledAt = LocalDateTime.now();
+    }
+
+    public void resume() {
+        this.canceledAt = null;
+    }
 }

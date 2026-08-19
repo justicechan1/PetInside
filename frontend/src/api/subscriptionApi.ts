@@ -62,5 +62,11 @@ export const completeOneTimePurchase = (paymentId: string) =>
 export const getMySubscription = () =>
     axiosInstance.get<{ data: SubscriptionMeResult }>('/api/v1/subscriptions/me').then(r => r.data.data);
 
+export const cancelSubscription = (subscriptionId: number) =>
+    axiosInstance.patch<{ data: SubscriptionMeResult }>(`/api/v1/subscriptions/${subscriptionId}/cancel`).then(r => r.data.data);
+
+export const resumeSubscription = (subscriptionId: number) =>
+    axiosInstance.patch<{ data: SubscriptionMeResult }>(`/api/v1/subscriptions/${subscriptionId}/resume`).then(r => r.data.data);
+
 export const getPaymentHistory = () =>
     axiosInstance.get<{ data: PaymentHistoryItem[] }>('/api/v1/payments').then(r => r.data.data);

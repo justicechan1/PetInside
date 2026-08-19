@@ -76,7 +76,8 @@ public class SubscriptionService {
         paymentService.verifyAndMarkPaid(userId, payment.getPaymentId());
 
         LocalDateTime now = LocalDateTime.now();
-        Subscription subscription = Subscription.activate(user, billingKey, now, now.plusMonths(1));
+        // 결제일 기준 한 달 뒤가 아니라 그 하루 전까지가 이용 기간(예: 8/19 결제 → 다음 결제일 9/18)
+        Subscription subscription = Subscription.activate(user, billingKey, now, now.plusMonths(1).minusDays(1));
         subscriptionRepository.save(subscription);
         payment.linkSubscription(subscription);
 
@@ -105,7 +106,8 @@ public class SubscriptionService {
         Payment payment = paymentService.verifyAndMarkPaid(userId, paymentId);
 
         LocalDateTime now = LocalDateTime.now();
-        Subscription subscription = Subscription.purchaseOneTime(user, now, now.plusMonths(1));
+        // 결제일 기준 한 달 뒤가 아니라 그 하루 전까지가 이용 기간(예: 8/19 결제 → 9/18 만료)
+        Subscription subscription = Subscription.purchaseOneTime(user, now, now.plusMonths(1).minusDays(1));
         subscriptionRepository.save(subscription);
         payment.linkSubscription(subscription);
 
@@ -117,5 +119,47 @@ public class SubscriptionService {
         return subscriptionRepository.findFirstByUserIdOrderByIdDesc(userId)
                 .map(SubscriptionMeResponse::from)
                 .orElseGet(SubscriptionMeResponse::none);
+    }
+
+    // F-23: 정기결제 해지 예약. 이미 승인된 회차는 그대로 두고 다음 결제만 막음.
+    @Transactional
+    public SubscriptionMeResponse cancel(Long userId, Long subscriptionId) {
+        Subscription subscription = findMyActiveRecurring(userId, subscriptionId);
+
+        if (subscription.getCanceledAt() != null) {
+            throw new CustomException(HttpStatus.CONFLICT.value(), "이미 해지 예약된 구독입니다.");
+        }
+
+        subscription.cancel();
+        return SubscriptionMeResponse.from(subscription);
+    }
+
+    // F-23: 해지 예약 취소(재개). 아직 만료 전(ACTIVE)인 동안만 가능.
+    @Transactional
+    public SubscriptionMeResponse resume(Long userId, Long subscriptionId) {
+        Subscription subscription = findMyActiveRecurring(userId, subscriptionId);
+
+        if (subscription.getCanceledAt() == null) {
+            throw new CustomException(HttpStatus.CONFLICT.value(), "해지 예약 상태가 아닙니다.");
+        }
+
+        subscription.resume();
+        return SubscriptionMeResponse.from(subscription);
+    }
+
+    private Subscription findMyActiveRecurring(Long userId, Long subscriptionId) {
+        Subscription subscription = subscriptionRepository.findById(subscriptionId)
+                .filter(s -> s.getUser().getId().equals(userId))
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "구독을 찾을 수 없습니다."));
+
+        if (subscription.getStatus() != SubscriptionStatus.ACTIVE) {
+            throw new CustomException(HttpStatus.CONFLICT.value(), "이미 종료된 구독입니다.");
+        }
+
+        if (!subscription.isRecurring()) {
+            throw new CustomException(HttpStatus.CONFLICT.value(), "1개월 이용권은 해지/재개 대상이 아닙니다.");
+        }
+
+        return subscription;
     }
 }
