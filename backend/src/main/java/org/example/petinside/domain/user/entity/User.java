@@ -45,12 +45,16 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted = false;
+
     @Builder
     private User(String username, String password, String nickname, String role) {
         this.username = username;
         this.password = password;
         this.nickname = nickname;
         this.role = role;
+        this.isDeleted = false;
     }
 
     // 로컬 로그인 유저
@@ -84,4 +88,9 @@ public class User {
     public void updateProfileImageUrl(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
     }
+
+    public void delete() {
+        this.isDeleted = true;
+    }
+
 }

@@ -1,4 +1,4 @@
 package org.example.petinside.domain.notification.dto;
 
-public class NotificationReadResponse {
+public record NotificationReadResponse(Long id) {
 }
