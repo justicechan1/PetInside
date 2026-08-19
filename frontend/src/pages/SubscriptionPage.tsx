@@ -46,6 +46,9 @@ export default function SubscriptionPage() {
                 issueId: prepared.issueId,
                 issueName: 'PetInside 구독 카드 등록',
                 customer: { fullName, phoneNumber, email },
+                // 모바일(REDIRECTION 전용 PG)에서 결제창이 이 URL로 복귀 - issueId는 우리가 붙인 쿼리라
+                // PortOne이 결과 파라미터를 이어붙여도 그대로 남아있음
+                redirectUrl: `${window.location.origin}/subscription/redirect?mode=billing-key&issueId=${encodeURIComponent(prepared.issueId)}`,
             });
 
             if (!issued || issued.code != null) {
@@ -86,6 +89,7 @@ export default function SubscriptionPage() {
                 currency: 'CURRENCY_KRW',
                 payMethod: 'CARD',
                 customer: { fullName, phoneNumber, email },
+                redirectUrl: `${window.location.origin}/subscription/redirect?mode=one-time`,
             });
 
             if (!paid || paid.code != null) {

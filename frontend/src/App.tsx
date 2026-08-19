@@ -7,6 +7,7 @@ import PostDetailPage from './pages/PostDetailPage';
 import PostFormPage from './pages/PostFormPage';
 import MyPage from './pages/MyPage';
 import SubscriptionPage from './pages/SubscriptionPage';
+import SubscriptionRedirectPage from './pages/SubscriptionRedirectPage';
 import AdminPage from './pages/AdminPage';
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute.tsx";
 
@@ -23,6 +24,7 @@ export default function App() {
                 <Route path="/posts/:postId/edit" element={<PostFormPage />} />
                 <Route path="/mypage" element={<MyPage />} />
                 <Route path="/subscription" element={<SubscriptionPage />} />
+                <Route path="/subscription/redirect" element={<SubscriptionRedirectPage />} />
                 <Route path="/admin" element={<ProtectedAdminRoute><AdminPage /></ProtectedAdminRoute>}/>
             </Routes>
         </BrowserRouter>
