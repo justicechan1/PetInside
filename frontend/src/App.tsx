@@ -8,6 +8,7 @@ import PostFormPage from './pages/PostFormPage';
 import MyPage from './pages/MyPage';
 import SubscriptionPage from './pages/SubscriptionPage';
 import SubscriptionRedirectPage from './pages/SubscriptionRedirectPage';
+import PaymentHistoryPage from './pages/PaymentHistoryPage';
 import AdminPage from './pages/AdminPage';
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute.tsx";
 
@@ -25,6 +26,7 @@ export default function App() {
                 <Route path="/mypage" element={<MyPage />} />
                 <Route path="/subscription" element={<SubscriptionPage />} />
                 <Route path="/subscription/redirect" element={<SubscriptionRedirectPage />} />
+                <Route path="/subscription/history" element={<PaymentHistoryPage />} />
                 <Route path="/admin" element={<ProtectedAdminRoute><AdminPage /></ProtectedAdminRoute>}/>
             </Routes>
         </BrowserRouter>
