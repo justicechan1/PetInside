@@ -25,6 +25,7 @@ export default function OAuthCallbackPage() {
 
                 const me = await axiosInstance.get('/api/v1/users/me');
                 localStorage.setItem('nickname', me.data.data.nickname);
+                localStorage.setItem('profileImageUrl', me.data.data.profileImageUrl ?? '');
 
                 navigate('/');
             } catch {

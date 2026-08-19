@@ -84,7 +84,9 @@ public class CommentService {
                 .map(comment -> new CommentResponse(
                         comment.getId(),
                         comment.getContent(),
+                        comment.getUser().getId(),
                         comment.getUser().getNickname(),
+                        comment.getUser().getProfileImageUrl(),
                         comment.getCreatedAt(),
                         // 대댓글 목록 매핑
                         comment.getChildren().stream()
@@ -92,7 +94,9 @@ public class CommentService {
                                 .map(child -> new CommentResponse(
                                         child.getId(),
                                         child.getContent(),
+                                        child.getUser().getId(),
                                         child.getUser().getNickname(),
+                                        child.getUser().getProfileImageUrl(),
                                         child.getCreatedAt(),
                                         null
                                 ))

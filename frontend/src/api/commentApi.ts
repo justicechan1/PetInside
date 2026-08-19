@@ -3,7 +3,9 @@ import axiosInstance from './axiosInstance';
 export interface CommentItem {
     id: number;
     content: string;
+    authorId: number;
     authorNickname: string;
+    authorProfileImageUrl: string | null;
     createdAt: string;
     children: CommentItem[] | null;
 }

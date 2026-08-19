@@ -55,6 +55,7 @@ public class Post {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
     private List<PostImage> images = new ArrayList<>();
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL)

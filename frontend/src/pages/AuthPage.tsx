@@ -14,6 +14,7 @@ export default function AuthPage() {
             localStorage.setItem('accessToken', res.data.data.accessToken);
             const me = await axiosInstance.get('/api/v1/users/me');
             localStorage.setItem('nickname', me.data.data.nickname);
+            localStorage.setItem('profileImageUrl', me.data.data.profileImageUrl ?? '');
             navigate('/');
         } catch (e: any) {
             alert(e.response?.data?.message ?? '로그인에 실패했습니다.');
