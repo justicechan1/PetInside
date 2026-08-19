@@ -61,6 +61,7 @@ class CommentServiceTest {
                 .role("USER")
                 .build();
         ReflectionTestUtils.setField(author, "id", 1L);
+        author.updateProfileImageUrl("http://profile/author.png");
 
         post = Post.builder()
                 .author(author)
@@ -193,7 +194,10 @@ class CommentServiceTest {
             assertThat(result.get(0).getId()).isEqualTo(1L);
             assertThat(result.get(0).getChildren()).hasSize(1);
             assertThat(result.get(0).getChildren().get(0).getId()).isEqualTo(2L);
+            assertThat(result.get(0).getAuthorId()).isEqualTo(1L);
+            assertThat(result.get(0).getAuthorProfileImageUrl()).isEqualTo("http://profile/author.png");
             assertThat(result.get(0).getChildren().get(0).getAuthorNickname()).isEqualTo("author-nick");
+            assertThat(result.get(0).getChildren().get(0).getAuthorProfileImageUrl()).isEqualTo("http://profile/author.png");
         }
     }
 

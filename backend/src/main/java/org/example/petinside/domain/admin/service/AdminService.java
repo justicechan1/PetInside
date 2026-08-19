@@ -127,7 +127,7 @@ public class AdminService {
         if (status != null) {
             subscriptions = subscriptionRepository.findByStatus(status, pageable);
         } else if (startDate != null && endDate != null) {
-            subscriptions = subscriptionRepository.findByCreateAtBetween(startDate, endDate, pageable);
+            subscriptions = subscriptionRepository.findByCreatedAtBetween(startDate, endDate, pageable);
         } else {
             subscriptions = subscriptionRepository.findAll(pageable);
         }

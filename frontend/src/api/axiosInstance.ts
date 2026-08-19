@@ -14,6 +14,7 @@ axiosInstance.interceptors.request.use((config) => {
 const clearAuthAndRedirect = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('nickname');
+    localStorage.removeItem('profileImageUrl');
     window.location.href = '/login';
 };
 

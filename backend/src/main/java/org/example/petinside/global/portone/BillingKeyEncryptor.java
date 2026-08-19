@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
 
-// 빌링키는 평문 저장/로그 노출이 금지되어 있어(CLAUDE.md 핵심 설계 원칙 7) AES-256-GCM으로 암호화해서 저장한다.
+// 빌링키는 평문 저장/로그 노출이 금지되어 있어(CLAUDE.md 핵심 설계 원칙 7) AES-256-GCM으로 암호화해서 저장.
 @Component
 @RequiredArgsConstructor
 public class BillingKeyEncryptor {

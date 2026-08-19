@@ -5,11 +5,30 @@ import GNB from '../components/GNB';
 import {
     prepareBillingKey, createBillingKey, createSubscription,
     prepareOneTimePurchase, completeOneTimePurchase,
+    getMySubscription,
+    cancelSubscription, resumeSubscription,
 } from '../api/subscriptionApi';
-import type { SubscriptionResult } from '../api/subscriptionApi';
+import type { SubscriptionResult, SubscriptionMeResult } from '../api/subscriptionApi';
 import { isAuthenticated } from '../utils/auth';
 
 type Mode = 'RECURRING' | 'ONE_TIME';
+
+const formatKoreanDate = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+};
+
+const formatISODate = (iso: string) => {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+const addDays = (iso: string, days: number) => {
+    const d = new Date(iso);
+    d.setDate(d.getDate() + days);
+    return d.toISOString();
+};
 
 export default function SubscriptionPage() {
     const navigate = useNavigate();
@@ -25,6 +44,25 @@ export default function SubscriptionPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [result, setResult] = useState<SubscriptionResult | null>(null);
+
+    const [mySubscription, setMySubscription] = useState<SubscriptionMeResult | null>(null);
+    const [statusLoading, setStatusLoading] = useState(true);
+    const [cancelLoading, setCancelLoading] = useState(false);
+
+    const loadStatus = async () => {
+        setStatusLoading(true);
+        try {
+            setMySubscription(await getMySubscription());
+        } catch {
+            // 조회 실패는 조용히 무시하고 구매 폼을 그대로 보여준다
+        } finally {
+            setStatusLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isAuthenticated()) loadStatus();
+    }, []);
 
     const handleSubscribe = async () => {
         setError('');
@@ -46,6 +84,9 @@ export default function SubscriptionPage() {
                 issueId: prepared.issueId,
                 issueName: 'PetInside 구독 카드 등록',
                 customer: { fullName, phoneNumber, email },
+                // 모바일(REDIRECTION 전용 PG)에서 결제창이 이 URL로 복귀 - issueId는 우리가 붙인 쿼리라
+                // PortOne이 결과 파라미터를 이어붙여도 그대로 남아있음
+                redirectUrl: `${window.location.origin}/subscription/redirect?mode=billing-key&issueId=${encodeURIComponent(prepared.issueId)}`,
             });
 
             if (!issued || issued.code != null) {
@@ -59,6 +100,7 @@ export default function SubscriptionPage() {
             // 3. 검증된 빌링키로 1회차 결제 실행 + 구독 시작
             const subscription = await createSubscription(billingKey.billingKeyId);
             setResult(subscription);
+            await loadStatus();
         } catch (e: any) {
             setError(e.response?.data?.message ?? '구독 처리 중 오류가 발생했습니다.');
         } finally {
@@ -86,6 +128,7 @@ export default function SubscriptionPage() {
                 currency: 'CURRENCY_KRW',
                 payMethod: 'CARD',
                 customer: { fullName, phoneNumber, email },
+                redirectUrl: `${window.location.origin}/subscription/redirect?mode=one-time`,
             });
 
             if (!paid || paid.code != null) {
@@ -95,10 +138,39 @@ export default function SubscriptionPage() {
 
             const subscription = await completeOneTimePurchase(prepared.paymentId);
             setResult(subscription);
+            await loadStatus();
         } catch (e: any) {
             setError(e.response?.data?.message ?? '결제 처리 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleCancel = async () => {
+        if (!mySubscription?.subscriptionId) return;
+        setCancelLoading(true);
+        setError('');
+        try {
+            await cancelSubscription(mySubscription.subscriptionId);
+            await loadStatus();
+        } catch (e: any) {
+            setError(e.response?.data?.message ?? '구독 해지 처리 중 오류가 발생했습니다.');
+        } finally {
+            setCancelLoading(false);
+        }
+    };
+
+    const handleResume = async () => {
+        if (!mySubscription?.subscriptionId) return;
+        setCancelLoading(true);
+        setError('');
+        try {
+            await resumeSubscription(mySubscription.subscriptionId);
+            await loadStatus();
+        } catch (e: any) {
+            setError(e.response?.data?.message ?? '구독 재개 처리 중 오류가 발생했습니다.');
+        } finally {
+            setCancelLoading(false);
         }
     };
 
@@ -118,21 +190,86 @@ export default function SubscriptionPage() {
         color: active ? '#fff' : '#333',
     });
 
+    const isActiveSubscriber = mySubscription?.hasSubscription && mySubscription.status === 'ACTIVE';
+
+    const benefitBoxStyle: React.CSSProperties = {
+        marginTop: 16, padding: '14px 16px', borderRadius: 10,
+        background: '#fff8ec', border: '1px solid #ffe1b3', fontSize: 13, color: '#9a6a1f',
+    };
+
     return (
         <div style={{ background: '#f8f8f8', minHeight: '100vh' }}>
             <GNB />
             <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 16px' }}>
-                <h2 style={{ marginBottom: 20 }}>PetInside 구독</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                    <h2 style={{ margin: 0 }}>PetInside 구독</h2>
+                    <button onClick={() => navigate('/subscription/history')} style={{
+                        border: 'none', background: 'none', color: '#666', fontSize: 13,
+                        fontWeight: 600, cursor: 'pointer', textDecoration: 'underline',
+                    }}>
+                        결제 내역
+                    </button>
+                </div>
 
-                {result ? (
+                {statusLoading ? (
+                    <div style={cardStyle}>
+                        <p style={{ color: '#666', fontSize: 14 }}>불러오는 중...</p>
+                    </div>
+                ) : result || isActiveSubscriber ? (
                     <div style={cardStyle}>
                         <p style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
-                            {mode === 'ONE_TIME' ? '이용권이 시작되었습니다 🎉' : '구독이 시작되었습니다 🎉'}
+                            {mySubscription?.type === 'RECURRING' ? '정기결제 구독 중 🎉' : '이용권 이용 중 🎉'}
                         </p>
-                        <p style={{ color: '#666', fontSize: 14 }}>상태: {result.status}</p>
-                        <p style={{ color: '#666', fontSize: 14 }}>
-                            {mode === 'ONE_TIME' ? '이용 만료일' : '다음 결제일'}: {new Date(result.nextBillingAt).toLocaleString()}
-                        </p>
+                        <p style={{ color: '#666', fontSize: 14 }}>상태: {result?.status ?? mySubscription?.status}</p>
+                        {mySubscription?.startAt && mySubscription?.nextBillingAt && (
+                            <>
+                                <p style={{ color: '#666', fontSize: 14 }}>
+                                    결제일: {formatKoreanDate(mySubscription.startAt)}
+                                </p>
+                                <p style={{ color: '#666', fontSize: 14 }}>
+                                    구독 기간: {formatISODate(mySubscription.startAt)} ~ {formatISODate(mySubscription.nextBillingAt)}
+                                </p>
+                                {mySubscription.type === 'RECURRING' && (
+                                    <p style={{ color: '#666', fontSize: 14 }}>
+                                        다음 결제일: {formatISODate(addDays(mySubscription.nextBillingAt, 1))}
+                                    </p>
+                                )}
+                            </>
+                        )}
+
+                        <div style={benefitBoxStyle}>
+                            구독 혜택은 현재 준비 중이에요. 확정되는 대로 이 화면에서 안내해드릴게요.
+                        </div>
+
+                        {mySubscription?.type === 'RECURRING' && (
+                            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
+                                {mySubscription.canceledAt ? (
+                                    <>
+                                        <p style={{ fontSize: 13, color: '#f44336', marginBottom: 10 }}>
+                                            해지 예약됨 — 다음 결제일 이후 자동 만료됩니다.
+                                        </p>
+                                        <button onClick={handleResume} disabled={cancelLoading} style={{
+                                            width: '100%', padding: '11px', border: '1px solid var(--primary, #FF8C00)',
+                                            borderRadius: 8, background: '#fff', color: 'var(--primary, #FF8C00)',
+                                            fontWeight: 700, fontSize: 14, cursor: cancelLoading ? 'default' : 'pointer',
+                                        }}>
+                                            {cancelLoading ? '처리 중...' : '구독 재개하기'}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button onClick={handleCancel} disabled={cancelLoading} style={{
+                                        width: '100%', padding: '11px', border: '1px solid #e0e0e0',
+                                        borderRadius: 8, background: '#fff', color: '#666',
+                                        fontWeight: 700, fontSize: 14, cursor: cancelLoading ? 'default' : 'pointer',
+                                    }}>
+                                        {cancelLoading ? '처리 중...' : '구독 해지하기'}
+                                    </button>
+                                )}
+                                {error && (
+                                    <p style={{ margin: '10px 0 0', fontSize: 13, color: '#f44336' }}>{error}</p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div style={cardStyle}>
@@ -171,6 +308,10 @@ export default function SubscriptionPage() {
                             }}>
                             {loading ? '처리 중...' : mode === 'ONE_TIME' ? '1개월 이용권 구매하기' : '구독 시작하기'}
                         </button>
+
+                        <div style={benefitBoxStyle}>
+                            구독하면 어떤 혜택이 있는지는 현재 준비 중이에요. 확정되는 대로 안내해드릴게요.
+                        </div>
                     </div>
                 )}
             </div>

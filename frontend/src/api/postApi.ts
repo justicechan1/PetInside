@@ -4,7 +4,9 @@ export interface PostListItem {
     id: number;
     title: string;
     category: string;
+    authorId: number;
     authorNickname: string;
+    authorProfileImageUrl: string | null;
     viewCount: number;
     commentCount: number;
     thumbnailUrl: string | null;
@@ -17,7 +19,9 @@ export interface PostDetail {
     content: string;
     category: string;
     viewCount: number;
+    authorId: number;
     authorNickname: string;
+    authorProfileImageUrl: string | null;
     imageUrls: string[];
     createdAt: string;
     updatedAt: string;

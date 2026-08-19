@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getComments, createComment, updateComment, deleteComment } from '../api/commentApi';
 import type { CommentItem } from '../api/commentApi';
+import Avatar from './Avatar';
+import { profilePath } from '../utils/profileNav';
 
 const inputStyle = {
     width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #ddd',
@@ -96,7 +98,13 @@ export default function CommentSection({ postId }: { postId: number }) {
             <div key={comment.id} style={{ marginLeft: isReply ? 32 : 0, padding: '12px 0', borderBottom: '1px solid #f0f0f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                        <span style={{ fontWeight: 600, fontSize: 13 }}>{comment.authorNickname}</span>
+                        <span
+                            onClick={() => navigate(profilePath(comment.authorId, comment.authorNickname))}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+                        >
+                            <Avatar imageUrl={comment.authorProfileImageUrl} nickname={comment.authorNickname} size={20} />
+                            <span style={{ fontWeight: 600, fontSize: 13 }}>{comment.authorNickname}</span>
+                        </span>
                         <span style={{ color: '#aaa', fontSize: 12 }}>{new Date(comment.createdAt).toLocaleString()}</span>
                     </div>
                     {isAuthor && !isEditing && (

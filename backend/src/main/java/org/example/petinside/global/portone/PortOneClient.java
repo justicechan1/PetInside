@@ -14,34 +14,51 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
 public class PortOneClient {
 
     private static final String BASE_URL = "https://api.portone.io";
+    private static final int SETTLE_RETRY_COUNT = 5;
+    private static final long SETTLE_RETRY_DELAY_MS = 1500;
+    private static final Set<String> TERMINAL_PAYMENT_STATUSES = Set.of("PAID", "FAILED", "CANCELLED");
+    private static final Set<String> TERMINAL_BILLING_KEY_STATUSES = Set.of("ISSUED", "FAILED", "DELETED");
 
     private final PortOneProperties portOneProperties;
 
-    // PortOne 결제 단건 조회. 프론트/웹훅의 결과를 그대로 믿지 않고 이 응답으로 최종 확정한다.
-    // 주의: 이 테스트 환경에서는 GET /payments/{id}가 실제 존재하는 건도 404를 내는 경우가 있어(목록 조회엔 정상적으로 나옴),
-    // 단건조회가 실패하면 목록조회로 한 번 더 확인한다.
+    // PortOne 결제 단건 조회. 프론트/웹훅의 결과를 그대로 믿지 않고 이 응답으로 최종 확정.
     public PortOnePaymentDetail getPaymentDetail(String paymentId) {
+        PortOnePaymentDetail last = null;
+        for (int attempt = 1; attempt <= SETTLE_RETRY_COUNT; attempt++) {
+            last = fetchPaymentDetail(paymentId).orElse(null);
+            if (last != null && TERMINAL_PAYMENT_STATUSES.contains(last.status())) {
+                return last;
+            }
+            sleepUnlessLastAttempt(attempt);
+        }
+        if (last != null) {
+            return last; // 끝내 최종 상태가 아니어도 마지막으로 받은 값을 넘겨 finalizeByDetail이 판단하게 함
+        }
+        throw new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 결제 정보를 조회할 수 없습니다.");
+    }
+
+    private Optional<PortOnePaymentDetail> fetchPaymentDetail(String paymentId) {
         try {
-            return client().get()
+            return Optional.ofNullable(client().get()
                     .uri("/payments/{paymentId}", paymentId)
                     .retrieve()
-                    .body(PortOnePaymentDetail.class);
+                    .body(PortOnePaymentDetail.class));
         } catch (RestClientException e) {
-            return findInPaymentList(paymentId)
-                    .orElseThrow(() -> new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 결제 정보를 조회할 수 없습니다."));
+            return findInPaymentList(paymentId);
         }
     }
 
     private Optional<PortOnePaymentDetail> findInPaymentList(String paymentId) {
         try {
             PortOnePaymentListResponse response = client().get()
-                    .uri("/payments?page.size=100")
+                    .uri("/payments?page.size=1000&sort.by=REQUESTED_AT&sort.order=DESC")
                     .retrieve()
                     .body(PortOnePaymentListResponse.class);
             return response.items().stream()
@@ -59,23 +76,37 @@ public class PortOneClient {
     }
 
     // 프론트에서 발급된 빌링키를 그대로 신뢰하지 않고, 발급 상태(ISSUED)와 소속 Store를 재확인한다.
-    // 결제 단건조회와 같은 이유로(이 테스트 환경의 단건조회 API 이슈) 실패 시 목록조회로 한 번 더 확인한다.
+    // 결제 조회와 같은 이유로 최종 상태가 아니면 재시도한다.
     public PortOneBillingKeyDetail getBillingKeyDetail(String billingKey) {
+        PortOneBillingKeyDetail last = null;
+        for (int attempt = 1; attempt <= SETTLE_RETRY_COUNT; attempt++) {
+            last = fetchBillingKeyDetail(billingKey).orElse(null);
+            if (last != null && TERMINAL_BILLING_KEY_STATUSES.contains(last.status())) {
+                return last;
+            }
+            sleepUnlessLastAttempt(attempt);
+        }
+        if (last != null) {
+            return last;
+        }
+        throw new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 빌링키 정보를 조회할 수 없습니다.");
+    }
+
+    private Optional<PortOneBillingKeyDetail> fetchBillingKeyDetail(String billingKey) {
         try {
-            return client().get()
+            return Optional.ofNullable(client().get()
                     .uri("/billing-keys/{billingKey}", billingKey)
                     .retrieve()
-                    .body(PortOneBillingKeyDetail.class);
+                    .body(PortOneBillingKeyDetail.class));
         } catch (RestClientException e) {
-            return findInBillingKeyList(billingKey)
-                    .orElseThrow(() -> new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 빌링키 정보를 조회할 수 없습니다."));
+            return findInBillingKeyList(billingKey);
         }
     }
 
     private Optional<PortOneBillingKeyDetail> findInBillingKeyList(String billingKey) {
         try {
             PortOneBillingKeyListResponse response = client().get()
-                    .uri("/billing-keys?page.size=100")
+                    .uri("/billing-keys?page.size=1000")
                     .retrieve()
                     .body(PortOneBillingKeyListResponse.class);
             return response.items().stream()
@@ -83,6 +114,17 @@ public class PortOneClient {
                     .findFirst();
         } catch (RestClientException e) {
             return Optional.empty();
+        }
+    }
+
+    private void sleepUnlessLastAttempt(int attempt) {
+        if (attempt == SETTLE_RETRY_COUNT) {
+            return;
+        }
+        try {
+            Thread.sleep(SETTLE_RETRY_DELAY_MS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

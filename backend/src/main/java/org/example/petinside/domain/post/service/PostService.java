@@ -89,7 +89,9 @@ public class PostService {
                     post.getId(),
                     post.getTitle(),
                     post.getCategory().name(),
+                    post.getAuthor().getId(),
                     post.getAuthor().getNickname(),
+                    post.getAuthor().getProfileImageUrl(),
                     post.getViewCount(),
                     commentCount,
                     thumbnailUrl,
@@ -121,7 +123,9 @@ public class PostService {
                 .content(post.getContent())
                 .category(post.getCategory().name())
                 .viewCount(post.getViewCount())
+                .authorId(post.getAuthor().getId())
                 .authorNickname(post.getAuthor().getNickname())
+                .authorProfileImageUrl(post.getAuthor().getProfileImageUrl())
                 .imageUrls(imageUrls)
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())

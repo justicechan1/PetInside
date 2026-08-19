@@ -8,11 +8,15 @@ import org.example.petinside.domain.payment.dto.PaymentPrepareResponse;
 import org.example.petinside.domain.subscription.dto.OneTimePurchaseCompleteRequest;
 import org.example.petinside.domain.subscription.dto.SubscriptionCompleteResponse;
 import org.example.petinside.domain.subscription.dto.SubscriptionCreateRequest;
+import org.example.petinside.domain.subscription.dto.SubscriptionMeResponse;
 import org.example.petinside.domain.subscription.service.SubscriptionService;
 import org.example.petinside.global.response.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +31,14 @@ public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
 
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<SubscriptionMeResponse>> me(@AuthenticationPrincipal Long userId) {
+        SubscriptionMeResponse response = subscriptionService.getMySubscription(userId);
+
+        return ResponseEntity
+                .ok(ApiResponse.success(HttpStatus.OK.value(), "구독 상태 조회 성공", response));
+    }
+
     @PostMapping
     public ResponseEntity<ApiResponse<SubscriptionCompleteResponse>> create(
             @AuthenticationPrincipal Long userId,
@@ -38,7 +50,7 @@ public class SubscriptionController {
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "구독이 시작되었습니다", response));
     }
 
-    // 자동 갱신 없는 1개월 이용권. 빌링키 없이 결제창을 바로 연다.
+    // 자동 갱신 없는 1개월 이용권. 빌링키 없이 결제창을 바로 염.
     @PostMapping("/one-time/prepare")
     public ResponseEntity<ApiResponse<PaymentPrepareResponse>> prepareOneTime(@AuthenticationPrincipal Long userId) {
         PaymentPrepareResponse response = subscriptionService.prepareOneTime(userId);
@@ -57,5 +69,27 @@ public class SubscriptionController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "1개월 이용권이 시작되었습니다", response));
+    }
+
+    // F-23: 정기결제 해지 예약(다음 결제만 막음, 이미 승인된 회차는 유지)
+    @PatchMapping("/{subscriptionId}/cancel")
+    public ResponseEntity<ApiResponse<SubscriptionMeResponse>> cancel(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long subscriptionId) {
+        SubscriptionMeResponse response = subscriptionService.cancel(userId, subscriptionId);
+
+        return ResponseEntity
+                .ok(ApiResponse.success(HttpStatus.OK.value(), "구독 해지가 예약되었습니다", response));
+    }
+
+    // F-23: 해지 예약 취소(재개)
+    @PatchMapping("/{subscriptionId}/resume")
+    public ResponseEntity<ApiResponse<SubscriptionMeResponse>> resume(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long subscriptionId) {
+        SubscriptionMeResponse response = subscriptionService.resume(userId, subscriptionId);
+
+        return ResponseEntity
+                .ok(ApiResponse.success(HttpStatus.OK.value(), "구독이 재개되었습니다", response));
     }
 }

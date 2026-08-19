@@ -71,6 +71,7 @@ class PostServiceTest {
                 .role("USER")
                 .build();
         ReflectionTestUtils.setField(author, "id", 1L);
+        author.updateProfileImageUrl("http://profile/author.png");
     }
 
     private PostCreateRequest createRequest(String category, String title, String content, List<String> imageUrls) {
@@ -202,7 +203,9 @@ class PostServiceTest {
             PostListResponse dto = result.content().get(0);
             assertThat(dto.getThumbnailUrl()).isEqualTo("http://thumb");
             assertThat(dto.getCommentCount()).isEqualTo(1);
+            assertThat(dto.getAuthorId()).isEqualTo(1L);
             assertThat(dto.getAuthorNickname()).isEqualTo("author-nick");
+            assertThat(dto.getAuthorProfileImageUrl()).isEqualTo("http://profile/author.png");
         }
 
         @Test
@@ -234,7 +237,9 @@ class PostServiceTest {
 
             assertThat(post.getViewCount()).isEqualTo(1);
             assertThat(response.getId()).isEqualTo(1L);
+            assertThat(response.getAuthorId()).isEqualTo(1L);
             assertThat(response.getAuthorNickname()).isEqualTo("author-nick");
+            assertThat(response.getAuthorProfileImageUrl()).isEqualTo("http://profile/author.png");
         }
 
         @Test

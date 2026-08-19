@@ -6,6 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
@@ -13,4 +15,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Page<Payment> findByStatus(PaymentStatus status, Pageable pageable);
     Page<Payment> findByUserId(Long userId, Pageable pageable);
+
+    List<Payment> findByUserIdOrderByCreatedAtDesc(Long userId);
+
+    // 결제창을 열어놓고 이탈해서 영영 READY로 남는 시도를 자동 만료 처리할 때 사용
+    List<Payment> findByStatusAndCreatedAtBefore(PaymentStatus status, LocalDateTime threshold);
 }

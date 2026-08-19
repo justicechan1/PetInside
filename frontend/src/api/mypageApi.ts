@@ -31,3 +31,18 @@ export const updateProfileImage = (imageUrl: string) =>
 
 export const getMyPosts = (params?: { keyword?: string; category?: string; page?: number; size?: number }) =>
     axiosInstance.get<{ data: { content: MyPost[]; totalPages: number; number: number } }>('/api/v1/users/me/posts', { params: { size: 10, ...params } }).then(r => r.data.data);
+
+export interface PublicProfile {
+    id: number;
+    nickname: string;
+    profileImageUrl: string | null;
+    postCount: number;
+    badges: string[];
+    membershipTier: string | null;
+}
+
+export const getPublicProfile = (userId: number) =>
+    axiosInstance.get<{ data: PublicProfile }>(`/api/v1/users/${userId}`).then(r => r.data.data);
+
+export const getPublicPosts = (userId: number, params?: { keyword?: string; category?: string; page?: number; size?: number }) =>
+    axiosInstance.get<{ data: { content: MyPost[]; totalPages: number; number: number } }>(`/api/v1/users/${userId}/posts`, { params: { size: 10, ...params } }).then(r => r.data.data);
