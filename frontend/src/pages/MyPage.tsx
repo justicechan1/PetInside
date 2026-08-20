@@ -97,13 +97,13 @@ export default function MyPage() {
     }, [tab, categoryFilter, page]);
 
     useEffect(() => {
-        if (tab !== 'pets' || petsLoaded) return;
+        if ((!['pets', 'posts'].includes(tab)) || petsLoaded || !isSubscriber) return;
         getMyPets().then(data => {
             setPets(data);
             setPetsLoaded(true);
             if (data.length > 0) setSelectedPet(data[0]);
         }).catch(() => setPetsLoaded(true));
-    }, [tab, petsLoaded]);
+    }, [tab, petsLoaded, isSubscriber]);
 
     useEffect(() => {
         if (!selectedPet) return;
@@ -564,35 +564,79 @@ export default function MyPage() {
 
                 {/* ───── 내 게시글 탭 ───── */}
                 {tab === 'posts' && (
-                    <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                                {[['', '전체'], ['QNA', 'Q&A'], ['BOAST', '자랑']].map(([val, label]) => (
-                                    <button key={val} onClick={() => { setCategoryFilter(val); setPage(0); }}
-                                        style={tabBtnStyle(categoryFilter === val)}>
-                                        {label}
-                                    </button>
-                                ))}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                        {/* ── 구독자 전용: 펫 스토리 버블 ── */}
+                        {isSubscriber && petsLoaded && pets.length > 0 && (
+                            <div style={{ ...cardStyle, padding: '16px 20px' }}>
+                                <div style={{ fontSize: 12, color: '#aaa', marginBottom: 10, fontWeight: 600, letterSpacing: 0.5 }}>MY PETS</div>
+                                <div style={{ display: 'flex', gap: 16, overflowX: 'auto', scrollbarWidth: 'none' }}>
+                                    {pets.map(pet => (
+                                        <div key={pet.id}
+                                            onClick={() => { setSelectedPet(pet); setTab('pets'); }}
+                                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer', flexShrink: 0 }}>
+                                            <div style={{
+                                                width: 56, height: 56, borderRadius: '50%',
+                                                background: '#f0f0f0', overflow: 'hidden',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
+                                                border: '2.5px solid var(--primary, #FF8C00)',
+                                                boxSizing: 'border-box',
+                                            }}>
+                                                {pet.petImageUrl
+                                                    ? <img src={pet.petImageUrl} alt={pet.petName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    : '🐾'}
+                                            </div>
+                                            <span style={{ fontSize: 11, color: '#555', maxWidth: 56, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {pet.petName}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', gap: 4, background: '#f0f0f0', borderRadius: 8, padding: 3 }}>
-                                {(['LIST', 'GRID'] as const).map(l => (
-                                    <button key={l} onClick={() => handleLayoutToggle(l)} style={{
-                                        padding: '6px 14px', border: 'none', borderRadius: 6, cursor: 'pointer',
-                                        background: layout === l ? '#fff' : 'transparent',
-                                        color: layout === l ? '#333' : '#888',
-                                        fontWeight: layout === l ? 700 : 400,
-                                        boxShadow: layout === l ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-                                        fontSize: 13,
-                                    }}>
-                                        {l === 'LIST' ? '☰' : '⊞'}
-                                    </button>
-                                ))}
+                        )}
+
+                        {/* ── 구독자 전용: 펫은 있지만 아직 미로드 ── */}
+                        {isSubscriber && !petsLoaded && (
+                            <div style={{ ...cardStyle, padding: '16px 20px', color: '#bbb', fontSize: 13 }}>펫 정보 불러오는 중...</div>
+                        )}
+
+                        {/* ── 피드 컨트롤 헤더 ── */}
+                        <div style={{ ...cardStyle, padding: '14px 20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                    {[['', '전체'], ['QNA', 'Q&A'], ['BOAST', '자랑']].map(([val, label]) => (
+                                        <button key={val} onClick={() => { setCategoryFilter(val); setPage(0); }}
+                                            style={tabBtnStyle(categoryFilter === val)}>
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                                {/* 레이아웃 토글: 구독자만 */}
+                                {isSubscriber ? (
+                                    <div style={{ display: 'flex', gap: 2, background: '#f0f0f0', borderRadius: 8, padding: 3 }}>
+                                        {(['LIST', 'GRID'] as const).map(l => (
+                                            <button key={l} onClick={() => handleLayoutToggle(l)} style={{
+                                                padding: '6px 14px', border: 'none', borderRadius: 6, cursor: 'pointer',
+                                                background: layout === l ? '#fff' : 'transparent',
+                                                color: layout === l ? '#333' : '#888',
+                                                fontWeight: layout === l ? 700 : 400,
+                                                boxShadow: layout === l ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                                                fontSize: 13,
+                                            }}>
+                                                {l === 'LIST' ? '☰' : '⊞'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <span style={{ fontSize: 12, color: '#bbb', cursor: 'default' }} title="구독자 전용">☰</span>
+                                )}
                             </div>
                         </div>
 
+                        {/* ── 게시글 목록 ── */}
                         {posts.length === 0 ? (
-                            <p style={{ textAlign: 'center', color: '#999', marginTop: 40 }}>작성한 게시글이 없습니다.</p>
-                        ) : layout === 'GRID' ? (
+                            <p style={{ textAlign: 'center', color: '#999', marginTop: 24 }}>작성한 게시글이 없습니다.</p>
+                        ) : (isSubscriber && layout === 'GRID') ? (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                 {posts.map(post => (
                                     <div key={post.id} onClick={() => navigate(`/posts/${post.id}`)} style={{
@@ -645,7 +689,7 @@ export default function MyPage() {
                         )}
 
                         {totalPages > 1 && (
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 24 }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8 }}>
                                 {Array.from({ length: totalPages }, (_, i) => (
                                     <button key={i} onClick={() => setPage(i)} style={{
                                         width: 36, height: 36, borderRadius: 8, border: 'none', cursor: 'pointer',
@@ -653,6 +697,21 @@ export default function MyPage() {
                                         color: page === i ? '#fff' : '#333', fontWeight: 600,
                                     }}>{i + 1}</button>
                                 ))}
+                            </div>
+                        )}
+
+                        {/* ── 비구독자 구독 유도 ── */}
+                        {!isSubscriber && (
+                            <div style={{
+                                borderRadius: 12, border: '1px dashed #ffd8a8',
+                                background: '#fff9f0', padding: '16px 20px',
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
+                            }}>
+                                <div>
+                                    <div style={{ fontWeight: 700, fontSize: 14, color: '#e67700', marginBottom: 4 }}>🌟 프리미엄 구독 혜택</div>
+                                    <div style={{ fontSize: 13, color: '#888' }}>그리드 뷰 · 펫 프로필 피드를 이용해보세요</div>
+                                </div>
+                                <button onClick={() => navigate('/subscription')} style={{ ...solidBtn, flexShrink: 0 }}>구독하기</button>
                             </div>
                         )}
                     </div>
