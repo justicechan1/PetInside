@@ -11,6 +11,7 @@ import org.example.petinside.domain.mypage.dto.MyPostResponse;
 import org.example.petinside.domain.mypage.dto.NicknameUpdateRequest;
 import org.example.petinside.domain.mypage.dto.PasswordUpdateRequest;
 import org.example.petinside.domain.mypage.dto.ProfileImageUpdateRequest;
+import org.example.petinside.domain.mypage.dto.ProfileLayoutUpdateRequest;
 import org.example.petinside.domain.mypage.dto.PublicProfileResponse;
 import org.example.petinside.domain.mypage.dto.UserInfoResponse;
 import org.example.petinside.domain.subscription.entity.SubscriptionStatus;
@@ -50,7 +51,7 @@ public class MypageService {
         return new UserInfoResponse(
                 user.getUsername(), user.getNickname(),
                 user.getProfileImageUrl(), user.getRole(), user.getCreatedAt(),
-                provider
+                provider, user.getProfileLayout()
         );
     }
 
@@ -83,6 +84,14 @@ public class MypageService {
             throw new CustomException(401, "비밀번호 불일치");
         }
         user.updatePassword(passwordEncoder.encode(request.getNewPassword()));
+    }
+
+    // [F-36] 피드 레이아웃 변경 - GRID/LIST 값을 users 테이블에 저장해 공개 프로필에도 반영
+    @Transactional
+    public void updateProfileLayout(Long userId, ProfileLayoutUpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(404, "유저 없음"));
+        user.updateProfileLayout(request.getProfileLayout());
     }
 
     // [F-07] 프로필 사진 변경 - 클라이언트에서 받은 URL을 USER 테이블에 저장
