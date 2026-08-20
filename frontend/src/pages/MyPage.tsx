@@ -538,11 +538,11 @@ export default function MyPage() {
                         {isSubscriber && petsLoaded && pets.length > 0 && (
                             <div style={{ ...cardStyle, padding: '16px 20px' }}>
                                 <div style={{ fontSize: 12, color: '#aaa', marginBottom: 10, fontWeight: 600, letterSpacing: 0.5 }}>MY PETS</div>
-                                <div style={{ fontSize: 12, color: '#aaa', marginBottom: 10, fontWeight: 600, letterSpacing: 0.5 }}>MY PETS</div>
                                 <PetStoryBubbles
                                     pets={pets}
                                     onSelect={pet => { setSelectedPet(pet); setTab('pets'); }}
                                 />
+                            </div>
                         )}
 
                         {/* ── 구독자 전용: 펫은 있지만 아직 미로드 ── */}
