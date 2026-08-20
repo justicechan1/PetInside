@@ -7,7 +7,7 @@ import {
     prepareBillingKey, createBillingKey, createSubscription,
     prepareOneTimePurchase, completeOneTimePurchase,
     getMySubscription,
-    cancelSubscription, resumeSubscription,
+    cancelSubscription, resumeSubscription, retrySubscriptionPayment,
 } from '../api/subscriptionApi';
 import type { SubscriptionResult, SubscriptionMeResult } from '../api/subscriptionApi';
 import { isAuthenticated, getUserIdFromToken } from '../utils/auth';
@@ -49,6 +49,7 @@ export default function SubscriptionPage() {
     const [mySubscription, setMySubscription] = useState<SubscriptionMeResult | null>(null);
     const [statusLoading, setStatusLoading] = useState(true);
     const [cancelLoading, setCancelLoading] = useState(false);
+    const [retryLoading, setRetryLoading] = useState(false);
 
     const loadStatus = async () => {
         setStatusLoading(true);
@@ -180,6 +181,23 @@ export default function SubscriptionPage() {
         }
     };
 
+    const handleRetryPayment = async () => {
+        if (!mySubscription?.subscriptionId) return;
+        setRetryLoading(true);
+        setError('');
+        try {
+            const updated = await retrySubscriptionPayment(mySubscription.subscriptionId);
+            setMySubscription(updated);
+            if (updated.status === 'PAST_DUE') {
+                setError('결제가 아직 실패 상태예요. 카드 정보를 확인한 뒤 다시 시도해주세요.');
+            }
+        } catch (e: any) {
+            setError(e.response?.data?.message ?? '결제 재시도 중 오류가 발생했습니다.');
+        } finally {
+            setRetryLoading(false);
+        }
+    };
+
     const inputStyle: React.CSSProperties = {
         padding: '11px 14px', border: '1px solid #e0e0e0', borderRadius: 8,
         fontSize: 14, width: '100%', boxSizing: 'border-box', background: '#fff',
@@ -197,11 +215,31 @@ export default function SubscriptionPage() {
     });
 
     const isActiveSubscriber = mySubscription?.hasSubscription && mySubscription.status === 'ACTIVE';
+    const isPastDue = mySubscription?.hasSubscription && mySubscription.status === 'PAST_DUE';
 
-    const benefitBoxStyle: React.CSSProperties = {
-        marginTop: 16, padding: '14px 16px', borderRadius: 10,
-        background: '#fff8ec', border: '1px solid #ffe1b3', fontSize: 13, color: '#9a6a1f',
-    };
+    const BENEFITS = [
+        { icon: '😺', label: '프리미엄 이모티콘' },
+        { icon: '✅', label: '인증 뱃지' },
+        { icon: '🐾', label: '반려동물 프로필' },
+        { icon: '🎨', label: '프로필 커스터마이징' },
+    ];
+
+    const renderBenefits = () => (
+        <div style={{ marginTop: 16 }}>
+            <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: '#9a6a1f' }}>구독 혜택</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                {BENEFITS.map(b => (
+                    <div key={b.label} style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
+                        borderRadius: 10, background: '#fff8ec', border: '1px solid #ffe1b3',
+                    }}>
+                        <span style={{ fontSize: 18, lineHeight: 1 }}>{b.icon}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#9a6a1f' }}>{b.label}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
 
     return (
         <div style={{ background: '#f8f8f8', minHeight: '100vh' }}>
@@ -243,9 +281,7 @@ export default function SubscriptionPage() {
                             </>
                         )}
 
-                        <div style={benefitBoxStyle}>
-                            구독 혜택은 현재 준비 중이에요. 확정되는 대로 이 화면에서 안내해드릴게요.
-                        </div>
+                        {renderBenefits()}
 
                         {mySubscription?.type === 'RECURRING' && (
                             <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
@@ -276,6 +312,35 @@ export default function SubscriptionPage() {
                                 )}
                             </div>
                         )}
+                    </div>
+                ) : isPastDue ? (
+                    <div style={cardStyle}>
+                        <p style={{ fontWeight: 700, fontSize: 16, marginBottom: 8, color: '#c92a2a' }}>
+                            결제에 실패했습니다 😥
+                        </p>
+                        <p style={{ color: '#666', fontSize: 14 }}>
+                            카드 상태를 확인하고 다시 결제해주세요. 계속 실패하면 구독이 자동으로 종료됩니다.
+                        </p>
+                        {error && (
+                            <p style={{ margin: '10px 0 0', fontSize: 13, color: '#f44336' }}>{error}</p>
+                        )}
+                        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                            <button onClick={handleCancel} disabled={cancelLoading} style={{
+                                flex: 1, padding: '11px', border: '1px solid #e0e0e0',
+                                borderRadius: 8, background: '#fff', color: '#666',
+                                fontWeight: 700, fontSize: 14, cursor: cancelLoading ? 'default' : 'pointer',
+                            }}>
+                                {cancelLoading ? '처리 중...' : '구독 취소'}
+                            </button>
+                            <button onClick={handleRetryPayment} disabled={retryLoading} style={{
+                                flex: 1, padding: '11px', border: 'none', borderRadius: 8,
+                                background: 'var(--primary, #FF8C00)', color: '#fff',
+                                fontWeight: 700, fontSize: 14, cursor: retryLoading ? 'default' : 'pointer',
+                                opacity: retryLoading ? 0.6 : 1,
+                            }}>
+                                {retryLoading ? '재시도 중...' : '다시 결제'}
+                            </button>
+                        </div>
                     </div>
                 ) : (
                     <div style={cardStyle}>
@@ -315,9 +380,7 @@ export default function SubscriptionPage() {
                             {loading ? '처리 중...' : mode === 'ONE_TIME' ? '1개월 이용권 구매하기' : '구독 시작하기'}
                         </button>
 
-                        <div style={benefitBoxStyle}>
-                            구독하면 어떤 혜택이 있는지는 현재 준비 중이에요. 확정되는 대로 안내해드릴게요.
-                        </div>
+                        {renderBenefits()}
                     </div>
                 )}
             </div>
