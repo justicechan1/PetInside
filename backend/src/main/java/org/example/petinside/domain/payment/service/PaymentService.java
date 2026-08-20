@@ -11,6 +11,7 @@ import org.example.petinside.domain.payment.entity.PaymentTransaction;
 import org.example.petinside.domain.payment.repository.OrderRepository;
 import org.example.petinside.domain.payment.repository.PaymentRepository;
 import org.example.petinside.domain.payment.repository.PaymentTransactionRepository;
+import org.example.petinside.domain.subscription.entity.Subscription;
 import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.global.exception.CustomException;
@@ -34,6 +35,7 @@ public class PaymentService {
     static final int PLAN_AMOUNT = 1900;
     static final String CURRENCY = "KRW";
     private static final String PAID_STATUS = "PAID";
+    private static final String TEST_CHANNEL_TYPE = "TEST";
 
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
@@ -77,6 +79,21 @@ public class PaymentService {
         return paymentRepository.save(payment);
     }
 
+    // F-22: 정기결제 다음 회차 결제 준비. 이미 존재하는 구독에 대한 재청구라 생성 시점에 바로 연결.
+    @Transactional
+    public Payment createNextRoundPayment(Subscription subscription) {
+        User user = subscription.getUser();
+        int nextRound = paymentRepository.findFirstBySubscriptionIdOrderByRoundDesc(subscription.getId())
+                .map(Payment::getRound)
+                .orElse(0) + 1;
+
+        Order order = orderRepository.save(Order.ready(user, PLAN_AMOUNT, CURRENCY));
+        String paymentId = portOneProperties.paymentIdPrefix() + "-SUB-" + UUID.randomUUID().toString().replace("-", "");
+        Payment payment = Payment.createReady(user, order, paymentId, nextRound, PLAN_AMOUNT, CURRENCY);
+        payment.linkSubscription(subscription);
+        return paymentRepository.save(payment);
+    }
+
     // 구독 완료검증(F-21)에서도 재사용: 이 유저의 READY 결제인지 확인
     @Transactional
     public Payment findReadyPayment(Long userId, String paymentId) {
@@ -104,7 +121,9 @@ public class PaymentService {
         boolean verified = PAID_STATUS.equalsIgnoreCase(detail.status())
                 && detail.amount() != null && detail.amount().total() == payment.getAmount()
                 && CURRENCY.equalsIgnoreCase(detail.currency())
-                && portOneProperties.storeId().equals(detail.storeId());
+                && portOneProperties.storeId().equals(detail.storeId())
+                && isOurChannel(detail.channel())
+                && isTestChannel(detail.channel());
 
         // PortOne이 부여한 승인 시도(transactionId)를 결과와 무관하게 기록.
         paymentTransactionRepository.save(PaymentTransaction.record(
@@ -118,5 +137,20 @@ public class PaymentService {
 
         payment.markPaid(LocalDateTime.now());
         payment.getOrder().markCompleted();
+    }
+
+    // 테스트 상점은 여러 팀이 공용으로 써서, storeId만으로는 다른 팀 채널로 발생한 결제를 걸러내지 못함.
+    // 단건결제 채널(channelKey)과 정기결제 채널(channelKeySubscription) 둘 중 하나와 일치해야 우리 결제로 인정.
+    private boolean isOurChannel(PortOnePaymentDetail.Channel channel) {
+        if (channel == null || channel.key() == null) {
+            return false;
+        }
+        return channel.key().equals(portOneProperties.channelKey())
+                || channel.key().equals(portOneProperties.channelKeySubscription());
+    }
+
+    // 실수로 실결제가 발생하지 않도록, 테스트 채널로 발생한 결제만 인정.
+    private boolean isTestChannel(PortOnePaymentDetail.Channel channel) {
+        return channel != null && TEST_CHANNEL_TYPE.equalsIgnoreCase(channel.type());
     }
 }
