@@ -4,12 +4,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.example.petinside.domain.pet.dto.PetPhotoRequest;
+import org.example.petinside.domain.pet.dto.PetPhotoResponse;
 import org.example.petinside.domain.pet.dto.PetRequest;
 import org.example.petinside.domain.pet.dto.PetResponse;
 import org.example.petinside.domain.pet.service.PetService;
 import org.example.petinside.global.response.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,5 +49,32 @@ public class PetController {
             @PathVariable Long petId,
             @Valid @RequestBody PetRequest request) {
         return ResponseEntity.ok(ApiResponse.success(200, "펫 정보가 수정되었습니다.", petService.update(userId, petId, request)));
+    }
+
+    @Operation(summary = "펫 사진 목록 조회")
+    @GetMapping("/pets/{petId}/photos")
+    public ResponseEntity<ApiResponse<List<PetPhotoResponse>>> getPhotos(
+            @PathVariable Long petId) {
+        return ResponseEntity.ok(ApiResponse.success(200, "조회 성공", petService.getPhotos(petId)));
+    }
+
+    @Operation(summary = "펫 사진 추가", description = "구독자(ACTIVE)만 이용 가능합니다.")
+    @PostMapping("/pets/{petId}/photos")
+    public ResponseEntity<ApiResponse<PetPhotoResponse>> addPhoto(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long petId,
+            @Valid @RequestBody PetPhotoRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(201, "사진이 등록되었습니다.", petService.addPhoto(userId, petId, request)));
+    }
+
+    @Operation(summary = "펫 사진 삭제", description = "구독자(ACTIVE)만 이용 가능합니다.")
+    @DeleteMapping("/pets/{petId}/photos/{photoId}")
+    public ResponseEntity<ApiResponse<Void>> deletePhoto(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long petId,
+            @PathVariable Long photoId) {
+        petService.deletePhoto(userId, petId, photoId);
+        return ResponseEntity.ok(ApiResponse.success(200, "사진이 삭제되었습니다.", null));
     }
 }
