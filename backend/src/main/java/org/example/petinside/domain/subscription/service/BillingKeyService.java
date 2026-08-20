@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -68,7 +69,9 @@ public class BillingKeyService {
     public BillingKey verifyAndStore(BillingKeyIssuanceIntent intent, String rawBillingKey) {
         PortOneBillingKeyDetail detail = portOneClient.getBillingKeyDetail(rawBillingKey);
         boolean verified = ISSUED_STATUS.equalsIgnoreCase(detail.status())
-                && portOneProperties.storeId().equals(detail.storeId());
+                && portOneProperties.storeId().equals(detail.storeId())
+                && isOurChannel(detail.channels())
+                && isSameCustomer(detail.customer(), intent);
 
         if (!verified) {
             throw new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 빌링키 정보가 유효하지 않습니다.");
@@ -78,5 +81,22 @@ public class BillingKeyService {
         BillingKey billingKey = billingKeyRepository.save(BillingKey.issue(intent.getUser(), encrypted, LocalDateTime.now()));
         intent.markCompleted(LocalDateTime.now());
         return billingKey;
+    }
+
+    // 테스트 상점은 여러 팀이 공용으로 써서, storeId만으로는 다른 팀 채널로 발급된 빌링키를 걸러내지 못함.
+    // 정기결제용 채널(channelKeySubscription)로, 그것도 테스트 채널로 발급된 것만 인정.
+    private boolean isOurChannel(List<PortOneBillingKeyDetail.Channel> channels) {
+        if (channels == null) {
+            return false;
+        }
+        return channels.stream().anyMatch(channel ->
+                portOneProperties.channelKeySubscription().equals(channel.key())
+                        && "TEST".equalsIgnoreCase(channel.type()));
+    }
+
+    // 프론트에서 requestIssueBillingKey 호출 시 customerId로 우리 userId를 그대로 넘기므로,
+    // 발급 의도(intent)를 남긴 사용자와 실제로 발급받은 사용자가 같은지 대조 가능.
+    private boolean isSameCustomer(PortOneBillingKeyDetail.Customer customer, BillingKeyIssuanceIntent intent) {
+        return customer != null && String.valueOf(intent.getUser().getId()).equals(customer.id());
     }
 }
