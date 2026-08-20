@@ -2,6 +2,10 @@ package org.example.petinside.domain.post.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.domain.comment.repository.CommentRepository;
+import org.example.petinside.domain.emoji.dto.EmojiResponse;
+import org.example.petinside.domain.emoji.entity.Emoji;
+import org.example.petinside.domain.emoji.entity.PostEmoji;
+import org.example.petinside.domain.emoji.service.EmojiService;
 import org.example.petinside.domain.post.dto.*;
 import org.example.petinside.domain.post.entity.Category;
 import org.example.petinside.domain.post.entity.Post;
@@ -32,6 +36,7 @@ public class PostService {
     private final PostImageRepository postImageRepository;
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
+    private final EmojiService emojiService;
 
     /**
      * 게시글 생성
@@ -60,6 +65,8 @@ public class PostService {
                 post.addImage(image);
             }
         }
+
+        attachEmojis(post, userId, request.getEmojiIds());
 
         Post savedPost = postRepository.save(post);
 
@@ -117,6 +124,13 @@ public class PostService {
                 .map(PostImage::getImageUrl)
                 .collect(Collectors.toList());
 
+        List<EmojiResponse> emojis = post.getEmojis().stream()
+                .map(postEmoji -> new EmojiResponse(
+                        postEmoji.getEmoji().getId(),
+                        postEmoji.getEmoji().getImageUrl(),
+                        postEmoji.getEmoji().getName()))
+                .collect(Collectors.toList());
+
         return PostDetailResponse.builder()
                 .id(post.getId())
                 .title(post.getTitle())
@@ -127,6 +141,7 @@ public class PostService {
                 .authorNickname(post.getAuthor().getNickname())
                 .authorProfileImageUrl(post.getAuthor().getProfileImageUrl())
                 .imageUrls(imageUrls)
+                .emojis(emojis)
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();
@@ -161,7 +176,22 @@ public class PostService {
         }
         post.updateImages(newImages);
 
+        List<Emoji> emojis = emojiService.resolveEmojisForAttach(userId, request.getEmojiIds());
+        List<PostEmoji> newEmojis = new ArrayList<>();
+        for (int i = 0; i < emojis.size(); i++) {
+            newEmojis.add(PostEmoji.builder().emoji(emojis.get(i)).sortOrder(i).build());
+        }
+        post.updateEmojis(newEmojis);
+
         return new IdResponse(post.getId());
+    }
+
+    // 요청받은 emojiIds를 구독 상태 검증 후 게시글에 첨부(sortOrder는 요청 순서를 따름)
+    private void attachEmojis(Post post, Long userId, List<Long> emojiIds) {
+        List<Emoji> emojis = emojiService.resolveEmojisForAttach(userId, emojiIds);
+        for (int i = 0; i < emojis.size(); i++) {
+            post.addEmoji(PostEmoji.builder().emoji(emojis.get(i)).sortOrder(i).build());
+        }
     }
 
     /**

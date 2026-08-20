@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Schema(description = "댓글/대댓글 작성 요청")
 @Getter
 @NoArgsConstructor
@@ -17,4 +19,7 @@ public class CommentCreateRequest {
     @Schema(description = "부모 댓글 ID (대댓글일 때만 지정, 최상위 댓글이면 null). "
             + "이미 대댓글인 댓글을 부모로 지정하면 400 에러", example = "null")
     private Long parentId;
+
+    @Schema(description = "첨부 이모지 ID 목록 (선택, 구독자만 사용 가능)")
+    private List<Long> emojiIds;
 }

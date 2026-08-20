@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import GNB from '../components/GNB';
+import EmojiPicker from '../components/EmojiPicker';
 import { createPost, updatePost, getPost } from '../api/postApi';
 import { uploadImage } from '../api/imageApi';
 
@@ -15,6 +16,7 @@ export default function PostFormPage() {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [imageUrls, setImageUrls] = useState<string[]>([]);
+    const [emojiIds, setEmojiIds] = useState<number[]>([]);
     const [uploading, setUploading] = useState(false);
     const [loading, setLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -26,6 +28,7 @@ export default function PostFormPage() {
             setTitle(post.title);
             setContent(post.content);
             setImageUrls(post.imageUrls ?? []);
+            setEmojiIds((post.emojis ?? []).map(e => e.id));
         });
     }, [postId]);
 
@@ -62,10 +65,10 @@ export default function PostFormPage() {
         setLoading(true);
         try {
             if (isEdit) {
-                await updatePost(Number(postId), { category, title, content, imageUrls });
+                await updatePost(Number(postId), { category, title, content, imageUrls, emojiIds });
                 navigate(`/posts/${postId}`);
             } else {
-                const res = await createPost({ category, title, content, imageUrls });
+                const res = await createPost({ category, title, content, imageUrls, emojiIds });
                 navigate(`/posts/${res.data.id}`);
             }
         } finally {
@@ -142,6 +145,11 @@ export default function PostFormPage() {
                         onChange={handleFileSelect}
                         style={{ display: 'none' }}
                     />
+                </div>
+
+                {/* 이모지 */}
+                <div style={{ marginTop: 16 }}>
+                    <EmojiPicker selectedIds={emojiIds} onChange={setEmojiIds} />
                 </div>
 
                 {/* 버튼 */}
