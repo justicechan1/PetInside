@@ -35,7 +35,12 @@ public class PaymentWebhookService {
 
     @Transactional
     public void handle(String rawBody, String webhookId, String webhookSignature, String webhookTimestamp) {
-        webhookVerifier.verify(rawBody, webhookId, webhookSignature, webhookTimestamp);
+        // PortOne이 noticeUrls 경유 웹훅은 서명 헤더 없이 보내는 경우가 있음.
+        // 그 경우 서명 검증은 생략하되, 아래 로직이 어차피 본문을 그대로 믿지 않고
+        // PortOne 재조회로 확정하므로 안전함(취소 이벤트도 handleCancelled에서 재조회로 확인).
+        if (webhookId != null && webhookSignature != null && webhookTimestamp != null) {
+            webhookVerifier.verify(rawBody, webhookId, webhookSignature, webhookTimestamp);
+        }
 
         PortOneWebhookPayload payload = parse(rawBody);
         if (payload.type() == null || payload.data() == null) {
@@ -83,12 +88,20 @@ public class PaymentWebhookService {
         billingKeyService.verifyAndStore(intent, data.billingKey());
     }
 
-    // 관리자 콘솔 수동 환불 등으로 발생한 취소는 해지 유예 없이 구독을 즉시 차단
+    // 관리자 콘솔 수동 환불 등으로 발생한 취소는 해지 유예 없이 구독을 즉시 차단.
+    // 웹훅 본문의 이벤트 타입을 그대로 믿지 않고, PortOne 재조회로 실제 취소 여부를 확인한 뒤에만 반영.
     private void handleCancelled(Payment payment) {
         Subscription subscription = payment.getSubscription();
-        if (subscription != null) {
-            subscription.expireImmediately();
+        if (subscription == null) {
+            return;
         }
+
+        PortOnePaymentDetail detail = portOneClient.getPaymentDetail(payment.getPaymentId());
+        if (!"CANCELLED".equals(detail.status())) {
+            return;
+        }
+
+        subscription.expireImmediately();
     }
 
     private PortOneWebhookPayload parse(String rawBody) {
