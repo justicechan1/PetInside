@@ -9,9 +9,14 @@ public record PortOnePaymentDetail(
         String storeId,
         String currency,
         String transactionId,
-        Amount amount
+        Amount amount,
+        Channel channel
 ) {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Amount(long total) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Channel(String type, String key) {
     }
 }
