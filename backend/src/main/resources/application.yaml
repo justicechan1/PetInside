@@ -55,6 +55,7 @@ portone:
   webhook-secret: ${PORTONE_WEBHOOK_SECRET}
   payment-id-prefix: PI
   billing-key-encryption-secret: ${BILLING_KEY_ENCRYPTION_SECRET}
+  webhook-notice-url: ${PORTONE_WEBHOOK_NOTICE_URL:}
 
 app:
   oauth2:

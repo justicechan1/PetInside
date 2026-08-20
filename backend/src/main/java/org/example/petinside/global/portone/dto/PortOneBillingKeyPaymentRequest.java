@@ -1,5 +1,7 @@
 package org.example.petinside.global.portone.dto;
 
+import java.util.List;
+
 public record PortOneBillingKeyPaymentRequest(
         String billingKey,
         String storeId,
@@ -7,7 +9,8 @@ public record PortOneBillingKeyPaymentRequest(
         String orderName,
         Customer customer,
         Amount amount,
-        String currency
+        String currency,
+        List<String> noticeUrls
 ) {
     public record Customer(String id) {
     }

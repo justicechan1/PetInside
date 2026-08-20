@@ -10,6 +10,7 @@ public record PortOneProperties(
         String apiSecret,
         String webhookSecret,
         String paymentIdPrefix,
-        String billingKeyEncryptionSecret
+        String billingKeyEncryptionSecret,
+        String webhookNoticeUrl
 ) {
 }
