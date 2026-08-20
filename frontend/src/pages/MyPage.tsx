@@ -97,13 +97,13 @@ export default function MyPage() {
     }, [tab, categoryFilter, page]);
 
     useEffect(() => {
-        if ((!['pets', 'posts'].includes(tab)) || petsLoaded || !isSubscriber) return;
+        if ((!['pets', 'posts'].includes(tab)) || petsLoaded || subscription?.status !== 'ACTIVE') return;
         getMyPets().then(data => {
             setPets(data);
             setPetsLoaded(true);
             if (data.length > 0) setSelectedPet(data[0]);
         }).catch(() => setPetsLoaded(true));
-    }, [tab, petsLoaded, isSubscriber]);
+    }, [tab, petsLoaded, subscription]);
 
     useEffect(() => {
         if (!selectedPet) return;
