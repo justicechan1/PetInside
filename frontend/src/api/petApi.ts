@@ -26,3 +26,18 @@ export const createPet = (data: PetForm) =>
 
 export const updatePet = (petId: number, data: PetForm) =>
     axiosInstance.put<{ data: Pet }>(`/api/v1/pets/${petId}`, data).then(r => r.data.data);
+
+export interface PetPhoto {
+    id: number;
+    imageUrl: string;
+    createdAt: string;
+}
+
+export const getPetPhotos = (petId: number) =>
+    axiosInstance.get<{ data: PetPhoto[] }>(`/api/v1/pets/${petId}/photos`).then(r => r.data.data);
+
+export const addPetPhoto = (petId: number, imageUrl: string) =>
+    axiosInstance.post<{ data: PetPhoto }>(`/api/v1/pets/${petId}/photos`, { imageUrl }).then(r => r.data.data);
+
+export const deletePetPhoto = (petId: number, photoId: number) =>
+    axiosInstance.delete(`/api/v1/pets/${petId}/photos/${photoId}`);

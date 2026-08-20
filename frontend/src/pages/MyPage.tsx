@@ -4,13 +4,13 @@ import GNB from '../components/GNB';
 import { getMyInfo, updateNickname, updatePassword, updateProfileImage, getMyPosts, updateProfileLayout } from '../api/mypageApi';
 import { uploadImage } from '../api/imageApi';
 import type { UserInfo, MyPost } from '../api/mypageApi';
-import { getMySubscription, getPaymentHistory, cancelSubscription, resumeSubscription, retrySubscriptionPayment } from '../api/subscriptionApi';
+import { getMySubscription, getPaymentHistory } from '../api/subscriptionApi';
 import type { SubscriptionMeResult, PaymentHistoryItem } from '../api/subscriptionApi';
-import { getMyPets, createPet, updatePet } from '../api/petApi';
-import type { Pet, PetForm } from '../api/petApi';
+import { getMyPets, createPet, updatePet, getPetPhotos, addPetPhoto, deletePetPhoto } from '../api/petApi';
+import type { Pet, PetForm, PetPhoto } from '../api/petApi';
 import { isAuthenticated } from '../utils/auth';
 
-type Tab = 'profile' | 'posts' | 'payment';
+type Tab = 'profile' | 'posts' | 'pets' | 'payment';
 
 const BadgeIcon = () => (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
@@ -29,38 +29,51 @@ export default function MyPage() {
         if (!isAuthenticated()) navigate('/login');
     }, [navigate]);
 
+    // ─── 유저 정보 ───────────────────────────────────────────────────
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [nickname, setNickname] = useState('');
     const [nicknameError, setNicknameError] = useState('');
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [passwordError, setPasswordError] = useState('');
-
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [imageError, setImageError] = useState('');
 
+    // ─── 게시글 ──────────────────────────────────────────────────────
     const [posts, setPosts] = useState<MyPost[]>([]);
     const [totalPages, setTotalPages] = useState(0);
     const [page, setPage] = useState(0);
     const [categoryFilter, setCategoryFilter] = useState('');
+    const [layout, setLayout] = useState<'LIST' | 'GRID'>('LIST');
 
+    // ─── 구독 ────────────────────────────────────────────────────────
     const [subscription, setSubscription] = useState<SubscriptionMeResult | null>(null);
+
+    // ─── 결제 내역 ───────────────────────────────────────────────────
     const [payments, setPayments] = useState<PaymentHistoryItem[]>([]);
     const [payLoading, setPayLoading] = useState(false);
-    const [retryLoading, setRetryLoading] = useState(false);
 
+    // ─── 반려동물 ─────────────────────────────────────────────────────
     const [pets, setPets] = useState<Pet[]>([]);
     const [petsLoaded, setPetsLoaded] = useState(false);
-    const [layout, setLayout] = useState<'LIST' | 'GRID'>('LIST');
-    const [showPetForm, setShowPetForm] = useState(false);
-    const [editingPet, setEditingPet] = useState<Pet | null>(null);
+    const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
+    const [petPhotos, setPetPhotos] = useState<{ [petId: number]: PetPhoto[] }>({});
+    const [photosLoading, setPhotosLoading] = useState(false);
+    const [photoUploading, setPhotoUploading] = useState(false);
+    const photoFileInputRef = useRef<HTMLInputElement>(null);
     const emptyPetForm: PetForm = { petName: '', petType: '', petBirthday: '', petIntro: '', petImageUrl: '' };
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [editingPet, setEditingPet] = useState<Pet | null>(null);
     const [petForm, setPetForm] = useState<PetForm>(emptyPetForm);
+    const [petImageFile, setPetImageFile] = useState<File | null>(null);
+    const [petImagePreview, setPetImagePreview] = useState<string | null>(null);
     const [petError, setPetError] = useState('');
     const [petSaving, setPetSaving] = useState(false);
+    const petFileInputRef = useRef<HTMLInputElement>(null);
 
+    // ─── 초기 로드 ───────────────────────────────────────────────────
     useEffect(() => {
         getMyInfo().then(info => {
             setUserInfo(info);
@@ -79,9 +92,23 @@ export default function MyPage() {
     }, [tab, categoryFilter, page]);
 
     useEffect(() => {
-        if (tab !== 'profile' || petsLoaded) return;
-        getMyPets().then(data => { setPets(data); setPetsLoaded(true); }).catch(() => setPetsLoaded(true));
+        if (tab !== 'pets' || petsLoaded) return;
+        getMyPets().then(data => {
+            setPets(data);
+            setPetsLoaded(true);
+            if (data.length > 0) setSelectedPet(data[0]);
+        }).catch(() => setPetsLoaded(true));
     }, [tab, petsLoaded]);
+
+    useEffect(() => {
+        if (!selectedPet) return;
+        if (petPhotos[selectedPet.id] !== undefined) return;
+        setPhotosLoading(true);
+        getPetPhotos(selectedPet.id)
+            .then(photos => setPetPhotos(prev => ({ ...prev, [selectedPet.id]: photos })))
+            .catch(() => setPetPhotos(prev => ({ ...prev, [selectedPet.id]: [] })))
+            .finally(() => setPhotosLoading(false));
+    }, [selectedPet]);
 
     useEffect(() => {
         if (tab !== 'payment') return;
@@ -89,6 +116,7 @@ export default function MyPage() {
         getPaymentHistory().then(setPayments).catch(() => {}).finally(() => setPayLoading(false));
     }, [tab]);
 
+    // ─── 프로필 이미지 ────────────────────────────────────────────────
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -118,6 +146,7 @@ export default function MyPage() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
+    // ─── 닉네임/비밀번호 ──────────────────────────────────────────────
     const handleNicknameUpdate = async () => {
         setNicknameError('');
         if (!nickname.trim()) { setNicknameError('닉네임을 입력해주세요.'); return; }
@@ -146,55 +175,7 @@ export default function MyPage() {
         }
     };
 
-    const handleCancel = async () => {
-        if (!subscription?.subscriptionId) return;
-        if (!confirm('구독을 해지 예약하시겠습니까? 다음 결제일까지는 계속 이용할 수 있습니다.')) return;
-        try {
-            const updated = await cancelSubscription(subscription.subscriptionId);
-            setSubscription(updated);
-        } catch (e: any) {
-            alert(e.response?.data?.message ?? '해지 처리 중 오류가 발생했습니다.');
-        }
-    };
-
-    const handleResume = async () => {
-        if (!subscription?.subscriptionId) return;
-        try {
-            const updated = await resumeSubscription(subscription.subscriptionId);
-            setSubscription(updated);
-        } catch (e: any) {
-            alert(e.response?.data?.message ?? '재개 처리 중 오류가 발생했습니다.');
-        }
-    };
-
-    const handleRetryPayment = async () => {
-        if (!subscription?.subscriptionId) return;
-        setRetryLoading(true);
-        try {
-            const updated = await retrySubscriptionPayment(subscription.subscriptionId);
-            setSubscription(updated);
-            if (updated.status === 'PAST_DUE') {
-                alert('결제가 아직 실패 상태입니다. 카드 정보를 확인한 뒤 다시 시도해주세요.');
-            }
-        } catch (e: any) {
-            alert(e.response?.data?.message ?? '결제 재시도 중 오류가 발생했습니다.');
-        } finally {
-            setRetryLoading(false);
-        }
-    };
-
-    // 유예기간 중 해지는 남은 기간을 기다리지 않고 즉시 종료됨(cancelDuringGracePeriod)
-    const handleCancelDuringGracePeriod = async () => {
-        if (!subscription?.subscriptionId) return;
-        if (!confirm('구독을 지금 바로 종료하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-        try {
-            const updated = await cancelSubscription(subscription.subscriptionId);
-            setSubscription(updated);
-        } catch (e: any) {
-            alert(e.response?.data?.message ?? '해지 처리 중 오류가 발생했습니다.');
-        }
-    };
-
+    // ─── 레이아웃 토글 ────────────────────────────────────────────────
     const handleLayoutToggle = async (newLayout: 'LIST' | 'GRID') => {
         if (newLayout === layout) return;
         const prev = layout;
@@ -202,14 +183,43 @@ export default function MyPage() {
         await updateProfileLayout(newLayout).catch(() => setLayout(prev));
     };
 
-    const openAddPet = () => { setEditingPet(null); setPetForm(emptyPetForm); setPetError(''); setShowPetForm(true); };
+    // ─── 반려동물 ─────────────────────────────────────────────────────
+    const openAddPet = () => {
+        setEditingPet(null);
+        setPetForm(emptyPetForm);
+        clearPetImage();
+        setPetError('');
+        setShowAddForm(true);
+    };
+
     const openEditPet = (pet: Pet) => {
         setEditingPet(pet);
         setPetForm({ petName: pet.petName, petType: pet.petType, petBirthday: pet.petBirthday ?? '', petIntro: pet.petIntro ?? '', petImageUrl: pet.petImageUrl ?? '' });
+        clearPetImage();
         setPetError('');
-        setShowPetForm(true);
+        setShowAddForm(false);
     };
-    const closePetForm = () => { setShowPetForm(false); setEditingPet(null); };
+
+    const closePetForm = () => {
+        setEditingPet(null);
+        setShowAddForm(false);
+        clearPetImage();
+    };
+
+    const clearPetImage = () => {
+        if (petImagePreview) URL.revokeObjectURL(petImagePreview);
+        setPetImageFile(null);
+        setPetImagePreview(null);
+        if (petFileInputRef.current) petFileInputRef.current.value = '';
+    };
+
+    const handlePetImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setPetImageFile(file);
+        if (petImagePreview) URL.revokeObjectURL(petImagePreview);
+        setPetImagePreview(URL.createObjectURL(file));
+    };
 
     const handlePetSave = async () => {
         if (!petForm.petName.trim()) { setPetError('펫 이름을 입력해주세요.'); return; }
@@ -217,11 +227,17 @@ export default function MyPage() {
         setPetSaving(true);
         setPetError('');
         try {
+            let imageUrl = petForm.petImageUrl;
+            if (petImageFile) {
+                imageUrl = await uploadImage(petImageFile);
+            }
+            const formToSave = { ...petForm, petImageUrl: imageUrl };
+
             if (editingPet) {
-                const updated = await updatePet(editingPet.id, petForm);
+                const updated = await updatePet(editingPet.id, formToSave);
                 setPets(prev => prev.map(p => p.id === updated.id ? updated : p));
             } else {
-                const created = await createPet(petForm);
+                const created = await createPet(formToSave);
                 setPets(prev => [...prev, created]);
             }
             closePetForm();
@@ -232,14 +248,44 @@ export default function MyPage() {
         }
     };
 
-    const formatDate = (iso: string) => new Date(iso).toLocaleDateString('ko-KR');
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !selectedPet) return;
+        setPhotoUploading(true);
+        try {
+            const url = await uploadImage(file);
+            const photo = await addPetPhoto(selectedPet.id, url);
+            setPetPhotos(prev => ({ ...prev, [selectedPet.id]: [photo, ...(prev[selectedPet.id] ?? [])] }));
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '사진 업로드에 실패했습니다.');
+        } finally {
+            setPhotoUploading(false);
+            if (photoFileInputRef.current) photoFileInputRef.current.value = '';
+        }
+    };
+
+    const handlePhotoDelete = async (photoId: number) => {
+        if (!selectedPet) return;
+        if (!confirm('이 사진을 삭제하시겠습니까?')) return;
+        try {
+            await deletePetPhoto(selectedPet.id, photoId);
+            setPetPhotos(prev => ({ ...prev, [selectedPet.id]: (prev[selectedPet.id] ?? []).filter(p => p.id !== photoId) }));
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '삭제에 실패했습니다.');
+        }
+    };
+
+    const selectPet = (pet: Pet) => {
+        setSelectedPet(pet);
+        setEditingPet(null);
+        setShowAddForm(false);
+    };
 
     const isSubscriber = subscription?.status === 'ACTIVE';
-    const isRecurring = subscription?.type === 'RECURRING';
 
     // ─── 스타일 상수 ───────────────────────────────────────────────────
     const tabBtnStyle = (active: boolean): React.CSSProperties => ({
-        padding: '10px 28px', border: 'none', borderRadius: 20, cursor: 'pointer', fontWeight: 600,
+        padding: '10px 20px', border: 'none', borderRadius: 20, cursor: 'pointer', fontWeight: 600, fontSize: 14,
         background: active ? 'var(--primary, #FF8C00)' : '#f0f0f0',
         color: active ? '#fff' : '#333',
     });
@@ -264,144 +310,57 @@ export default function MyPage() {
         background: '#fff', cursor: 'pointer', fontSize: 13,
     };
 
-    // ─── 구독 상태 배너 (프로필/결제 탭 공용) ──────────────────────────
-    const renderSubscriptionBanner = () => {
-        if (!subscription) return null;
-        const { hasSubscription, status, canceledAt, nextBillingAt } = subscription;
+    // ─── 펫 인라인 폼 ─────────────────────────────────────────────────
+    const renderPetForm = (title: string) => (
+        <div style={{ ...cardStyle, padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: '#222' }}>{title}</div>
 
-        if (!hasSubscription) return (
-            <div style={{ background: '#f5f5f5', borderRadius: 12, padding: '18px 20px',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                    <div style={{ fontWeight: 700, color: '#444', marginBottom: 2 }}>프리미엄 멤버십</div>
-                    <div style={{ fontSize: 13, color: '#888' }}>인증뱃지, 펫 프로필, 커스텀 피드 혜택</div>
+            {/* 이미지 업로드 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div
+                    onClick={() => petFileInputRef.current?.click()}
+                    style={{
+                        width: 72, height: 72, borderRadius: '50%', background: '#f0f0f0',
+                        border: '2px dashed #ccc', overflow: 'hidden', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', fontSize: 28,
+                    }}
+                >
+                    {petImagePreview
+                        ? <img src={petImagePreview} alt="미리보기" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : petForm.petImageUrl
+                            ? <img src={petForm.petImageUrl} alt="현재" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : '🐾'}
                 </div>
-                <button onClick={() => navigate('/subscription')} style={solidBtn}>구독하기</button>
-            </div>
-        );
-
-        if (status === 'ACTIVE' && canceledAt) return (
-            <div style={{ background: '#FFF3E0', border: '1px solid #FFB74D', borderRadius: 12, padding: '18px 20px',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <div style={{ fontWeight: 700, color: '#E65100' }}>해지 예약됨</div>
-                    {nextBillingAt && <div style={{ fontSize: 13, color: '#BF360C', marginTop: 4 }}>{formatDate(nextBillingAt)}까지 이용 가능</div>}
-                </div>
-                {isRecurring && <button onClick={handleResume} style={solidBtn}>재개하기</button>}
-            </div>
-        );
-
-        if (status === 'ACTIVE') return (
-            <div style={{ background: '#E7F5FF', border: '1px solid #74C0FC', borderRadius: 12, padding: '18px 20px',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                    <div style={{ fontWeight: 700, color: '#1864AB', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <BadgeIcon /> 프리미엄 구독 이용 중
-                    </div>
-                    {nextBillingAt && isRecurring && <div style={{ fontSize: 13, color: '#1971C2', marginTop: 4 }}>다음 결제일: {formatDate(nextBillingAt)}</div>}
-                    {nextBillingAt && !isRecurring && <div style={{ fontSize: 13, color: '#1971C2', marginTop: 4 }}>{formatDate(nextBillingAt)}까지 이용 가능</div>}
-                </div>
-                {isRecurring && <button onClick={handleCancel} style={outlineBtn}>해지 예약</button>}
-            </div>
-        );
-
-        // 정기결제 실패 · 유예기간(PAST_DUE): 혜택은 즉시 차단, [다시 결제]로 재시도하거나 [구독 취소]로 바로 종료
-        if (status === 'PAST_DUE') return (
-            <div style={{ background: '#FFF5F5', border: '1px solid #FFA8A8', borderRadius: 12, padding: '18px 20px',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                <div>
-                    <div style={{ fontWeight: 700, color: '#C92A2A' }}>결제에 실패했습니다</div>
-                    <div style={{ fontSize: 13, color: '#e03131', marginTop: 4 }}>
-                        카드 상태를 확인하고 다시 결제해주세요. 계속 실패하면 구독이 자동으로 종료됩니다.
-                    </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={handleCancelDuringGracePeriod} style={outlineBtn}>구독 취소</button>
-                    <button onClick={handleRetryPayment} disabled={retryLoading} style={{ ...solidBtn, opacity: retryLoading ? 0.6 : 1 }}>
-                        {retryLoading ? '재시도 중…' : '다시 결제'}
+                    <div style={{ fontSize: 13, color: '#666', marginBottom: 6 }}>사진을 클릭해서 변경하세요</div>
+                    <button onClick={() => petFileInputRef.current?.click()} style={{ ...outlineBtn, fontSize: 12, padding: '5px 12px' }}>
+                        사진 선택
                     </button>
                 </div>
+                <input ref={petFileInputRef} type="file" accept="image/*" onChange={handlePetImageSelect} style={{ display: 'none' }} />
             </div>
-        );
 
-        return (
-            <div style={{ background: '#FFF5F5', border: '1px solid #FFA8A8', borderRadius: 12, padding: '18px 20px',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                    <div style={{ fontWeight: 700, color: '#C92A2A' }}>구독이 만료되었습니다</div>
-                    <div style={{ fontSize: 13, color: '#e03131', marginTop: 4 }}>재구독하면 모든 혜택이 즉시 복구됩니다.</div>
-                </div>
-                <button onClick={() => navigate('/subscription')} style={solidBtn}>재구독하기</button>
+            <input placeholder="이름 *" value={petForm.petName}
+                onChange={e => setPetForm(p => ({ ...p, petName: e.target.value }))} style={inputStyle} />
+            <input placeholder="종류 * (예: 골든리트리버, 페르시안 고양이)" value={petForm.petType}
+                onChange={e => setPetForm(p => ({ ...p, petType: e.target.value }))} style={inputStyle} />
+            <input type="date" value={petForm.petBirthday}
+                onChange={e => setPetForm(p => ({ ...p, petBirthday: e.target.value }))} style={inputStyle} />
+            <textarea placeholder="소개 (선택)" value={petForm.petIntro}
+                onChange={e => setPetForm(p => ({ ...p, petIntro: e.target.value }))}
+                rows={3} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
+
+            {petError && <p style={{ margin: 0, fontSize: 13, color: '#f44336' }}>{petError}</p>}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={handlePetSave} disabled={petSaving} style={{ ...solidBtn, opacity: petSaving ? 0.7 : 1 }}>
+                    {petSaving ? '저장 중...' : '저장'}
+                </button>
+                <button onClick={closePetForm} style={outlineBtn}>취소</button>
             </div>
-        );
-    };
-
-    // ─── 잠금 배너 (F-35/F-36 비구독자 공용) ──────────────────────────
-    const renderLockBanner = (label: string) => (
-        <div style={{ textAlign: 'center', padding: '28px 0' }}>
-            <div style={{ fontSize: 32, marginBottom: 10 }}>🔒</div>
-            <div style={{ fontSize: 14, color: '#888', marginBottom: 16 }}>{label}은 프리미엄 구독자 전용 기능입니다.</div>
-            <button onClick={() => navigate('/subscription')} style={solidBtn}>구독하기</button>
         </div>
     );
-
-    // ─── F-35 반려동물 프로필 내용 ────────────────────────────────────
-    const renderPetSection = () => {
-        if (!isSubscriber) return renderLockBanner('반려동물 프로필');
-
-        if (showPetForm) return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ fontWeight: 600, fontSize: 14, color: '#444', marginBottom: 2 }}>
-                    {editingPet ? '펫 정보 수정' : '새 반려동물 등록'}
-                </div>
-                <input placeholder="이름 *" value={petForm.petName}
-                    onChange={e => setPetForm(p => ({ ...p, petName: e.target.value }))} style={inputStyle} />
-                <input placeholder="종류 * (예: 골든 리트리버, 페르시안 고양이)" value={petForm.petType}
-                    onChange={e => setPetForm(p => ({ ...p, petType: e.target.value }))} style={inputStyle} />
-                <input type="date" value={petForm.petBirthday}
-                    onChange={e => setPetForm(p => ({ ...p, petBirthday: e.target.value }))} style={inputStyle} />
-                <textarea placeholder="소개 (선택)" value={petForm.petIntro}
-                    onChange={e => setPetForm(p => ({ ...p, petIntro: e.target.value }))}
-                    rows={3} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
-                <input placeholder="이미지 URL (선택)" value={petForm.petImageUrl}
-                    onChange={e => setPetForm(p => ({ ...p, petImageUrl: e.target.value }))} style={inputStyle} />
-                {petError && <p style={{ margin: 0, fontSize: 13, color: '#f44336' }}>{petError}</p>}
-                <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={handlePetSave} disabled={petSaving} style={{ ...solidBtn, opacity: petSaving ? 0.7 : 1 }}>
-                        {petSaving ? '저장 중...' : '저장'}
-                    </button>
-                    <button onClick={closePetForm} style={outlineBtn}>취소</button>
-                </div>
-            </div>
-        );
-
-        if (pets.length === 0) return (
-            <p style={{ textAlign: 'center', color: '#bbb', padding: '16px 0', margin: 0 }}>
-                등록된 반려동물이 없습니다.
-            </p>
-        );
-
-        return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {pets.map(pet => (
-                    <div key={pet.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: '#f8f9fa', borderRadius: 12 }}>
-                        <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#e9ecef', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-                            {pet.petImageUrl
-                                ? <img src={pet.petImageUrl} alt={pet.petName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                : '🐾'}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, fontSize: 15 }}>{pet.petName}</div>
-                            <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>{pet.petType}</div>
-                            {pet.petBirthday && <div style={{ fontSize: 12, color: '#aaa', marginTop: 1 }}>{pet.petBirthday}</div>}
-                            {pet.petIntro && <div style={{ fontSize: 13, color: '#555', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pet.petIntro}</div>}
-                        </div>
-                        <button onClick={() => openEditPet(pet)} style={outlineBtn}>수정</button>
-                    </div>
-                ))}
-            </div>
-        );
-    };
 
     return (
         <div style={{ background: '#f8f8f8', minHeight: '100vh' }}>
@@ -409,9 +368,10 @@ export default function MyPage() {
             <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 16px' }}>
 
                 {/* 탭 */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
                     <button style={tabBtnStyle(tab === 'profile')} onClick={() => setTab('profile')}>프로필</button>
                     <button style={tabBtnStyle(tab === 'posts')} onClick={() => setTab('posts')}>내 게시글</button>
+                    <button style={tabBtnStyle(tab === 'pets')} onClick={() => setTab('pets')}>🐾 반려동물</button>
                     <button style={tabBtnStyle(tab === 'payment')} onClick={() => setTab('payment')}>구독·결제</button>
                 </div>
 
@@ -419,7 +379,7 @@ export default function MyPage() {
                 {tab === 'profile' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-                        {/* 1. 프로필 카드 */}
+                        {/* 프로필 카드 */}
                         <div style={cardStyle}>
                             <div style={{ height: 80, background: 'linear-gradient(135deg, #FF8C00 0%, #ffb347 100%)' }} />
                             <div style={{ padding: '0 28px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: -44 }}>
@@ -479,23 +439,7 @@ export default function MyPage() {
                             </div>
                         </div>
 
-                        {/* 2. F-35 반려동물 프로필 */}
-                        <div style={cardStyle}>
-                            <div style={{ padding: '20px 24px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                                    <div style={{ fontWeight: 700, fontSize: 15, color: '#222', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        🐾 반려동물 프로필
-                                        <span style={{ fontSize: 11, background: '#E7F5FF', color: '#1864AB', padding: '2px 8px', borderRadius: 10, fontWeight: 500 }}>구독자 전용</span>
-                                    </div>
-                                    {isSubscriber && !showPetForm && (
-                                        <button onClick={openAddPet} style={solidBtn}>+ 추가</button>
-                                    )}
-                                </div>
-                                {renderPetSection()}
-                            </div>
-                        </div>
-
-                        {/* 4. 닉네임 변경 */}
+                        {/* 닉네임 변경 */}
                         <div style={cardStyle}>
                             <div style={{ padding: '20px 24px' }}>
                                 <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14, color: '#222' }}>닉네임 변경</div>
@@ -513,7 +457,7 @@ export default function MyPage() {
                             </div>
                         </div>
 
-                        {/* 5. 비밀번호 변경 (소셜 로그인 제외) */}
+                        {/* 비밀번호 변경 */}
                         {!userInfo?.provider && (
                             <div style={cardStyle}>
                                 <div style={{ padding: '20px 24px' }}>
@@ -558,7 +502,7 @@ export default function MyPage() {
                                         color: layout === l ? '#333' : '#888',
                                         fontWeight: layout === l ? 700 : 400,
                                         boxShadow: layout === l ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-                                        fontSize: 13, transition: 'all 0.15s',
+                                        fontSize: 13,
                                     }}>
                                         {l === 'LIST' ? '☰' : '⊞'}
                                     </button>
@@ -575,7 +519,7 @@ export default function MyPage() {
                                         borderRadius: 12, border: '1px solid #f0f0f0', cursor: 'pointer',
                                         background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden',
                                     }}>
-                                        <div style={{ height: 120, background: post.thumbnailImageUrl ? undefined : '#f5f5f5', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div style={{ height: 120, background: '#f5f5f5', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                             {post.thumbnailImageUrl
                                                 ? <img src={post.thumbnailImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                 : <span style={{ fontSize: 32 }}>📝</span>}
@@ -634,51 +578,211 @@ export default function MyPage() {
                     </div>
                 )}
 
-                {/* ───── 구독·결제 탭 (F-24 + F-25 통합) ───── */}
-                {tab === 'payment' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* ───── 🐾 반려동물 탭 ───── */}
+                {tab === 'pets' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
 
-                        {/* 구독 상태 배너 */}
-                        {renderSubscriptionBanner()}
-
-                        {/* 결제 내역 */}
-                        <div style={cardStyle}>
-                            <div style={{ padding: '20px 24px' }}>
-                                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: '#222' }}>결제 내역</div>
-                                {payLoading ? (
-                                    <p style={{ color: '#999', textAlign: 'center', padding: '20px 0' }}>불러오는 중...</p>
-                                ) : payments.length === 0 ? (
-                                    <div style={{ textAlign: 'center', padding: '32px 0' }}>
-                                        <p style={{ color: '#999', margin: '0 0 16px' }}>결제 내역이 없습니다.</p>
-                                        <button onClick={() => navigate('/subscription')} style={solidBtn}>구독하러 가기</button>
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        {payments.map((item, i) => (
-                                            <div key={item.paymentId} style={{
-                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                padding: '16px 0', borderTop: i === 0 ? 'none' : '1px solid #f0f0f0',
+                        {!isSubscriber ? (
+                            <div style={{ ...cardStyle, padding: '48px 24px', textAlign: 'center' }}>
+                                <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
+                                <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 8 }}>프리미엄 구독자 전용 기능</div>
+                                <div style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>
+                                    반려동물 프로필을 등록하고 피드를 꾸며보세요.
+                                </div>
+                                <button onClick={() => navigate('/subscription')} style={{ ...solidBtn, padding: '12px 28px', fontSize: 15 }}>
+                                    구독하기
+                                </button>
+                            </div>
+                        ) : (
+                            <div style={cardStyle}>
+                                {/* ── 스토리 버블 행 ── */}
+                                <div style={{
+                                    display: 'flex', gap: 16, padding: '20px 20px 16px',
+                                    overflowX: 'auto', borderBottom: '1px solid #f0f0f0',
+                                    scrollbarWidth: 'none',
+                                }}>
+                                    {pets.map(pet => (
+                                        <div key={pet.id} onClick={() => selectPet(pet)}
+                                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer', flexShrink: 0 }}>
+                                            <div style={{
+                                                width: 64, height: 64, borderRadius: '50%',
+                                                background: '#f0f0f0', overflow: 'hidden',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
+                                                border: selectedPet?.id === pet.id
+                                                    ? '3px solid var(--primary, #FF8C00)'
+                                                    : '3px solid #e0e0e0',
+                                                boxSizing: 'border-box',
                                             }}>
-                                                <div>
-                                                    <div style={{ fontWeight: 700, fontSize: 16 }}>
-                                                        {item.amount.toLocaleString()}{item.currency === 'KRW' ? '원' : ` ${item.currency}`}
-                                                    </div>
-                                                    <div style={{ fontSize: 13, color: '#999', marginTop: 4 }}>
-                                                        {new Date(item.paidAt ?? item.createdAt).toLocaleString('ko-KR')}
-                                                    </div>
-                                                </div>
-                                                <span style={{
-                                                    fontSize: 13, fontWeight: 700, padding: '4px 12px', borderRadius: 12,
-                                                    color: item.status === 'PAID' ? '#2e7d32' : item.status === 'FAILED' ? '#c62828' : '#666',
-                                                    background: item.status === 'PAID' ? '#e8f5e9' : item.status === 'FAILED' ? '#ffebee' : '#f0f0f0',
-                                                }}>
-                                                    {item.status === 'PAID' ? '결제완료' : item.status === 'FAILED' ? '실패' : '준비중'}
-                                                </span>
+                                                {pet.petImageUrl
+                                                    ? <img src={pet.petImageUrl} alt={pet.petName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    : '🐾'}
                                             </div>
-                                        ))}
+                                            <span style={{
+                                                fontSize: 12, fontWeight: selectedPet?.id === pet.id ? 700 : 400,
+                                                color: selectedPet?.id === pet.id ? 'var(--primary, #FF8C00)' : '#555',
+                                                maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                            }}>{pet.petName}</span>
+                                        </div>
+                                    ))}
+                                    {/* 새 펫 추가 버블 */}
+                                    <div onClick={openAddPet}
+                                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer', flexShrink: 0 }}>
+                                        <div style={{
+                                            width: 64, height: 64, borderRadius: '50%',
+                                            background: '#f8f8f8', border: '3px dashed #ddd', boxSizing: 'border-box',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: '#bbb',
+                                        }}>+</div>
+                                        <span style={{ fontSize: 12, color: '#bbb' }}>추가</span>
+                                    </div>
+                                </div>
+
+                                {/* ── 선택된 펫 프로필 헤더 ── */}
+                                {selectedPet && !showAddForm && (
+                                    <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0' }}>
+                                        {editingPet?.id === selectedPet.id ? (
+                                            renderPetForm('펫 정보 수정')
+                                        ) : (
+                                            <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+                                                <div style={{
+                                                    width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
+                                                    background: '#f0f0f0', overflow: 'hidden',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32,
+                                                }}>
+                                                    {selectedPet.petImageUrl
+                                                        ? <img src={selectedPet.petImageUrl} alt={selectedPet.petName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        : '🐾'}
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                                                        <span style={{ fontWeight: 700, fontSize: 17 }}>{selectedPet.petName}</span>
+                                                        <button onClick={() => openEditPet(selectedPet)} style={{ ...outlineBtn, padding: '4px 12px', fontSize: 12 }}>수정</button>
+                                                    </div>
+                                                    <div style={{ fontSize: 13, color: '#888' }}>
+                                                        {selectedPet.petType}
+                                                        {selectedPet.petBirthday && <span> · {selectedPet.petBirthday}</span>}
+                                                    </div>
+                                                    {selectedPet.petIntro && (
+                                                        <div style={{ fontSize: 13, color: '#444', marginTop: 6, lineHeight: 1.5 }}>
+                                                            {selectedPet.petIntro}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                                                    <div style={{ fontWeight: 700, fontSize: 18 }}>{(petPhotos[selectedPet.id] ?? []).length}</div>
+                                                    <div style={{ fontSize: 12, color: '#888' }}>게시물</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* ── 새 펫 추가 폼 ── */}
+                                {showAddForm && (
+                                    <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0' }}>
+                                        {renderPetForm('새 반려동물 등록')}
+                                    </div>
+                                )}
+
+                                {/* ── 사진 그리드 피드 ── */}
+                                {selectedPet && !showAddForm && !editingPet && (
+                                    <div>
+                                        {photosLoading ? (
+                                            <p style={{ textAlign: 'center', color: '#bbb', padding: '32px 0' }}>불러오는 중...</p>
+                                        ) : (
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2, padding: 2 }}>
+                                                {/* 사진 추가 칸 */}
+                                                <div
+                                                    onClick={() => photoFileInputRef.current?.click()}
+                                                    style={{
+                                                        aspectRatio: '1', background: '#f8f8f8', cursor: 'pointer',
+                                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                                        gap: 4, border: '2px dashed #e0e0e0',
+                                                    }}
+                                                >
+                                                    {photoUploading
+                                                        ? <span style={{ fontSize: 12, color: '#bbb' }}>업로드 중...</span>
+                                                        : <>
+                                                            <span style={{ fontSize: 28, color: '#ccc' }}>+</span>
+                                                            <span style={{ fontSize: 11, color: '#bbb' }}>사진 추가</span>
+                                                          </>
+                                                    }
+                                                </div>
+                                                <input ref={photoFileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+
+                                                {/* 사진 목록 */}
+                                                {(petPhotos[selectedPet.id] ?? []).map(photo => (
+                                                    <div key={photo.id} style={{ position: 'relative', aspectRatio: '1', overflow: 'hidden' }}
+                                                        onMouseEnter={e => (e.currentTarget.querySelector<HTMLElement>('.del-btn')!.style.opacity = '1')}
+                                                        onMouseLeave={e => (e.currentTarget.querySelector<HTMLElement>('.del-btn')!.style.opacity = '0')}
+                                                    >
+                                                        <img src={photo.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                                        <button
+                                                            className="del-btn"
+                                                            onClick={() => handlePhotoDelete(photo.id)}
+                                                            style={{
+                                                                position: 'absolute', top: 4, right: 4,
+                                                                width: 24, height: 24, borderRadius: '50%',
+                                                                border: 'none', background: 'rgba(0,0,0,0.55)', color: '#fff',
+                                                                cursor: 'pointer', fontSize: 14, lineHeight: 1,
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                opacity: 0, transition: 'opacity 0.15s',
+                                                            }}
+                                                        >×</button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {!photosLoading && (petPhotos[selectedPet.id] ?? []).length === 0 && (
+                                            <p style={{ textAlign: 'center', color: '#bbb', padding: '32px 0', fontSize: 14 }}>
+                                                아직 사진이 없습니다. 위의 + 버튼으로 추가해보세요.
+                                            </p>
+                                        )}
                                     </div>
                                 )}
                             </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ───── 구독·결제 탭 ───── */}
+                {tab === 'payment' && (
+                    <div style={cardStyle}>
+                        <div style={{ padding: '20px 24px' }}>
+                            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: '#222' }}>결제 내역</div>
+                            {payLoading ? (
+                                <p style={{ color: '#999', textAlign: 'center', padding: '20px 0' }}>불러오는 중...</p>
+                            ) : payments.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                                    <p style={{ color: '#999', margin: '0 0 16px' }}>결제 내역이 없습니다.</p>
+                                    <button onClick={() => navigate('/subscription')} style={solidBtn}>구독하러 가기</button>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    {payments.map((item, i) => (
+                                        <div key={item.paymentId} style={{
+                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                            padding: '16px 0', borderTop: i === 0 ? 'none' : '1px solid #f0f0f0',
+                                        }}>
+                                            <div>
+                                                <div style={{ fontWeight: 700, fontSize: 16 }}>
+                                                    {item.amount.toLocaleString()}{item.currency === 'KRW' ? '원' : ` ${item.currency}`}
+                                                </div>
+                                                <div style={{ fontSize: 13, color: '#999', marginTop: 4 }}>
+                                                    {new Date(item.paidAt ?? item.createdAt).toLocaleString('ko-KR')}
+                                                </div>
+                                            </div>
+                                            <span style={{
+                                                fontSize: 13, fontWeight: 700, padding: '4px 12px', borderRadius: 12,
+                                                color: item.status === 'PAID' ? '#2e7d32' : item.status === 'FAILED' ? '#c62828' : '#666',
+                                                background: item.status === 'PAID' ? '#e8f5e9' : item.status === 'FAILED' ? '#ffebee' : '#f0f0f0',
+                                            }}>
+                                                {item.status === 'PAID' ? '결제완료' : item.status === 'FAILED' ? '실패' : '준비중'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
