@@ -4,9 +4,18 @@ import GNB from '../components/GNB';
 import { getMyInfo, updateNickname, updatePassword, updateProfileImage, getMyPosts } from '../api/mypageApi';
 import { uploadImage } from '../api/imageApi';
 import type { UserInfo, MyPost } from '../api/mypageApi';
+import { getMySubscription, getPaymentHistory, cancelSubscription, resumeSubscription } from '../api/subscriptionApi';
+import type { SubscriptionMeResult, PaymentHistoryItem } from '../api/subscriptionApi';
 import { isAuthenticated } from '../utils/auth';
 
-type Tab = 'profile' | 'posts';
+type Tab = 'profile' | 'posts' | 'payment';
+
+const BadgeIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+        <circle cx="9" cy="9" r="9" fill="#339AF0"/>
+        <path d="M5 9.5L7.5 12L13 6.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+);
 
 export default function MyPage() {
     const navigate = useNavigate();
@@ -33,11 +42,13 @@ export default function MyPage() {
     const [page, setPage] = useState(0);
     const [categoryFilter, setCategoryFilter] = useState('');
 
+    const [subscription, setSubscription] = useState<SubscriptionMeResult | null>(null);
+    const [payments, setPayments] = useState<PaymentHistoryItem[]>([]);
+    const [payLoading, setPayLoading] = useState(false);
+
     useEffect(() => {
-        getMyInfo().then(info => {
-            setUserInfo(info);
-            setNickname(info.nickname);
-        });
+        getMyInfo().then(info => { setUserInfo(info); setNickname(info.nickname); });
+        getMySubscription().then(setSubscription).catch(() => {});
     }, []);
 
     useEffect(() => {
@@ -47,6 +58,12 @@ export default function MyPage() {
             setTotalPages(data.totalPages);
         });
     }, [tab, categoryFilter, page]);
+
+    useEffect(() => {
+        if (tab !== 'payment') return;
+        setPayLoading(true);
+        getPaymentHistory().then(setPayments).catch(() => {}).finally(() => setPayLoading(false));
+    }, [tab]);
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -94,10 +111,7 @@ export default function MyPage() {
 
     const handlePasswordUpdate = async () => {
         setPasswordError('');
-        if (!currentPassword || !newPassword) {
-            setPasswordError('비밀번호를 입력해주세요.');
-            return;
-        }
+        if (!currentPassword || !newPassword) { setPasswordError('비밀번호를 입력해주세요.'); return; }
         try {
             await updatePassword(currentPassword, newPassword);
             alert('비밀번호가 변경되었습니다.');
@@ -107,6 +121,32 @@ export default function MyPage() {
             setPasswordError(e.response?.data?.message ?? '비밀번호 변경에 실패했습니다.');
         }
     };
+
+    const handleCancel = async () => {
+        if (!subscription?.subscriptionId) return;
+        if (!confirm('구독을 해지 예약하시겠습니까? 다음 결제일까지는 계속 이용할 수 있습니다.')) return;
+        try {
+            const updated = await cancelSubscription(subscription.subscriptionId);
+            setSubscription(updated);
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '해지 처리 중 오류가 발생했습니다.');
+        }
+    };
+
+    const handleResume = async () => {
+        if (!subscription?.subscriptionId) return;
+        try {
+            const updated = await resumeSubscription(subscription.subscriptionId);
+            setSubscription(updated);
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '재개 처리 중 오류가 발생했습니다.');
+        }
+    };
+
+    const formatDate = (iso: string) => new Date(iso).toLocaleDateString('ko-KR');
+
+    const isSubscriber = subscription?.status === 'ACTIVE';
+    const isRecurring = subscription?.type === 'RECURRING';
 
     const tabBtnStyle = (active: boolean): React.CSSProperties => ({
         padding: '10px 28px', border: 'none', borderRadius: 20, cursor: 'pointer', fontWeight: 600,
@@ -124,6 +164,78 @@ export default function MyPage() {
         boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden',
     };
 
+    const solidBtn: React.CSSProperties = {
+        padding: '8px 18px', border: 'none', borderRadius: 8, whiteSpace: 'nowrap',
+        background: 'var(--primary, #FF8C00)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+    };
+
+    const outlineBtn: React.CSSProperties = {
+        padding: '8px 18px', border: '1px solid #dee2e6', borderRadius: 8, whiteSpace: 'nowrap',
+        background: '#fff', cursor: 'pointer', fontSize: 13,
+    };
+
+    const renderSubscriptionBanner = () => {
+        if (!subscription) return null;
+
+        const { hasSubscription, status, canceledAt, nextBillingAt } = subscription;
+
+        if (!hasSubscription) return (
+            <div style={{ background: '#f5f5f5', borderRadius: 12, padding: '18px 20px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600, color: '#555' }}>프리미엄 멤버십 혜택을 확인해보세요</span>
+                <button onClick={() => navigate('/subscription')} style={solidBtn}>구독하기</button>
+            </div>
+        );
+
+        // ACTIVE + 해지 예약됨
+        if (status === 'ACTIVE' && canceledAt) return (
+            <div style={{ background: '#FFF3E0', border: '1px solid #FFB74D', borderRadius: 12, padding: '18px 20px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <div style={{ fontWeight: 700, color: '#E65100' }}>해지 예약됨</div>
+                    {nextBillingAt && (
+                        <div style={{ fontSize: 13, color: '#BF360C', marginTop: 4 }}>
+                            {formatDate(nextBillingAt)}까지 이용 가능
+                        </div>
+                    )}
+                </div>
+                {isRecurring && <button onClick={handleResume} style={solidBtn}>재개하기</button>}
+            </div>
+        );
+
+        // ACTIVE 정상
+        if (status === 'ACTIVE') return (
+            <div style={{ background: '#E7F5FF', border: '1px solid #74C0FC', borderRadius: 12, padding: '18px 20px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <div style={{ fontWeight: 700, color: '#1864AB', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <BadgeIcon /> 프리미엄 구독 이용 중
+                    </div>
+                    {nextBillingAt && isRecurring && (
+                        <div style={{ fontSize: 13, color: '#1971C2', marginTop: 4 }}>
+                            다음 결제일: {formatDate(nextBillingAt)}
+                        </div>
+                    )}
+                    {nextBillingAt && !isRecurring && (
+                        <div style={{ fontSize: 13, color: '#1971C2', marginTop: 4 }}>
+                            {formatDate(nextBillingAt)}까지 이용 가능
+                        </div>
+                    )}
+                </div>
+                {isRecurring && <button onClick={handleCancel} style={outlineBtn}>해지 예약</button>}
+            </div>
+        );
+
+        // EXPIRED
+        return (
+            <div style={{ background: '#FFF5F5', border: '1px solid #FFA8A8', borderRadius: 12, padding: '18px 20px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600, color: '#C92A2A' }}>구독이 만료되었습니다</span>
+                <button onClick={() => navigate('/subscription')} style={solidBtn}>재구독하기</button>
+            </div>
+        );
+    };
+
     return (
         <div style={{ background: '#f8f8f8', minHeight: '100vh' }}>
             <GNB />
@@ -133,29 +245,27 @@ export default function MyPage() {
                 <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
                     <button style={tabBtnStyle(tab === 'profile')} onClick={() => setTab('profile')}>프로필</button>
                     <button style={tabBtnStyle(tab === 'posts')} onClick={() => setTab('posts')}>내 게시글</button>
+                    <button style={tabBtnStyle(tab === 'payment')} onClick={() => setTab('payment')}>결제내역</button>
                 </div>
 
                 {/* 프로필 탭 */}
                 {tab === 'profile' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
+                        {/* F-25 구독 상태 배너 */}
+                        {renderSubscriptionBanner()}
+
                         {/* 프로필 카드 */}
                         <div style={cardStyle}>
-                            {/* 상단 배너 */}
-                            <div style={{
-                                height: 80,
-                                background: 'linear-gradient(135deg, #FF8C00 0%, #ffb347 100%)',
-                            }} />
+                            <div style={{ height: 80, background: 'linear-gradient(135deg, #FF8C00 0%, #ffb347 100%)' }} />
 
-                            {/* 아바타 + 정보 */}
                             <div style={{ padding: '0 28px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: -44 }}>
                                 <div style={{ position: 'relative' }}>
                                     <div style={{
                                         width: 88, height: 88, borderRadius: '50%',
-                                        border: '4px solid #fff',
-                                        background: '#eee', display: 'flex', alignItems: 'center',
-                                        justifyContent: 'center', fontSize: 40, overflow: 'hidden',
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                        border: '4px solid #fff', background: '#eee',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 40, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                                     }}>
                                         {previewUrl
                                             ? <img src={previewUrl} alt="미리보기" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -169,8 +279,7 @@ export default function MyPage() {
                                         style={{
                                             position: 'absolute', bottom: 4, right: 4,
                                             width: 26, height: 26, borderRadius: '50%',
-                                            border: '2px solid #fff',
-                                            background: 'var(--primary, #FF8C00)',
+                                            border: '2px solid #fff', background: 'var(--primary, #FF8C00)',
                                             color: '#fff', fontSize: 11, cursor: 'pointer',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         }}
@@ -180,7 +289,11 @@ export default function MyPage() {
                                 </div>
 
                                 <div style={{ marginTop: 12, textAlign: 'center' }}>
-                                    <div style={{ fontWeight: 700, fontSize: 20 }}>{userInfo?.nickname}</div>
+                                    {/* F-30 인증뱃지 */}
+                                    <div style={{ fontWeight: 700, fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                        {userInfo?.nickname}
+                                        {isSubscriber && <BadgeIcon />}
+                                    </div>
                                     <div style={{ color: '#999', fontSize: 14, marginTop: 4 }}>{userInfo?.username}</div>
                                     <div style={{ fontSize: 12, color: '#bbb', marginTop: 6 }}>
                                         가입일 {userInfo ? new Date(userInfo.createdAt).toLocaleDateString() : '-'}
@@ -199,9 +312,7 @@ export default function MyPage() {
                                                 background: '#fff', cursor: 'pointer', fontSize: 13,
                                             }}>취소</button>
                                         </div>
-                                        {imageError && (
-                                            <p style={{ margin: 0, fontSize: 13, color: '#f44336' }}>{imageError}</p>
-                                        )}
+                                        {imageError && <p style={{ margin: 0, fontSize: 13, color: '#f44336' }}>{imageError}</p>}
                                     </div>
                                 )}
                             </div>
@@ -221,9 +332,7 @@ export default function MyPage() {
                                         background: 'var(--primary, #FF8C00)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 14,
                                     }}>변경</button>
                                 </div>
-                                {nicknameError && (
-                                    <p style={{ margin: '8px 0 0', fontSize: 13, color: '#f44336' }}>{nicknameError}</p>
-                                )}
+                                {nicknameError && <p style={{ margin: '8px 0 0', fontSize: 13, color: '#f44336' }}>{nicknameError}</p>}
                             </div>
                         </div>
 
@@ -238,13 +347,9 @@ export default function MyPage() {
                                             placeholder="현재 비밀번호" style={inputStyle} />
                                         <input type="password" value={newPassword}
                                             onChange={e => { setNewPassword(e.target.value); setPasswordError(''); }}
-                                            placeholder="새 비밀번호 (8자 이상, 영문+숫자+특수문자)" style={{
-                                                ...inputStyle,
-                                                borderColor: passwordError ? '#f44336' : '#e0e0e0',
-                                            }} />
-                                        {passwordError && (
-                                            <p style={{ margin: 0, fontSize: 13, color: '#f44336' }}>{passwordError}</p>
-                                        )}
+                                            placeholder="새 비밀번호 (8자 이상, 영문+숫자+특수문자)"
+                                            style={{ ...inputStyle, borderColor: passwordError ? '#f44336' : '#e0e0e0' }} />
+                                        {passwordError && <p style={{ margin: 0, fontSize: 13, color: '#f44336' }}>{passwordError}</p>}
                                         <button onClick={handlePasswordUpdate} style={{
                                             padding: '11px', border: 'none', borderRadius: 8,
                                             background: 'var(--primary, #FF8C00)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 14,
@@ -307,6 +412,49 @@ export default function MyPage() {
                                 ))}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* F-24 결제내역 탭 */}
+                {tab === 'payment' && (
+                    <div style={cardStyle}>
+                        <div style={{ padding: '20px 24px' }}>
+                            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: '#222' }}>결제 내역</div>
+                            {payLoading ? (
+                                <p style={{ color: '#999', textAlign: 'center', padding: '20px 0' }}>불러오는 중...</p>
+                            ) : payments.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                                    <p style={{ color: '#999', marginBottom: 16 }}>결제 내역이 없습니다.</p>
+                                    <button onClick={() => navigate('/subscription')} style={solidBtn}>구독하러 가기</button>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    {payments.map((item, i) => (
+                                        <div key={item.paymentId} style={{
+                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                            padding: '16px 0', borderTop: i === 0 ? 'none' : '1px solid #f0f0f0',
+                                        }}>
+                                            <div>
+                                                <div style={{ fontWeight: 700, fontSize: 16 }}>
+                                                    {item.amount.toLocaleString()}
+                                                    {item.currency === 'KRW' ? '원' : ` ${item.currency}`}
+                                                </div>
+                                                <div style={{ fontSize: 13, color: '#999', marginTop: 4 }}>
+                                                    {new Date(item.paidAt ?? item.createdAt).toLocaleString('ko-KR')}
+                                                </div>
+                                            </div>
+                                            <span style={{
+                                                fontSize: 13, fontWeight: 700, padding: '4px 12px', borderRadius: 12,
+                                                color: item.status === 'PAID' ? '#2e7d32' : item.status === 'FAILED' ? '#c62828' : '#666',
+                                                background: item.status === 'PAID' ? '#e8f5e9' : item.status === 'FAILED' ? '#ffebee' : '#f0f0f0',
+                                            }}>
+                                                {item.status === 'PAID' ? '결제완료' : item.status === 'FAILED' ? '실패' : '준비중'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
