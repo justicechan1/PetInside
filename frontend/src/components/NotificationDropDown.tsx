@@ -1,8 +1,8 @@
 // components/NotificationDropdown.tsx
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getNotifications, readNotification } from '../api/notificationApi';
-import type { NotificationItem } from '../api/notificationApi';
+import { getNotifications, readNotification } from '../api/notificationApi.ts';
+import type { NotificationItem } from '../api/notificationApi.ts';
 
 export default function NotificationDropdown() {
     const navigate = useNavigate();
