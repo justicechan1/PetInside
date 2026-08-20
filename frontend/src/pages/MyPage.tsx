@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import GNB from '../components/GNB';
 import { getMyInfo, updateNickname, updatePassword, updateProfileImage, getMyPosts, updateProfileLayout } from '../api/mypageApi';
 import { uploadImage } from '../api/imageApi';
@@ -21,7 +21,9 @@ const BadgeIcon = () => (
 
 export default function MyPage() {
     const navigate = useNavigate();
-    const [tab, setTab] = useState<Tab>('profile');
+    const [searchParams] = useSearchParams();
+    const initialTab = (searchParams.get('tab') as Tab) || 'profile';
+    const [tab, setTab] = useState<Tab>(initialTab);
 
     useEffect(() => {
         if (!isAuthenticated()) navigate('/login');
@@ -166,8 +168,9 @@ export default function MyPage() {
 
     const handleLayoutToggle = async (newLayout: 'LIST' | 'GRID') => {
         if (newLayout === layout) return;
+        const prev = layout;
         setLayout(newLayout);
-        await updateProfileLayout(newLayout).catch(() => setLayout(layout));
+        await updateProfileLayout(newLayout).catch(() => setLayout(prev));
     };
 
     const openAddPet = () => { setEditingPet(null); setPetForm(emptyPetForm); setPetError(''); setShowPetForm(true); };
@@ -205,6 +208,7 @@ export default function MyPage() {
     const isSubscriber = subscription?.status === 'ACTIVE';
     const isRecurring = subscription?.type === 'RECURRING';
 
+    // ─── 스타일 상수 ───────────────────────────────────────────────────
     const tabBtnStyle = (active: boolean): React.CSSProperties => ({
         padding: '10px 28px', border: 'none', borderRadius: 20, cursor: 'pointer', fontWeight: 600,
         background: active ? 'var(--primary, #FF8C00)' : '#f0f0f0',
@@ -231,36 +235,33 @@ export default function MyPage() {
         background: '#fff', cursor: 'pointer', fontSize: 13,
     };
 
+    // ─── 구독 상태 배너 (프로필/결제 탭 공용) ──────────────────────────
     const renderSubscriptionBanner = () => {
         if (!subscription) return null;
-
         const { hasSubscription, status, canceledAt, nextBillingAt } = subscription;
 
         if (!hasSubscription) return (
             <div style={{ background: '#f5f5f5', borderRadius: 12, padding: '18px 20px',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600, color: '#555' }}>프리미엄 멤버십 혜택을 확인해보세요</span>
+                <div>
+                    <div style={{ fontWeight: 700, color: '#444', marginBottom: 2 }}>프리미엄 멤버십</div>
+                    <div style={{ fontSize: 13, color: '#888' }}>인증뱃지, 펫 프로필, 커스텀 피드 혜택</div>
+                </div>
                 <button onClick={() => navigate('/subscription')} style={solidBtn}>구독하기</button>
             </div>
         );
 
-        // ACTIVE + 해지 예약됨
         if (status === 'ACTIVE' && canceledAt) return (
             <div style={{ background: '#FFF3E0', border: '1px solid #FFB74D', borderRadius: 12, padding: '18px 20px',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                     <div style={{ fontWeight: 700, color: '#E65100' }}>해지 예약됨</div>
-                    {nextBillingAt && (
-                        <div style={{ fontSize: 13, color: '#BF360C', marginTop: 4 }}>
-                            {formatDate(nextBillingAt)}까지 이용 가능
-                        </div>
-                    )}
+                    {nextBillingAt && <div style={{ fontSize: 13, color: '#BF360C', marginTop: 4 }}>{formatDate(nextBillingAt)}까지 이용 가능</div>}
                 </div>
                 {isRecurring && <button onClick={handleResume} style={solidBtn}>재개하기</button>}
             </div>
         );
 
-        // ACTIVE 정상
         if (status === 'ACTIVE') return (
             <div style={{ background: '#E7F5FF', border: '1px solid #74C0FC', borderRadius: 12, padding: '18px 20px',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -268,27 +269,88 @@ export default function MyPage() {
                     <div style={{ fontWeight: 700, color: '#1864AB', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <BadgeIcon /> 프리미엄 구독 이용 중
                     </div>
-                    {nextBillingAt && isRecurring && (
-                        <div style={{ fontSize: 13, color: '#1971C2', marginTop: 4 }}>
-                            다음 결제일: {formatDate(nextBillingAt)}
-                        </div>
-                    )}
-                    {nextBillingAt && !isRecurring && (
-                        <div style={{ fontSize: 13, color: '#1971C2', marginTop: 4 }}>
-                            {formatDate(nextBillingAt)}까지 이용 가능
-                        </div>
-                    )}
+                    {nextBillingAt && isRecurring && <div style={{ fontSize: 13, color: '#1971C2', marginTop: 4 }}>다음 결제일: {formatDate(nextBillingAt)}</div>}
+                    {nextBillingAt && !isRecurring && <div style={{ fontSize: 13, color: '#1971C2', marginTop: 4 }}>{formatDate(nextBillingAt)}까지 이용 가능</div>}
                 </div>
                 {isRecurring && <button onClick={handleCancel} style={outlineBtn}>해지 예약</button>}
             </div>
         );
 
-        // EXPIRED
         return (
             <div style={{ background: '#FFF5F5', border: '1px solid #FFA8A8', borderRadius: 12, padding: '18px 20px',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600, color: '#C92A2A' }}>구독이 만료되었습니다</span>
+                <div>
+                    <div style={{ fontWeight: 700, color: '#C92A2A' }}>구독이 만료되었습니다</div>
+                    <div style={{ fontSize: 13, color: '#e03131', marginTop: 4 }}>재구독하면 모든 혜택이 즉시 복구됩니다.</div>
+                </div>
                 <button onClick={() => navigate('/subscription')} style={solidBtn}>재구독하기</button>
+            </div>
+        );
+    };
+
+    // ─── 잠금 배너 (F-35/F-36 비구독자 공용) ──────────────────────────
+    const renderLockBanner = (label: string) => (
+        <div style={{ textAlign: 'center', padding: '28px 0' }}>
+            <div style={{ fontSize: 32, marginBottom: 10 }}>🔒</div>
+            <div style={{ fontSize: 14, color: '#888', marginBottom: 16 }}>{label}은 프리미엄 구독자 전용 기능입니다.</div>
+            <button onClick={() => navigate('/subscription')} style={solidBtn}>구독하기</button>
+        </div>
+    );
+
+    // ─── F-35 반려동물 프로필 내용 ────────────────────────────────────
+    const renderPetSection = () => {
+        if (!isSubscriber) return renderLockBanner('반려동물 프로필');
+
+        if (showPetForm) return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, color: '#444', marginBottom: 2 }}>
+                    {editingPet ? '펫 정보 수정' : '새 반려동물 등록'}
+                </div>
+                <input placeholder="이름 *" value={petForm.petName}
+                    onChange={e => setPetForm(p => ({ ...p, petName: e.target.value }))} style={inputStyle} />
+                <input placeholder="종류 * (예: 골든 리트리버, 페르시안 고양이)" value={petForm.petType}
+                    onChange={e => setPetForm(p => ({ ...p, petType: e.target.value }))} style={inputStyle} />
+                <input type="date" value={petForm.petBirthday}
+                    onChange={e => setPetForm(p => ({ ...p, petBirthday: e.target.value }))} style={inputStyle} />
+                <textarea placeholder="소개 (선택)" value={petForm.petIntro}
+                    onChange={e => setPetForm(p => ({ ...p, petIntro: e.target.value }))}
+                    rows={3} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
+                <input placeholder="이미지 URL (선택)" value={petForm.petImageUrl}
+                    onChange={e => setPetForm(p => ({ ...p, petImageUrl: e.target.value }))} style={inputStyle} />
+                {petError && <p style={{ margin: 0, fontSize: 13, color: '#f44336' }}>{petError}</p>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={handlePetSave} disabled={petSaving} style={{ ...solidBtn, opacity: petSaving ? 0.7 : 1 }}>
+                        {petSaving ? '저장 중...' : '저장'}
+                    </button>
+                    <button onClick={closePetForm} style={outlineBtn}>취소</button>
+                </div>
+            </div>
+        );
+
+        if (pets.length === 0) return (
+            <p style={{ textAlign: 'center', color: '#bbb', padding: '16px 0', margin: 0 }}>
+                등록된 반려동물이 없습니다.
+            </p>
+        );
+
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {pets.map(pet => (
+                    <div key={pet.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: '#f8f9fa', borderRadius: 12 }}>
+                        <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#e9ecef', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
+                            {pet.petImageUrl
+                                ? <img src={pet.petImageUrl} alt={pet.petName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                : '🐾'}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: 15 }}>{pet.petName}</div>
+                            <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>{pet.petType}</div>
+                            {pet.petBirthday && <div style={{ fontSize: 12, color: '#aaa', marginTop: 1 }}>{pet.petBirthday}</div>}
+                            {pet.petIntro && <div style={{ fontSize: 13, color: '#555', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pet.petIntro}</div>}
+                        </div>
+                        <button onClick={() => openEditPet(pet)} style={outlineBtn}>수정</button>
+                    </div>
+                ))}
             </div>
         );
     };
@@ -302,20 +364,16 @@ export default function MyPage() {
                 <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
                     <button style={tabBtnStyle(tab === 'profile')} onClick={() => setTab('profile')}>프로필</button>
                     <button style={tabBtnStyle(tab === 'posts')} onClick={() => setTab('posts')}>내 게시글</button>
-                    <button style={tabBtnStyle(tab === 'payment')} onClick={() => setTab('payment')}>결제내역</button>
+                    <button style={tabBtnStyle(tab === 'payment')} onClick={() => setTab('payment')}>구독·결제</button>
                 </div>
 
-                {/* 프로필 탭 */}
+                {/* ───── 프로필 탭 ───── */}
                 {tab === 'profile' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-                        {/* F-25 구독 상태 배너 */}
-                        {renderSubscriptionBanner()}
-
-                        {/* 프로필 카드 */}
+                        {/* 1. 프로필 카드 */}
                         <div style={cardStyle}>
                             <div style={{ height: 80, background: 'linear-gradient(135deg, #FF8C00 0%, #ffb347 100%)' }} />
-
                             <div style={{ padding: '0 28px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: -44 }}>
                                 <div style={{ position: 'relative' }}>
                                     <div style={{
@@ -341,12 +399,10 @@ export default function MyPage() {
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         }}
                                     >✏️</button>
-                                    <input ref={fileInputRef} type="file" accept="image/*"
-                                        onChange={handleFileSelect} style={{ display: 'none' }} />
+                                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} style={{ display: 'none' }} />
                                 </div>
 
                                 <div style={{ marginTop: 12, textAlign: 'center' }}>
-                                    {/* F-30 인증뱃지 */}
                                     <div style={{ fontWeight: 700, fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                                         {userInfo?.nickname}
                                         {isSubscriber && <BadgeIcon />}
@@ -375,7 +431,58 @@ export default function MyPage() {
                             </div>
                         </div>
 
-                        {/* 닉네임 변경 카드 */}
+                        {/* 2. F-35 반려동물 프로필 */}
+                        <div style={cardStyle}>
+                            <div style={{ padding: '20px 24px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                                    <div style={{ fontWeight: 700, fontSize: 15, color: '#222', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        🐾 반려동물 프로필
+                                        <span style={{ fontSize: 11, background: '#E7F5FF', color: '#1864AB', padding: '2px 8px', borderRadius: 10, fontWeight: 500 }}>구독자 전용</span>
+                                    </div>
+                                    {isSubscriber && !showPetForm && (
+                                        <button onClick={openAddPet} style={solidBtn}>+ 추가</button>
+                                    )}
+                                </div>
+                                {renderPetSection()}
+                            </div>
+                        </div>
+
+                        {/* 3. F-36 마이 피드 설정 */}
+                        <div style={cardStyle}>
+                            <div style={{ padding: '20px 24px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isSubscriber ? 16 : 0 }}>
+                                    <div style={{ fontWeight: 700, fontSize: 15, color: '#222', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        📐 피드 레이아웃
+                                        <span style={{ fontSize: 11, background: '#E7F5FF', color: '#1864AB', padding: '2px 8px', borderRadius: 10, fontWeight: 500 }}>구독자 전용</span>
+                                    </div>
+                                    {isSubscriber && (
+                                        <div style={{ display: 'flex', gap: 4, background: '#f0f0f0', borderRadius: 8, padding: 3 }}>
+                                            {(['LIST', 'GRID'] as const).map(l => (
+                                                <button key={l} onClick={() => handleLayoutToggle(l)} style={{
+                                                    padding: '6px 14px', border: 'none', borderRadius: 6, cursor: 'pointer',
+                                                    background: layout === l ? '#fff' : 'transparent',
+                                                    color: layout === l ? '#333' : '#888',
+                                                    fontWeight: layout === l ? 700 : 400,
+                                                    boxShadow: layout === l ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                                                    fontSize: 13, transition: 'all 0.15s',
+                                                }}>
+                                                    {l === 'LIST' ? '☰ 목록' : '⊞ 그리드'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                {!isSubscriber && renderLockBanner('피드 레이아웃 설정')}
+                                {isSubscriber && (
+                                    <p style={{ margin: 0, fontSize: 13, color: '#888' }}>
+                                        {layout === 'GRID' ? '그리드 뷰로 내 게시글을 표시합니다.' : '목록 뷰로 내 게시글을 표시합니다.'}
+                                        &nbsp;설정은 자동 저장됩니다.
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 4. 닉네임 변경 */}
                         <div style={cardStyle}>
                             <div style={{ padding: '20px 24px' }}>
                                 <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14, color: '#222' }}>닉네임 변경</div>
@@ -393,77 +500,7 @@ export default function MyPage() {
                             </div>
                         </div>
 
-                        {/* F-35 반려동물 프로필 (구독자 전용) */}
-                        <div style={cardStyle}>
-                            <div style={{ padding: '20px 24px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                                    <div style={{ fontWeight: 700, fontSize: 15, color: '#222', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        🐾 반려동물 프로필
-                                        <span style={{ fontSize: 11, background: '#E7F5FF', color: '#1864AB', padding: '2px 8px', borderRadius: 10 }}>구독자 전용</span>
-                                    </div>
-                                    {isSubscriber && !showPetForm && (
-                                        <button onClick={openAddPet} style={solidBtn}>+ 추가</button>
-                                    )}
-                                </div>
-
-                                {!isSubscriber ? (
-                                    <div style={{ textAlign: 'center', padding: '24px 0', color: '#999' }}>
-                                        <div style={{ fontSize: 32, marginBottom: 8 }}>🔒</div>
-                                        <div style={{ fontSize: 14, marginBottom: 12 }}>프리미엄 구독자만 이용할 수 있는 기능입니다.</div>
-                                        <button onClick={() => navigate('/subscription')} style={solidBtn}>구독하기</button>
-                                    </div>
-                                ) : showPetForm ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                        <div style={{ fontWeight: 600, fontSize: 14, color: '#444', marginBottom: 4 }}>
-                                            {editingPet ? '펫 정보 수정' : '새 반려동물 등록'}
-                                        </div>
-                                        <input placeholder="이름 *" value={petForm.petName}
-                                            onChange={e => setPetForm(p => ({ ...p, petName: e.target.value }))} style={inputStyle} />
-                                        <input placeholder="종류 * (예: 골든 리트리버, 페르시안 고양이)" value={petForm.petType}
-                                            onChange={e => setPetForm(p => ({ ...p, petType: e.target.value }))} style={inputStyle} />
-                                        <input type="date" placeholder="생일" value={petForm.petBirthday}
-                                            onChange={e => setPetForm(p => ({ ...p, petBirthday: e.target.value }))} style={inputStyle} />
-                                        <textarea placeholder="소개 (선택)" value={petForm.petIntro}
-                                            onChange={e => setPetForm(p => ({ ...p, petIntro: e.target.value }))}
-                                            rows={3} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
-                                        <input placeholder="이미지 URL (선택)" value={petForm.petImageUrl}
-                                            onChange={e => setPetForm(p => ({ ...p, petImageUrl: e.target.value }))} style={inputStyle} />
-                                        {petError && <p style={{ margin: 0, fontSize: 13, color: '#f44336' }}>{petError}</p>}
-                                        <div style={{ display: 'flex', gap: 8 }}>
-                                            <button onClick={handlePetSave} disabled={petSaving} style={{ ...solidBtn, opacity: petSaving ? 0.7 : 1 }}>
-                                                {petSaving ? '저장 중...' : '저장'}
-                                            </button>
-                                            <button onClick={closePetForm} style={outlineBtn}>취소</button>
-                                        </div>
-                                    </div>
-                                ) : pets.length === 0 ? (
-                                    <p style={{ textAlign: 'center', color: '#bbb', padding: '16px 0', margin: 0 }}>
-                                        등록된 반려동물이 없습니다. + 추가 버튼으로 등록해보세요!
-                                    </p>
-                                ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                        {pets.map(pet => (
-                                            <div key={pet.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: '#f8f9fa', borderRadius: 10 }}>
-                                                <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#e9ecef', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
-                                                    {pet.petImageUrl
-                                                        ? <img src={pet.petImageUrl} alt={pet.petName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                        : '🐾'}
-                                                </div>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{ fontWeight: 700, fontSize: 15 }}>{pet.petName}</div>
-                                                    <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>{pet.petType}</div>
-                                                    {pet.petBirthday && <div style={{ fontSize: 12, color: '#999', marginTop: 1 }}>{pet.petBirthday}</div>}
-                                                    {pet.petIntro && <div style={{ fontSize: 13, color: '#555', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pet.petIntro}</div>}
-                                                </div>
-                                                <button onClick={() => openEditPet(pet)} style={outlineBtn}>수정</button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* 비밀번호 변경 카드 */}
+                        {/* 5. 비밀번호 변경 (소셜 로그인 제외) */}
                         {!userInfo?.provider && (
                             <div style={cardStyle}>
                                 <div style={{ padding: '20px 24px' }}>
@@ -488,33 +525,16 @@ export default function MyPage() {
                     </div>
                 )}
 
-                {/* 내 게시글 탭 */}
+                {/* ───── 내 게시글 탭 ───── */}
                 {tab === 'posts' && (
                     <div>
-                        {/* F-36 레이아웃 토글 + 카테고리 필터 */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                                {[['', '전체'], ['QNA', 'Q&A'], ['BOAST', '자랑']].map(([val, label]) => (
-                                    <button key={val} onClick={() => { setCategoryFilter(val); setPage(0); }}
-                                        style={tabBtnStyle(categoryFilter === val)}>
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
-                            <div style={{ display: 'flex', gap: 4, background: '#f0f0f0', borderRadius: 8, padding: 3 }}>
-                                {(['LIST', 'GRID'] as const).map(l => (
-                                    <button key={l} onClick={() => handleLayoutToggle(l)} style={{
-                                        padding: '6px 12px', border: 'none', borderRadius: 6, cursor: 'pointer',
-                                        background: layout === l ? '#fff' : 'transparent',
-                                        color: layout === l ? '#333' : '#888',
-                                        fontWeight: layout === l ? 700 : 400,
-                                        boxShadow: layout === l ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                                        fontSize: 13, transition: 'all 0.15s',
-                                    }}>
-                                        {l === 'LIST' ? '☰ 목록' : '⊞ 그리드'}
-                                    </button>
-                                ))}
-                            </div>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                            {[['', '전체'], ['QNA', 'Q&A'], ['BOAST', '자랑']].map(([val, label]) => (
+                                <button key={val} onClick={() => { setCategoryFilter(val); setPage(0); }}
+                                    style={tabBtnStyle(categoryFilter === val)}>
+                                    {label}
+                                </button>
+                            ))}
                         </div>
 
                         {posts.length === 0 ? (
@@ -533,7 +553,7 @@ export default function MyPage() {
                                         </div>
                                         <div style={{ padding: '10px 12px' }}>
                                             <span style={{
-                                                fontSize: 11, padding: '2px 6px', borderRadius: 8, marginRight: 6,
+                                                fontSize: 11, padding: '2px 6px', borderRadius: 8,
                                                 background: post.category === 'QNA' ? '#E3F2FD' : '#FFF3E0',
                                                 color: post.category === 'QNA' ? '#1565C0' : '#E65100',
                                             }}>
@@ -585,48 +605,55 @@ export default function MyPage() {
                     </div>
                 )}
 
-                {/* F-24 결제내역 탭 */}
+                {/* ───── 구독·결제 탭 (F-24 + F-25 통합) ───── */}
                 {tab === 'payment' && (
-                    <div style={cardStyle}>
-                        <div style={{ padding: '20px 24px' }}>
-                            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: '#222' }}>결제 내역</div>
-                            {payLoading ? (
-                                <p style={{ color: '#999', textAlign: 'center', padding: '20px 0' }}>불러오는 중...</p>
-                            ) : payments.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '32px 0' }}>
-                                    <p style={{ color: '#999', marginBottom: 16 }}>결제 내역이 없습니다.</p>
-                                    <button onClick={() => navigate('/subscription')} style={solidBtn}>구독하러 가기</button>
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    {payments.map((item, i) => (
-                                        <div key={item.paymentId} style={{
-                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                            padding: '16px 0', borderTop: i === 0 ? 'none' : '1px solid #f0f0f0',
-                                        }}>
-                                            <div>
-                                                <div style={{ fontWeight: 700, fontSize: 16 }}>
-                                                    {item.amount.toLocaleString()}
-                                                    {item.currency === 'KRW' ? '원' : ` ${item.currency}`}
-                                                </div>
-                                                <div style={{ fontSize: 13, color: '#999', marginTop: 4 }}>
-                                                    {new Date(item.paidAt ?? item.createdAt).toLocaleString('ko-KR')}
-                                                </div>
-                                            </div>
-                                            <span style={{
-                                                fontSize: 13, fontWeight: 700, padding: '4px 12px', borderRadius: 12,
-                                                color: item.status === 'PAID' ? '#2e7d32' : item.status === 'FAILED' ? '#c62828' : '#666',
-                                                background: item.status === 'PAID' ? '#e8f5e9' : item.status === 'FAILED' ? '#ffebee' : '#f0f0f0',
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                        {/* 구독 상태 배너 */}
+                        {renderSubscriptionBanner()}
+
+                        {/* 결제 내역 */}
+                        <div style={cardStyle}>
+                            <div style={{ padding: '20px 24px' }}>
+                                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: '#222' }}>결제 내역</div>
+                                {payLoading ? (
+                                    <p style={{ color: '#999', textAlign: 'center', padding: '20px 0' }}>불러오는 중...</p>
+                                ) : payments.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                                        <p style={{ color: '#999', margin: '0 0 16px' }}>결제 내역이 없습니다.</p>
+                                        <button onClick={() => navigate('/subscription')} style={solidBtn}>구독하러 가기</button>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        {payments.map((item, i) => (
+                                            <div key={item.paymentId} style={{
+                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                padding: '16px 0', borderTop: i === 0 ? 'none' : '1px solid #f0f0f0',
                                             }}>
-                                                {item.status === 'PAID' ? '결제완료' : item.status === 'FAILED' ? '실패' : '준비중'}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                                                <div>
+                                                    <div style={{ fontWeight: 700, fontSize: 16 }}>
+                                                        {item.amount.toLocaleString()}{item.currency === 'KRW' ? '원' : ` ${item.currency}`}
+                                                    </div>
+                                                    <div style={{ fontSize: 13, color: '#999', marginTop: 4 }}>
+                                                        {new Date(item.paidAt ?? item.createdAt).toLocaleString('ko-KR')}
+                                                    </div>
+                                                </div>
+                                                <span style={{
+                                                    fontSize: 13, fontWeight: 700, padding: '4px 12px', borderRadius: 12,
+                                                    color: item.status === 'PAID' ? '#2e7d32' : item.status === 'FAILED' ? '#c62828' : '#666',
+                                                    background: item.status === 'PAID' ? '#e8f5e9' : item.status === 'FAILED' ? '#ffebee' : '#f0f0f0',
+                                                }}>
+                                                    {item.status === 'PAID' ? '결제완료' : item.status === 'FAILED' ? '실패' : '준비중'}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
+
             </div>
         </div>
     );
