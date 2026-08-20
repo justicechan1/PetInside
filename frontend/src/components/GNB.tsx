@@ -3,6 +3,7 @@ import axiosInstance from '../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 import { getRoleFromToken } from '../utils/auth';
 import Avatar from './Avatar';
+import NotificationDropdown from "./NotificationDropDown";
 
 export default function GNB() {
     const navigate = useNavigate();
@@ -79,6 +80,8 @@ export default function GNB() {
                             </button>
                         )}
 
+                        <NotificationDropdown />
+
                         {/* 프로필 동그라미 */}
                         <div style={{ position: 'relative' }}>
                             <div onClick={() => setDropdownOpen(!dropdownOpen)} style={{ cursor: 'pointer' }}>
@@ -97,6 +100,10 @@ export default function GNB() {
                                     <div onClick={() => { navigate('/mypage'); setDropdownOpen(false); }}
                                          style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
                                         마이페이지
+                                    </div>
+                                    <div onClick={() => { navigate('/subscription'); setDropdownOpen(false); }}
+                                         style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
+                                        구독
                                     </div>
                                     <div onClick={handleLogout}
                                          style={{ padding: '12px 16px', cursor: 'pointer', color: '#E03131' }}>

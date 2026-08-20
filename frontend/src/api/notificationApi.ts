@@ -1,7 +1,7 @@
 import axiosInstance from './axiosInstance';
 import type {PageResult} from './adminApi';
 
-export interface Notification {
+export interface NotificationItem {
     id: number;
     type: string;
     content: string;
@@ -13,7 +13,7 @@ export interface Notification {
 
 // F-34: 알림 목록 조회
 export const getNotifications = (page = 0) =>
-    axiosInstance.get<{ data: PageResult<Notification> }>('/api/v1/notifications', {
+    axiosInstance.get<{ data: PageResult<NotificationItem> }>('/api/v1/notifications', {
         params: { page, size: 10 },
     }).then(r => r.data.data);
 

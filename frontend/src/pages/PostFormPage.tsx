@@ -4,6 +4,7 @@ import GNB from '../components/GNB';
 import EmojiPicker from '../components/EmojiPicker';
 import { createPost, updatePost, getPost } from '../api/postApi';
 import { uploadImage } from '../api/imageApi';
+import { isAuthenticated } from '../utils/auth';
 
 const MAX_IMAGES = 5;
 
@@ -11,6 +12,14 @@ export default function PostFormPage() {
     const { postId } = useParams<{ postId: string }>();
     const navigate = useNavigate();
     const isEdit = !!postId;
+
+    // URL을 직접 입력해서 들어오는 경우까지 막기 위한 방어(글쓰기 버튼 자체는 목록 페이지에서 이미 막음)
+    useEffect(() => {
+        if (!isAuthenticated()) {
+            alert('로그인 후 이용할 수 있습니다.');
+            navigate('/login');
+        }
+    }, [navigate]);
 
     const [category, setCategory] = useState('QNA');
     const [title, setTitle] = useState('');

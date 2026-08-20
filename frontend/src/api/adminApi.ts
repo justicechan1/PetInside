@@ -30,6 +30,7 @@ export interface Subscription {
     username: string;
     nickname: string;
     status: SubscriptionStatus;
+    type: 'RECURRING' | 'ONE_TIME';
     nextBillingAt: string | null;
     canceledAt: string | null;
 }
