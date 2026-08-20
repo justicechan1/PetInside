@@ -447,41 +447,6 @@ export default function MyPage() {
                             </div>
                         </div>
 
-                        {/* 3. F-36 마이 피드 설정 */}
-                        <div style={cardStyle}>
-                            <div style={{ padding: '20px 24px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isSubscriber ? 16 : 0 }}>
-                                    <div style={{ fontWeight: 700, fontSize: 15, color: '#222', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        📐 피드 레이아웃
-                                        <span style={{ fontSize: 11, background: '#E7F5FF', color: '#1864AB', padding: '2px 8px', borderRadius: 10, fontWeight: 500 }}>구독자 전용</span>
-                                    </div>
-                                    {isSubscriber && (
-                                        <div style={{ display: 'flex', gap: 4, background: '#f0f0f0', borderRadius: 8, padding: 3 }}>
-                                            {(['LIST', 'GRID'] as const).map(l => (
-                                                <button key={l} onClick={() => handleLayoutToggle(l)} style={{
-                                                    padding: '6px 14px', border: 'none', borderRadius: 6, cursor: 'pointer',
-                                                    background: layout === l ? '#fff' : 'transparent',
-                                                    color: layout === l ? '#333' : '#888',
-                                                    fontWeight: layout === l ? 700 : 400,
-                                                    boxShadow: layout === l ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-                                                    fontSize: 13, transition: 'all 0.15s',
-                                                }}>
-                                                    {l === 'LIST' ? '☰ 목록' : '⊞ 그리드'}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                                {!isSubscriber && renderLockBanner('피드 레이아웃 설정')}
-                                {isSubscriber && (
-                                    <p style={{ margin: 0, fontSize: 13, color: '#888' }}>
-                                        {layout === 'GRID' ? '그리드 뷰로 내 게시글을 표시합니다.' : '목록 뷰로 내 게시글을 표시합니다.'}
-                                        &nbsp;설정은 자동 저장됩니다.
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-
                         {/* 4. 닉네임 변경 */}
                         <div style={cardStyle}>
                             <div style={{ padding: '20px 24px' }}>
@@ -528,13 +493,29 @@ export default function MyPage() {
                 {/* ───── 내 게시글 탭 ───── */}
                 {tab === 'posts' && (
                     <div>
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-                            {[['', '전체'], ['QNA', 'Q&A'], ['BOAST', '자랑']].map(([val, label]) => (
-                                <button key={val} onClick={() => { setCategoryFilter(val); setPage(0); }}
-                                    style={tabBtnStyle(categoryFilter === val)}>
-                                    {label}
-                                </button>
-                            ))}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                {[['', '전체'], ['QNA', 'Q&A'], ['BOAST', '자랑']].map(([val, label]) => (
+                                    <button key={val} onClick={() => { setCategoryFilter(val); setPage(0); }}
+                                        style={tabBtnStyle(categoryFilter === val)}>
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                            <div style={{ display: 'flex', gap: 4, background: '#f0f0f0', borderRadius: 8, padding: 3 }}>
+                                {(['LIST', 'GRID'] as const).map(l => (
+                                    <button key={l} onClick={() => handleLayoutToggle(l)} style={{
+                                        padding: '6px 14px', border: 'none', borderRadius: 6, cursor: 'pointer',
+                                        background: layout === l ? '#fff' : 'transparent',
+                                        color: layout === l ? '#333' : '#888',
+                                        fontWeight: layout === l ? 700 : 400,
+                                        boxShadow: layout === l ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                                        fontSize: 13, transition: 'all 0.15s',
+                                    }}>
+                                        {l === 'LIST' ? '☰' : '⊞'}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {posts.length === 0 ? (
