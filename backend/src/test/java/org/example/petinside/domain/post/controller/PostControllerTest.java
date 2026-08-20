@@ -55,7 +55,7 @@ class PostControllerTest {
     @Test
     @DisplayName("GET /api/v1/posts - 200")
     void getPostList_ok() throws Exception {
-        PostListResponse item = new PostListResponse(1L, "제목", "QNA", "닉네임", 0, 0, null, LocalDateTime.now());
+        PostListResponse item = new PostListResponse(1L, "제목", "QNA", 7L, "닉네임", null, 0, 0, null, LocalDateTime.now());
         PageResponse<PostListResponse> page = new PageResponse<>(List.of(item), 0, 10, 1, 1);
         when(postService.getPostList(eq("qna"), eq("사료"), any(Pageable.class))).thenReturn(page);
 
@@ -71,7 +71,7 @@ class PostControllerTest {
     void getPostDetail_ok() throws Exception {
         PostDetailResponse detail = PostDetailResponse.builder()
                 .id(1L).title("제목").content("내용").category("QNA")
-                .viewCount(1).authorNickname("닉네임").imageUrls(List.of())
+                .viewCount(1).authorId(7L).authorNickname("닉네임").imageUrls(List.of())
                 .createdAt(LocalDateTime.now()).updatedAt(LocalDateTime.now())
                 .build();
         when(postService.getPostDetail(1L)).thenReturn(detail);

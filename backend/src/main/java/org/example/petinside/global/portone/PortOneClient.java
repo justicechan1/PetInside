@@ -1,0 +1,151 @@
+package org.example.petinside.global.portone;
+
+import lombok.RequiredArgsConstructor;
+import org.example.petinside.global.exception.CustomException;
+import org.example.petinside.global.portone.dto.PortOneBillingKeyDetail;
+import org.example.petinside.global.portone.dto.PortOneBillingKeyListResponse;
+import org.example.petinside.global.portone.dto.PortOneBillingKeyPaymentRequest;
+import org.example.petinside.global.portone.dto.PortOnePayWithBillingKeyResponse;
+import org.example.petinside.global.portone.dto.PortOnePaymentDetail;
+import org.example.petinside.global.portone.dto.PortOnePaymentListResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+
+import java.util.Optional;
+import java.util.Set;
+
+@Component
+@RequiredArgsConstructor
+public class PortOneClient {
+
+    private static final String BASE_URL = "https://api.portone.io";
+    private static final int SETTLE_RETRY_COUNT = 5;
+    private static final long SETTLE_RETRY_DELAY_MS = 1500;
+    private static final Set<String> TERMINAL_PAYMENT_STATUSES = Set.of("PAID", "FAILED", "CANCELLED");
+    private static final Set<String> TERMINAL_BILLING_KEY_STATUSES = Set.of("ISSUED", "FAILED", "DELETED");
+
+    private final PortOneProperties portOneProperties;
+
+    // PortOne 결제 단건 조회. 프론트/웹훅의 결과를 그대로 믿지 않고 이 응답으로 최종 확정.
+    public PortOnePaymentDetail getPaymentDetail(String paymentId) {
+        PortOnePaymentDetail last = null;
+        for (int attempt = 1; attempt <= SETTLE_RETRY_COUNT; attempt++) {
+            last = fetchPaymentDetail(paymentId).orElse(null);
+            if (last != null && TERMINAL_PAYMENT_STATUSES.contains(last.status())) {
+                return last;
+            }
+            sleepUnlessLastAttempt(attempt);
+        }
+        if (last != null) {
+            return last; // 끝내 최종 상태가 아니어도 마지막으로 받은 값을 넘겨 finalizeByDetail이 판단하게 함
+        }
+        throw new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 결제 정보를 조회할 수 없습니다.");
+    }
+
+    private Optional<PortOnePaymentDetail> fetchPaymentDetail(String paymentId) {
+        try {
+            return Optional.ofNullable(client().get()
+                    .uri("/payments/{paymentId}", paymentId)
+                    .retrieve()
+                    .body(PortOnePaymentDetail.class));
+        } catch (RestClientException e) {
+            return findInPaymentList(paymentId);
+        }
+    }
+
+    private Optional<PortOnePaymentDetail> findInPaymentList(String paymentId) {
+        try {
+            PortOnePaymentListResponse response = client().get()
+                    .uri("/payments?page.size=1000&sort.by=REQUESTED_AT&sort.order=DESC")
+                    .retrieve()
+                    .body(PortOnePaymentListResponse.class);
+            return response.items().stream()
+                    .filter(item -> paymentId.equals(item.id()))
+                    .findFirst();
+        } catch (RestClientException e) {
+            return Optional.empty();
+        }
+    }
+
+    // requestIssueBillingKeyAndPay(휴대폰 인증)처럼 프론트 단계에서 이미 1회차 결제까지 끝난 경우를 구분하기 위한 조회.
+    // 아직 결제가 실행되지 않은 paymentId(PortOne이 모르는 값)면 Optional.empty()로 구분한다.
+    public Optional<PortOnePaymentDetail> findPaymentDetail(String paymentId) {
+        return findInPaymentList(paymentId);
+    }
+
+    // 프론트에서 발급된 빌링키를 그대로 신뢰하지 않고, 발급 상태(ISSUED)와 소속 Store를 재확인한다.
+    // 결제 조회와 같은 이유로 최종 상태가 아니면 재시도한다.
+    public PortOneBillingKeyDetail getBillingKeyDetail(String billingKey) {
+        PortOneBillingKeyDetail last = null;
+        for (int attempt = 1; attempt <= SETTLE_RETRY_COUNT; attempt++) {
+            last = fetchBillingKeyDetail(billingKey).orElse(null);
+            if (last != null && TERMINAL_BILLING_KEY_STATUSES.contains(last.status())) {
+                return last;
+            }
+            sleepUnlessLastAttempt(attempt);
+        }
+        if (last != null) {
+            return last;
+        }
+        throw new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 빌링키 정보를 조회할 수 없습니다.");
+    }
+
+    private Optional<PortOneBillingKeyDetail> fetchBillingKeyDetail(String billingKey) {
+        try {
+            return Optional.ofNullable(client().get()
+                    .uri("/billing-keys/{billingKey}", billingKey)
+                    .retrieve()
+                    .body(PortOneBillingKeyDetail.class));
+        } catch (RestClientException e) {
+            return findInBillingKeyList(billingKey);
+        }
+    }
+
+    private Optional<PortOneBillingKeyDetail> findInBillingKeyList(String billingKey) {
+        try {
+            PortOneBillingKeyListResponse response = client().get()
+                    .uri("/billing-keys?page.size=1000")
+                    .retrieve()
+                    .body(PortOneBillingKeyListResponse.class);
+            return response.items().stream()
+                    .filter(item -> billingKey.equals(item.billingKey()))
+                    .findFirst();
+        } catch (RestClientException e) {
+            return Optional.empty();
+        }
+    }
+
+    private void sleepUnlessLastAttempt(int attempt) {
+        if (attempt == SETTLE_RETRY_COUNT) {
+            return;
+        }
+        try {
+            Thread.sleep(SETTLE_RETRY_DELAY_MS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    // 빌링키로 1회차 결제를 실행(서버→PortOne 직접 호출이라 프론트 결제창을 거치지 않는다)
+    public PortOnePaymentDetail payWithBillingKey(String paymentId, PortOneBillingKeyPaymentRequest request) {
+        try {
+            PortOnePayWithBillingKeyResponse response = client().post()
+                    .uri("/payments/{paymentId}/billing-key", paymentId)
+                    .body(request)
+                    .retrieve()
+                    .body(PortOnePayWithBillingKeyResponse.class);
+            return response.payment();
+        } catch (RestClientException e) {
+            throw new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "빌링키 결제 요청에 실패했습니다.");
+        }
+    }
+
+    private RestClient client() {
+        // V2 API Secret은 별도 토큰 교환 없이 "PortOne {API_SECRET}" 형식으로 바로 사용
+        return RestClient.create(BASE_URL).mutate()
+                .defaultHeader("Authorization", "PortOne " + portOneProperties.apiSecret())
+                .build();
+    }
+}

@@ -1,8 +1,10 @@
 package org.example.petinside.domain.post.repository;
 
+import jakarta.persistence.EntityManager;
 import org.example.petinside.config.JpaAuditingConfig;
 import org.example.petinside.domain.post.entity.Category;
 import org.example.petinside.domain.post.entity.Post;
+import org.example.petinside.domain.post.entity.PostImage;
 import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +29,8 @@ class PostRepositoryTest {
     private PostRepository postRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private EntityManager entityManager;
 
     private User author;
 
@@ -118,5 +122,22 @@ class PostRepositoryTest {
 
         assertThat(result.getContent()).extracting(Post::getTitle)
                 .containsExactly("조회수 높음", "조회수 중간", "조회수 낮음");
+    }
+
+    @Test
+    @DisplayName("이미지는 삽입 순서와 무관하게 sort_order 오름차순으로 조회된다 (F-37 썸네일 = images.get(0) 전제)")
+    void images_areLoadedOrderedBySortOrder_regardlessOfInsertionOrder() {
+        Post post = save(Category.QNA, "이미지 있는 글", false);
+        post.addImage(PostImage.builder().imageUrl("http://second").sortOrder(1).build());
+        post.addImage(PostImage.builder().imageUrl("http://first").sortOrder(0).build());
+        postRepository.save(post);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Post reloaded = postRepository.findById(post.getId()).orElseThrow();
+
+        assertThat(reloaded.getImages()).extracting(PostImage::getImageUrl)
+                .containsExactly("http://first", "http://second");
     }
 }
