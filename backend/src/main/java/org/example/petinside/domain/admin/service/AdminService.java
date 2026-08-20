@@ -66,7 +66,7 @@ public class AdminService {
     // F-17: 회원 목록 조회
     @Transactional(readOnly = true)
     public Page<UserSummaryResponse> getUsers(Pageable pageable) {
-        return userRepository.findAll(pageable)
+        return userRepository.findByIsDeletedFalse(pageable)
                 .map(UserSummaryResponse::from);
     }
 
