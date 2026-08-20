@@ -11,6 +11,8 @@ import {
 } from '../api/subscriptionApi';
 import type { SubscriptionResult, SubscriptionMeResult } from '../api/subscriptionApi';
 import { isAuthenticated, getUserIdFromToken } from '../utils/auth';
+import petProfileRegisterImg from '../assets/benefit-pet-profile-register.png';
+import petProfileFeedImg from '../assets/benefit-pet-profile-feed.png';
 
 type Mode = 'RECURRING' | 'ONE_TIME';
 
@@ -50,6 +52,7 @@ export default function SubscriptionPage() {
     const [statusLoading, setStatusLoading] = useState(true);
     const [cancelLoading, setCancelLoading] = useState(false);
     const [retryLoading, setRetryLoading] = useState(false);
+    const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
     const loadStatus = async () => {
         setStatusLoading(true);
@@ -239,30 +242,60 @@ export default function SubscriptionPage() {
     const isActiveSubscriber = mySubscription?.hasSubscription && mySubscription.status === 'ACTIVE';
     const isPastDue = mySubscription?.hasSubscription && mySubscription.status === 'PAST_DUE';
 
-    const BENEFITS = [
-        { icon: '😺', label: '프리미엄 이모티콘' },
-        { icon: '✅', label: '인증 뱃지' },
-        { icon: '🐾', label: '반려동물 프로필' },
-        { icon: '🎨', label: '프로필 커스터마이징' },
+    // 혜택을 스크린샷과 함께 자세히 소개하는 영역. 구독 상태와 무관하게 항상 별도 카드로 보여줌.
+    // screenshots가 있는 혜택만 이미지로 보여주고, 아직 없는 혜택은 아이콘+설명 줄로만 표시.
+    // 스크린샷이 더 생기면 해당 혜택의 screenshots 배열만 채우면 됨.
+    const BENEFIT_DETAILS: {
+        icon: string; title: string; description: string;
+        screenshots?: { src: string; caption: string }[];
+    }[] = [
+        {
+            icon: '🐾', title: '반려동물 프로필',
+            description: '내 반려동물의 프로필을 만들고, 사진을 인스타 피드처럼 모아서 자랑할 수 있어요.',
+            screenshots: [
+                { src: petProfileRegisterImg, caption: '반려동물 등록' },
+                { src: petProfileFeedImg, caption: '프로필 & 사진 피드' },
+            ],
+        },
+        { icon: '😺', title: '프리미엄 이모티콘', description: '채팅과 게시글에서 쓸 수 있는 PetInside 전용 이모티콘이 열려요.' },
+        { icon: '✅', title: '인증 뱃지', description: '닉네임 옆에 프리미엄 멤버십 인증 뱃지가 붙어요.' },
+        { icon: '🎨', title: '프로필 커스터마이징', description: '프로필 테마와 배경을 취향대로 꾸밀 수 있어요.' },
     ];
 
-    const renderBenefits = () => (
+    const renderBenefitShowcase = () => (
         <div>
-            <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, letterSpacing: '0.04em', color: muted, textTransform: 'uppercase' }}>
-                Membership Benefits
+            <p style={{ margin: '0 0 14px', fontSize: 12, fontWeight: 800, letterSpacing: '0.04em', color: muted, textTransform: 'uppercase' }}>
+                이런 혜택이 있어요
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
-                {BENEFITS.map(b => (
-                    <div key={b.label} style={{
-                        display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
-                        borderRadius: 14, background: '#FFF8EC',
-                    }}>
-                        <span style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            width: 30, height: 30, borderRadius: '50%', background: '#fff',
-                            fontSize: 15, flexShrink: 0,
-                        }}>{b.icon}</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#8A5A16', lineHeight: 1.25 }}>{b.label}</span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+                {BENEFIT_DETAILS.map(b => (
+                    <div key={b.title} style={{ padding: '16px', borderRadius: 16, background: '#FFF8EC' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                            <span style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: 30, height: 30, borderRadius: '50%', background: '#fff',
+                                fontSize: 15, flexShrink: 0,
+                            }}>{b.icon}</span>
+                            <span style={{ fontSize: 14, fontWeight: 800, color: '#8A5A16' }}>{b.title}</span>
+                        </div>
+                        <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#9A6A1F', lineHeight: 1.5 }}>
+                            {b.description}
+                        </p>
+                        {b.screenshots && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                {b.screenshots.map(s => (
+                                    <div key={s.caption}>
+                                        <img src={s.src} alt={s.caption} onClick={() => setLightboxSrc(s.src)} style={{
+                                            width: '100%', display: 'block', borderRadius: 14,
+                                            border: '1px solid #FFE1B3', background: '#fff', cursor: 'zoom-in',
+                                        }} />
+                                        <p style={{ margin: '6px 0 0', fontSize: 11, color: '#9A6A1F', textAlign: 'center', fontWeight: 600 }}>
+                                            {s.caption}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
@@ -283,7 +316,8 @@ export default function SubscriptionPage() {
     return (
         <div style={{ background: page, minHeight: '100vh' }}>
             <GNB />
-            <div style={{ maxWidth: 460, margin: '0 auto', padding: '40px 16px 64px' }}>
+            <div style={{ padding: '40px 16px 64px' }}>
+            <div style={{ maxWidth: 460, margin: '0 auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 22 }}>
                     <div>
                         <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', color: primary, textTransform: 'uppercase' }}>
@@ -334,10 +368,6 @@ export default function SubscriptionPage() {
                                 )}
                             </div>
                         )}
-
-                        <div style={{ height: 1, background: border, margin: '0 0 22px' }} />
-
-                        {renderBenefits()}
 
                         {mySubscription?.type === 'RECURRING' && (
                             <div style={{ marginTop: 24 }}>
@@ -399,10 +429,6 @@ export default function SubscriptionPage() {
                                 {retryLoading ? '재시도 중...' : '다시 결제'}
                             </button>
                         </div>
-
-                        <div style={{ height: 1, background: border, margin: '22px 0' }} />
-
-                        {renderBenefits()}
                     </div>
                 ) : (
                     <div style={cardStyle}>
@@ -437,11 +463,34 @@ export default function SubscriptionPage() {
                             style={{ ...primaryBtnStyle(loading), width: '100%', padding: '14px', marginBottom: 26 }}>
                             {loading ? '처리 중...' : mode === 'ONE_TIME' ? '1개월 이용권 구매하기' : '구독 시작하기'}
                         </button>
-
-                        {renderBenefits()}
                     </div>
                 )}
+
             </div>
+
+            {!statusLoading && (
+                <div style={{ maxWidth: 640, margin: '16px auto 0' }}>
+                    <div style={cardStyle}>
+                        {renderBenefitShowcase()}
+                    </div>
+                </div>
+            )}
+            </div>
+
+            {lightboxSrc && (
+                <div onClick={() => setLightboxSrc(null)} style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, cursor: 'zoom-out',
+                }}>
+                    <button onClick={() => setLightboxSrc(null)} style={{
+                        position: 'absolute', top: 16, right: 16, background: 'none', border: 'none',
+                        color: '#fff', fontSize: 28, cursor: 'pointer', lineHeight: 1,
+                    }}>×</button>
+                    <img src={lightboxSrc} alt="" onClick={e => e.stopPropagation()} style={{
+                        maxWidth: '100%', maxHeight: '85vh', objectFit: 'contain', borderRadius: 12, display: 'block', cursor: 'default',
+                    }} />
+                </div>
+            )}
         </div>
     );
 }
