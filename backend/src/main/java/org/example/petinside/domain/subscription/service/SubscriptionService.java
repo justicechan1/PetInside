@@ -47,9 +47,11 @@ public class SubscriptionService {
 
     // 이미 검증·저장된 빌링키(billingKeyId)로 1회차 결제를 실행하고 구독을 시작.
     // 빌링키 발급(카드 등록) 자체는 별도 API(BillingKeyController)에서 이미 끝난 상태.
+    // 같은 유저가 거의 동시에 두 번 호출해도("이미 구독 있는지 확인 → 결제" 사이에 이중 결제가 끼어들지
+    // 못하도록) 유저 row에 락을 걸어 트랜잭션이 끝날 때까지 뒤 요청이 대기하게 만든다.
     @Transactional
     public SubscriptionCompleteResponse create(Long userId, SubscriptionCreateRequest request) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
 
         if (subscriptionRepository.existsByUserAndStatusIn(user, VALID_SUBSCRIPTION_STATUSES)) {
