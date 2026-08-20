@@ -10,7 +10,7 @@ import {
     cancelSubscription, resumeSubscription,
 } from '../api/subscriptionApi';
 import type { SubscriptionResult, SubscriptionMeResult } from '../api/subscriptionApi';
-import { isAuthenticated } from '../utils/auth';
+import { isAuthenticated, getUserIdFromToken } from '../utils/auth';
 
 type Mode = 'RECURRING' | 'ONE_TIME';
 
@@ -84,6 +84,9 @@ export default function SubscriptionPage() {
                 billingKeyMethod: 'CARD',
                 issueId: prepared.issueId,
                 issueName: 'PetInside 구독 카드 등록',
+                // 백엔드가 발급 의도(intent)를 남긴 사용자와 실제 발급받은 사용자가 같은지 대조할 수 있도록,
+                // 우리 userId를 그대로 PortOne customerId로 넘김.
+                customerId: getUserIdFromToken() ?? undefined,
                 customer: { fullName, phoneNumber, email },
                 // 모바일(REDIRECTION 전용 PG)에서 결제창이 이 URL로 복귀 - issueId는 우리가 붙인 쿼리라
                 // PortOne이 결과 파라미터를 이어붙여도 그대로 남아있음
