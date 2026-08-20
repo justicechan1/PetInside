@@ -5,6 +5,7 @@ import Avatar from '../components/Avatar';
 import { profilePath } from '../utils/profileNav';
 import { getPosts } from '../api/postApi';
 import type { PostListItem } from '../api/postApi';
+import { isAuthenticated } from '../utils/auth';
 
 export default function PostListPage() {
     const navigate = useNavigate();
@@ -33,6 +34,15 @@ export default function PostListPage() {
     const handleSearch = () => setSearchParams({ category, keyword: searchInput, page: '0' });
     const setPage = (p: number) => setSearchParams({ category, keyword, page: String(p) });
 
+    const handleWriteClick = () => {
+        if (!isAuthenticated()) {
+            alert('로그인 후 이용할 수 있습니다.');
+            navigate('/login');
+            return;
+        }
+        navigate('/posts/new');
+    };
+
     return (
         <div>
             <GNB />
@@ -49,7 +59,7 @@ export default function PostListPage() {
                             {cat === '' ? '전체' : cat === 'QNA' ? 'Q&A' : '자랑'}
                         </button>
                     ))}
-                    <button onClick={() => navigate('/posts/new')} style={{
+                    <button onClick={handleWriteClick} style={{
                         marginLeft: 'auto', padding: '8px 20px', borderRadius: 20,
                         border: 'none', background: 'var(--primary, #FF8C00)', color: '#fff',
                         cursor: 'pointer', fontWeight: 600,
