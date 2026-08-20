@@ -12,19 +12,21 @@ public record SubscriptionMeResponse(
         SubscriptionStatus status,
         LocalDateTime startAt,
         LocalDateTime nextBillingAt,
-        LocalDateTime canceledAt
+        LocalDateTime canceledAt,
+        LocalDateTime paymentFailedAt
 ) {
     private static final String RECURRING = "RECURRING";
     private static final String ONE_TIME = "ONE_TIME";
 
     public static SubscriptionMeResponse none() {
-        return new SubscriptionMeResponse(false, null, null, null, null, null, null);
+        return new SubscriptionMeResponse(false, null, null, null, null, null, null, null);
     }
 
     public static SubscriptionMeResponse from(Subscription subscription) {
         String type = subscription.getBillingKey() != null ? RECURRING : ONE_TIME;
         return new SubscriptionMeResponse(
                 true, subscription.getId(), type, subscription.getStatus(),
-                subscription.getStartAt(), subscription.getNextBillingAt(), subscription.getCanceledAt());
+                subscription.getStartAt(), subscription.getNextBillingAt(), subscription.getCanceledAt(),
+                subscription.getPaymentFailedAt());
     }
 }

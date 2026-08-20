@@ -92,4 +92,15 @@ public class SubscriptionController {
         return ResponseEntity
                 .ok(ApiResponse.success(HttpStatus.OK.value(), "구독이 재개되었습니다", response));
     }
+
+    // F-22: 결제 실패 배너의 [다시 결제]. 다음 자동 재청구 배치를 기다리지 않고 즉시 재시도.
+    @PostMapping("/{subscriptionId}/retry-payment")
+    public ResponseEntity<ApiResponse<SubscriptionMeResponse>> retryPayment(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long subscriptionId) {
+        SubscriptionMeResponse response = subscriptionService.retryPayment(userId, subscriptionId);
+
+        return ResponseEntity
+                .ok(ApiResponse.success(HttpStatus.OK.value(), "결제를 재시도했습니다", response));
+    }
 }

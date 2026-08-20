@@ -99,11 +99,38 @@ public class Subscription {
         return billingKey != null;
     }
 
+    // 정상(ACTIVE) 구독의 해지 예약: 이미 승인된 회차는 그대로 두고 다음 결제만 막음.
+    // PAST_DUE(유예기간) 중의 해지는 다른 의미라 여기서 다루지 않고 cancelDuringGracePeriod()로 분리.
     public void cancel() {
         this.canceledAt = LocalDateTime.now();
     }
 
+    // 결제 실패 배너에서 [구독 취소]를 누른 경우: 유예기간 중엔 이미 새 회차 결제가 안 된 상태라
+    // 더 기다릴 이유가 없으므로, 해지 요청 즉시 만료시킴(유예기간 만료를 기다리지 않음).
+    public void cancelDuringGracePeriod() {
+        this.status = SubscriptionStatus.EXPIRED;
+        this.canceledAt = LocalDateTime.now();
+        this.paymentFailedAt = null;
+    }
+
     public void resume() {
         this.canceledAt = null;
+    }
+
+    // F-22: 정기결제 회차 성공. 다음 결제일을 한 달 뒤로 미루고(1회차와 동일한 규칙),
+    // 유예기간(PAST_DUE) 중이었다면 정상(ACTIVE)으로 복귀시키고 실패 기록을 지움.
+    public void chargeSucceeded(LocalDateTime paidAt) {
+        this.nextBillingAt = paidAt.plusMonths(1).minusDays(1);
+        this.status = SubscriptionStatus.ACTIVE;
+        this.paymentFailedAt = null;
+    }
+
+    // F-22: 정기결제 회차 실패. 혜택을 즉시 차단하기 위해 PAST_DUE로 전환하고,
+    // 재시도 때마다 갱신하지 않고 최초 실패 시각만 고정(유예기간 3일 계산 기준).
+    public void markPaymentFailed() {
+        if (this.paymentFailedAt == null) {
+            this.paymentFailedAt = LocalDateTime.now();
+        }
+        this.status = SubscriptionStatus.PAST_DUE;
     }
 }
