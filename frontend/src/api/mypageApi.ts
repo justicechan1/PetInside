@@ -7,6 +7,7 @@ export interface UserInfo {
     role: string;
     createdAt: string;
     provider: string | null;
+    profileLayout: string;
 }
 
 export interface MyPost {
@@ -28,6 +29,9 @@ export const updatePassword = (currentPassword: string, newPassword: string) =>
 
 export const updateProfileImage = (imageUrl: string) =>
     axiosInstance.patch('/api/v1/users/me/profile-image', { imageUrl });
+
+export const updateProfileLayout = (profileLayout: string) =>
+    axiosInstance.patch('/api/v1/mypage/profile-layout', { profileLayout });
 
 export const getMyPosts = (params?: { keyword?: string; category?: string; page?: number; size?: number }) =>
     axiosInstance.get<{ data: { content: MyPost[]; totalPages: number; number: number } }>('/api/v1/users/me/posts', { params: { size: 10, ...params } }).then(r => r.data.data);
