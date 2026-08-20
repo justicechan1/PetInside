@@ -51,6 +51,15 @@ public class PetController {
         return ResponseEntity.ok(ApiResponse.success(200, "펫 정보가 수정되었습니다.", petService.update(userId, petId, request)));
     }
 
+    @Operation(summary = "펫 삭제", description = "반려동물 프로필 및 모든 사진을 삭제합니다. 구독자(ACTIVE)만 이용 가능합니다.")
+    @DeleteMapping("/pets/{petId}")
+    public ResponseEntity<ApiResponse<Void>> delete(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long petId) {
+        petService.delete(userId, petId);
+        return ResponseEntity.ok(ApiResponse.success(200, "펫이 삭제되었습니다.", null));
+    }
+
     @Operation(summary = "펫 사진 목록 조회")
     @GetMapping("/pets/{petId}/photos")
     public ResponseEntity<ApiResponse<List<PetPhotoResponse>>> getPhotos(

@@ -27,14 +27,18 @@ public class PetPhoto {
     @Column(nullable = false)
     private String imageUrl;
 
+    @Column(length = 200)
+    private String caption;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public static PetPhoto of(Pet pet, String imageUrl) {
+    public static PetPhoto of(Pet pet, String imageUrl, String caption) {
         PetPhoto photo = new PetPhoto();
         photo.pet = pet;
         photo.imageUrl = imageUrl;
+        photo.caption = caption;
         return photo;
     }
 }

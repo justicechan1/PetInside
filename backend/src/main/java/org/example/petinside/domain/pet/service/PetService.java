@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -66,6 +65,15 @@ public class PetService {
                 .toList();
     }
 
+    // [F-35] 펫 삭제 - 사진은 cascade로 자동 삭제
+    @Transactional
+    public void delete(Long userId, Long petId) {
+        validateSubscriberAndGetUser(userId);
+        Pet pet = petRepository.findByIdAndUserId(petId, userId)
+                .orElseThrow(() -> new CustomException(404, "펫을 찾을 수 없습니다."));
+        petRepository.delete(pet);
+    }
+
     // [F-35] 펫 수정 - 본인 소유 펫인지 한 번에 확인 (findByIdAndUserId)
     @Transactional
     public PetResponse update(Long userId, Long petId, PetRequest request) {
@@ -98,7 +106,7 @@ public class PetService {
         validateSubscriberAndGetUser(userId);
         Pet pet = petRepository.findByIdAndUserId(petId, userId)
                 .orElseThrow(() -> new CustomException(404, "펫을 찾을 수 없습니다."));
-        return PetPhotoResponse.from(petPhotoRepository.save(PetPhoto.of(pet, request.getImageUrl())));
+        return PetPhotoResponse.from(petPhotoRepository.save(PetPhoto.of(pet, request.getImageUrl(), request.getCaption())));
     }
 
     // 펫 사진 삭제 - 구독자 + 본인 소유 펫의 사진
@@ -107,8 +115,9 @@ public class PetService {
         validateSubscriberAndGetUser(userId);
         PetPhoto photo = petPhotoRepository.findById(photoId)
                 .orElseThrow(() -> new CustomException(404, "사진을 찾을 수 없습니다."));
-        if (!Objects.equals(photo.getPet().getId(), petId) ||
-            !Objects.equals(photo.getPet().getUser().getId(), userId)) {
+        Long ownerUserId = photo.getPet().getUser().getId();
+        Long ownerPetId = photo.getPet().getId();
+        if (!ownerPetId.equals(petId) || !ownerUserId.equals(userId)) {
             throw new CustomException(403, "권한이 없습니다.");
         }
         petPhotoRepository.delete(photo);
