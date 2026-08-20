@@ -42,6 +42,13 @@ public class PetController {
         return ResponseEntity.ok(ApiResponse.success(200, "조회 성공", petService.getMyPets(userId)));
     }
 
+    @Operation(summary = "공개 펫 목록 조회", description = "특정 사용자의 반려동물 목록을 조회합니다.")
+    @GetMapping("/users/{userId}/pets")
+    public ResponseEntity<ApiResponse<List<PetResponse>>> getUserPets(
+            @PathVariable Long userId) {
+        return ResponseEntity.ok(ApiResponse.success(200, "조회 성공", petService.getMyPets(userId)));
+    }
+
     @Operation(summary = "펫 수정", description = "반려동물 프로필을 수정합니다. 구독자(ACTIVE)만 이용 가능합니다.")
     @PutMapping("/pets/{petId}")
     public ResponseEntity<ApiResponse<PetResponse>> update(
