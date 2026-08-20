@@ -288,8 +288,8 @@ export default function SubscriptionPage() {
 
                         <p style={{ color: '#666', fontSize: 14, marginBottom: 20 }}>
                             {mode === 'ONE_TIME'
-                                ? '1,000원 결제로 1개월간 이용할 수 있어요. 자동으로 다시 결제되지 않고, 한 달 뒤 자동 만료돼요.'
-                                : '월 1,000원 정기결제로 카드를 등록합니다. 카드 등록 창이 뜨면 안내에 따라 진행해주세요.'}
+                                ? '1,900원 결제로 1개월간 이용할 수 있어요. 자동으로 다시 결제되지 않고, 한 달 뒤 자동 만료돼요.'
+                                : '월 1,900원 정기결제로 카드를 등록합니다. 카드 등록 창이 뜨면 안내에 따라 진행해주세요.'}
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
                             <input value={fullName} onChange={e => setFullName(e.target.value)}
