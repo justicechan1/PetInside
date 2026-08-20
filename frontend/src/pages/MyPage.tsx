@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GNB from '../components/GNB';
 import { getMyInfo, updateNickname, updatePassword, updateProfileImage, getMyPosts, updateProfileLayout } from '../api/mypageApi';
@@ -9,6 +9,11 @@ import type { SubscriptionMeResult, PaymentHistoryItem } from '../api/subscripti
 import { getMyPets, createPet, updatePet, deletePet, getPetPhotos, addPetPhoto, deletePetPhoto } from '../api/petApi';
 import type { Pet, PetForm, PetPhoto } from '../api/petApi';
 import { isAuthenticated } from '../utils/auth';
+import { cardStyle, solidBtn, outlineBtn, inputStyle as sharedInputStyle } from '../styles/common';
+import PhotoLightbox from '../components/PhotoLightbox';
+import PetStoryBubbles from '../components/PetStoryBubbles';
+import PetProfileHeader from '../components/PetProfileHeader';
+import PetPhotoGrid from '../components/PetPhotoGrid';
 
 type Tab = 'profile' | 'posts' | 'pets' | 'payment';
 
@@ -62,7 +67,6 @@ export default function MyPage() {
     const [petPhotos, setPetPhotos] = useState<{ [petId: number]: PetPhoto[] }>({});
     const [photosLoading, setPhotosLoading] = useState(false);
     const [photoUploading, setPhotoUploading] = useState(false);
-    const photoFileInputRef = useRef<HTMLInputElement>(null);
     // 업로드 미리보기 모달
     const [uploadPreview, setUploadPreview] = useState<{ file: File; previewUrl: string } | null>(null);
     const [uploadCaption, setUploadCaption] = useState('');
@@ -253,12 +257,9 @@ export default function MyPage() {
         }
     };
 
-    const handlePhotoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    const handlePhotoFileSelect = (file: File) => {
         setUploadPreview({ file, previewUrl: URL.createObjectURL(file) });
         setUploadCaption('');
-        if (photoFileInputRef.current) photoFileInputRef.current.value = '';
     };
 
     const handlePhotoUploadConfirm = async () => {
@@ -312,31 +313,13 @@ export default function MyPage() {
     const isSubscriber = subscription?.status === 'ACTIVE';
 
     // ─── 스타일 상수 ───────────────────────────────────────────────────
+    const inputStyle = sharedInputStyle;
+
     const tabBtnStyle = (active: boolean): React.CSSProperties => ({
         padding: '10px 20px', border: 'none', borderRadius: 20, cursor: 'pointer', fontWeight: 600, fontSize: 14,
         background: active ? 'var(--primary, #FF8C00)' : '#f0f0f0',
         color: active ? '#fff' : '#333',
     });
-
-    const inputStyle: React.CSSProperties = {
-        padding: '11px 14px', border: '1px solid #e0e0e0', borderRadius: 8,
-        fontSize: 14, width: '100%', boxSizing: 'border-box', background: '#fff',
-    };
-
-    const cardStyle: React.CSSProperties = {
-        background: '#fff', borderRadius: 16, border: '1px solid #f0f0f0',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden',
-    };
-
-    const solidBtn: React.CSSProperties = {
-        padding: '8px 18px', border: 'none', borderRadius: 8, whiteSpace: 'nowrap',
-        background: 'var(--primary, #FF8C00)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-    };
-
-    const outlineBtn: React.CSSProperties = {
-        padding: '8px 18px', border: '1px solid #dee2e6', borderRadius: 8, whiteSpace: 'nowrap',
-        background: '#fff', cursor: 'pointer', fontSize: 13,
-    };
 
     // ─── 펫 인라인 폼 ─────────────────────────────────────────────────
     const renderPetForm = (title: string) => (
@@ -424,26 +407,11 @@ export default function MyPage() {
 
             {/* ── 라이트박스 모달 ── */}
             {lightbox && (
-                <div onClick={() => setLightbox(null)}
-                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-                    <button onClick={() => setLightbox(null)}
-                        style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: '#fff', fontSize: 28, cursor: 'pointer', lineHeight: 1 }}>×</button>
-                    <img src={lightbox.imageUrl} alt={lightbox.caption ?? ''}
-                        style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: 8, display: 'block' }}
-                        onClick={e => e.stopPropagation()} />
-                    <div style={{ marginTop: 16, textAlign: 'center', width: '100%', maxWidth: 480 }} onClick={e => e.stopPropagation()}>
-                        {lightbox.caption && (
-                            <p style={{ color: '#fff', fontSize: 15, margin: '0 0 8px', lineHeight: 1.5 }}>{lightbox.caption}</p>
-                        )}
-                        <p style={{ color: '#aaa', fontSize: 13, margin: '0 0 16px' }}>
-                            {new Date(lightbox.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
-                        </p>
-                        <button onClick={() => handlePhotoDelete(lightbox.id)}
-                            style={{ padding: '8px 20px', border: '1px solid #ff6b6b', borderRadius: 8, background: 'transparent', color: '#ff6b6b', cursor: 'pointer', fontSize: 13 }}>
-                            사진 삭제
-                        </button>
-                    </div>
-                </div>
+                <PhotoLightbox
+                    photo={lightbox}
+                    onClose={() => setLightbox(null)}
+                    onDelete={handlePhotoDelete}
+                />
             )}
             <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 16px' }}>
 
@@ -570,28 +538,10 @@ export default function MyPage() {
                         {isSubscriber && petsLoaded && pets.length > 0 && (
                             <div style={{ ...cardStyle, padding: '16px 20px' }}>
                                 <div style={{ fontSize: 12, color: '#aaa', marginBottom: 10, fontWeight: 600, letterSpacing: 0.5 }}>MY PETS</div>
-                                <div style={{ display: 'flex', gap: 16, overflowX: 'auto', scrollbarWidth: 'none' }}>
-                                    {pets.map(pet => (
-                                        <div key={pet.id}
-                                            onClick={() => { setSelectedPet(pet); setTab('pets'); }}
-                                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer', flexShrink: 0 }}>
-                                            <div style={{
-                                                width: 56, height: 56, borderRadius: '50%',
-                                                background: '#f0f0f0', overflow: 'hidden',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
-                                                border: '2.5px solid var(--primary, #FF8C00)',
-                                                boxSizing: 'border-box',
-                                            }}>
-                                                {pet.petImageUrl
-                                                    ? <img src={pet.petImageUrl} alt={pet.petName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    : '🐾'}
-                                            </div>
-                                            <span style={{ fontSize: 11, color: '#555', maxWidth: 56, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {pet.petName}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
+                                <PetStoryBubbles
+                                    pets={pets}
+                                    onSelect={pet => { setSelectedPet(pet); setTab('pets'); }}
+                                />
                             </div>
                         )}
 
@@ -734,45 +684,9 @@ export default function MyPage() {
                             </div>
                         ) : (
                             <div style={cardStyle}>
-                                {/* ── 스토리 버블 행 ── */}
-                                <div style={{
-                                    display: 'flex', gap: 16, padding: '20px 20px 16px',
-                                    overflowX: 'auto', borderBottom: '1px solid #f0f0f0',
-                                    scrollbarWidth: 'none',
-                                }}>
-                                    {pets.map(pet => (
-                                        <div key={pet.id} onClick={() => selectPet(pet)}
-                                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer', flexShrink: 0 }}>
-                                            <div style={{
-                                                width: 64, height: 64, borderRadius: '50%',
-                                                background: '#f0f0f0', overflow: 'hidden',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
-                                                border: selectedPet?.id === pet.id
-                                                    ? '3px solid var(--primary, #FF8C00)'
-                                                    : '3px solid #e0e0e0',
-                                                boxSizing: 'border-box',
-                                            }}>
-                                                {pet.petImageUrl
-                                                    ? <img src={pet.petImageUrl} alt={pet.petName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    : '🐾'}
-                                            </div>
-                                            <span style={{
-                                                fontSize: 12, fontWeight: selectedPet?.id === pet.id ? 700 : 400,
-                                                color: selectedPet?.id === pet.id ? 'var(--primary, #FF8C00)' : '#555',
-                                                maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                            }}>{pet.petName}</span>
-                                        </div>
-                                    ))}
-                                    {/* 새 펫 추가 버블 */}
-                                    <div onClick={openAddPet}
-                                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer', flexShrink: 0 }}>
-                                        <div style={{
-                                            width: 64, height: 64, borderRadius: '50%',
-                                            background: '#f8f8f8', border: '3px dashed #ddd', boxSizing: 'border-box',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: '#bbb',
-                                        }}>+</div>
-                                        <span style={{ fontSize: 12, color: '#bbb' }}>추가</span>
-                                    </div>
+                                {/* -- Story bubbles */}
+                                <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid #f0f0f0' }}>
+                                    <PetStoryBubbles pets={pets} selectedPetId={selectedPet?.id} onSelect={selectPet} onAdd={openAddPet} />
                                 </div>
 
                                 {/* ── 선택된 펫 프로필 헤더 ── */}
@@ -781,37 +695,12 @@ export default function MyPage() {
                                         {editingPet?.id === selectedPet.id ? (
                                             renderPetForm('펫 정보 수정')
                                         ) : (
-                                            <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-                                                <div style={{
-                                                    width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
-                                                    background: '#f0f0f0', overflow: 'hidden',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32,
-                                                }}>
-                                                    {selectedPet.petImageUrl
-                                                        ? <img src={selectedPet.petImageUrl} alt={selectedPet.petName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                        : '🐾'}
-                                                </div>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                                                        <span style={{ fontWeight: 700, fontSize: 17 }}>{selectedPet.petName}</span>
-                                                        <button onClick={() => openEditPet(selectedPet)} style={{ ...outlineBtn, padding: '4px 12px', fontSize: 12 }}>수정</button>
-                                                        <button onClick={() => handlePetDelete(selectedPet.id)} style={{ ...outlineBtn, padding: '4px 12px', fontSize: 12, color: '#e03131', borderColor: '#ffa8a8' }}>삭제</button>
-                                                    </div>
-                                                    <div style={{ fontSize: 13, color: '#888' }}>
-                                                        {selectedPet.petType}
-                                                        {selectedPet.petBirthday && <span> · {selectedPet.petBirthday}</span>}
-                                                    </div>
-                                                    {selectedPet.petIntro && (
-                                                        <div style={{ fontSize: 13, color: '#444', marginTop: 6, lineHeight: 1.5 }}>
-                                                            {selectedPet.petIntro}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                                                    <div style={{ fontWeight: 700, fontSize: 18 }}>{(petPhotos[selectedPet.id] ?? []).length}</div>
-                                                    <div style={{ fontSize: 12, color: '#888' }}>게시물</div>
-                                                </div>
-                                            </div>
+                                            <PetProfileHeader
+                                                pet={selectedPet}
+                                                photoCount={(petPhotos[selectedPet.id] ?? []).length}
+                                                onEdit={() => openEditPet(selectedPet)}
+                                                onDelete={() => handlePetDelete(selectedPet.id)}
+                                            />
                                         )}
                                     </div>
                                 )}
@@ -825,51 +714,12 @@ export default function MyPage() {
 
                                 {/* ── 사진 그리드 피드 ── */}
                                 {selectedPet && !showAddForm && !editingPet && (
-                                    <div>
-                                        {photosLoading ? (
-                                            <p style={{ textAlign: 'center', color: '#bbb', padding: '32px 0' }}>불러오는 중...</p>
-                                        ) : (
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2, padding: 2 }}>
-                                                {/* 사진 추가 칸 */}
-                                                <div
-                                                    onClick={() => photoFileInputRef.current?.click()}
-                                                    style={{
-                                                        aspectRatio: '1', background: '#f8f8f8', cursor: 'pointer',
-                                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                                        gap: 4, border: '2px dashed #e0e0e0',
-                                                    }}
-                                                >
-                                                    <span style={{ fontSize: 28, color: '#ccc' }}>+</span>
-                                                    <span style={{ fontSize: 11, color: '#bbb' }}>사진 추가</span>
-                                                </div>
-                                                <input ref={photoFileInputRef} type="file" accept="image/*" onChange={handlePhotoFileSelect} style={{ display: 'none' }} />
-
-                                                {/* 사진 목록 */}
-                                                {(petPhotos[selectedPet.id] ?? []).map(photo => (
-                                                    <div key={photo.id} onClick={() => setLightbox(photo)}
-                                                        style={{ position: 'relative', aspectRatio: '1', overflow: 'hidden', cursor: 'pointer' }}
-                                                    >
-                                                        <img src={photo.imageUrl} alt={photo.caption ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                                                        {photo.caption && (
-                                                            <div style={{
-                                                                position: 'absolute', bottom: 0, left: 0, right: 0,
-                                                                background: 'linear-gradient(transparent, rgba(0,0,0,0.55))',
-                                                                padding: '16px 6px 5px',
-                                                                fontSize: 10, color: '#fff',
-                                                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                                            }}>{photo.caption}</div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {!photosLoading && (petPhotos[selectedPet.id] ?? []).length === 0 && (
-                                            <p style={{ textAlign: 'center', color: '#bbb', padding: '32px 0', fontSize: 14 }}>
-                                                아직 사진이 없습니다. 위의 + 버튼으로 추가해보세요.
-                                            </p>
-                                        )}
-                                    </div>
+                                    <PetPhotoGrid
+                                        photos={petPhotos[selectedPet.id] ?? []}
+                                        loading={photosLoading}
+                                        onPhotoClick={setLightbox}
+                                        onAdd={handlePhotoFileSelect}
+                                    />
                                 )}
                             </div>
                         )}
