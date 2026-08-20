@@ -5,13 +5,18 @@ import org.example.petinside.domain.subscription.entity.SubscriptionStatus;
 import java.time.LocalDateTime;
 
 public record SubscriptionSummaryResponse (
-        Long subscripstionId,
+        Long subscriptionId,
         Long userId,
         String username,
         String nickname,
         SubscriptionStatus status,
-        LocalDateTime nextBillingAt
+        String type,
+        LocalDateTime nextBillingAt,
+        LocalDateTime canceledAt
 ) {
+    private static final String RECURRING = "RECURRING";
+    private static final String ONE_TIME = "ONE_TIME";
+
     public static SubscriptionSummaryResponse from(Subscription subscription) {
         return new SubscriptionSummaryResponse(
                 subscription.getId(),
@@ -19,7 +24,9 @@ public record SubscriptionSummaryResponse (
                 subscription.getUser().getUsername(),
                 subscription.getUser().getNickname(),
                 subscription.getStatus(),
-                subscription.getNextBillingAt()
+                subscription.getBillingKey() != null ? RECURRING : ONE_TIME,
+                subscription.getNextBillingAt(),
+                subscription.getCanceledAt()
         );
     }
 }
