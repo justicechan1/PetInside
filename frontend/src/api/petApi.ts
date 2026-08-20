@@ -21,6 +21,9 @@ export interface PetForm {
 export const getMyPets = () =>
     axiosInstance.get<{ data: Pet[] }>('/api/v1/users/me/pets').then(r => r.data.data);
 
+export const getUserPets = (userId: number) =>
+    axiosInstance.get<{ data: Pet[] }>(`/api/v1/users/${userId}/pets`).then(r => r.data.data);
+
 export const createPet = (data: PetForm) =>
     axiosInstance.post<{ data: Pet }>('/api/v1/pets', data).then(r => r.data.data);
 
