@@ -11,6 +11,7 @@ import org.example.petinside.domain.payment.entity.PaymentTransaction;
 import org.example.petinside.domain.payment.repository.OrderRepository;
 import org.example.petinside.domain.payment.repository.PaymentRepository;
 import org.example.petinside.domain.payment.repository.PaymentTransactionRepository;
+import org.example.petinside.domain.subscription.entity.Subscription;
 import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.global.exception.CustomException;
@@ -74,6 +75,21 @@ public class PaymentService {
         //파라미터 제한(1~40자)에 맞춰 UUID는 하이픈 없이 사용
         String paymentId = portOneProperties.paymentIdPrefix() + "-SUB-" + UUID.randomUUID().toString().replace("-", "");
         Payment payment = Payment.createReady(user, order, paymentId, 1, PLAN_AMOUNT, CURRENCY);
+        return paymentRepository.save(payment);
+    }
+
+    // F-22: 정기결제 다음 회차 결제 준비. 이미 존재하는 구독에 대한 재청구라 생성 시점에 바로 연결.
+    @Transactional
+    public Payment createNextRoundPayment(Subscription subscription) {
+        User user = subscription.getUser();
+        int nextRound = paymentRepository.findFirstBySubscriptionIdOrderByRoundDesc(subscription.getId())
+                .map(Payment::getRound)
+                .orElse(0) + 1;
+
+        Order order = orderRepository.save(Order.ready(user, PLAN_AMOUNT, CURRENCY));
+        String paymentId = portOneProperties.paymentIdPrefix() + "-SUB-" + UUID.randomUUID().toString().replace("-", "");
+        Payment payment = Payment.createReady(user, order, paymentId, nextRound, PLAN_AMOUNT, CURRENCY);
+        payment.linkSubscription(subscription);
         return paymentRepository.save(payment);
     }
 

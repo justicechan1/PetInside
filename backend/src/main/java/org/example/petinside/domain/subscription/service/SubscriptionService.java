@@ -25,13 +25,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class SubscriptionService {
 
     private static final String ORDER_NAME = "PetInside 구독 결제";
+    // 이미 유효한 구독(정상이든 유예기간 중이든)이 있으면 새 구독을 또 시작할 수 없음.
+    private static final Set<SubscriptionStatus> VALID_SUBSCRIPTION_STATUSES = EnumSet.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE);
 
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
@@ -48,7 +52,7 @@ public class SubscriptionService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
 
-        if (subscriptionRepository.existsByUserAndStatus(user, SubscriptionStatus.ACTIVE)) {
+        if (subscriptionRepository.existsByUserAndStatusIn(user, VALID_SUBSCRIPTION_STATUSES)) {
             throw new CustomException(HttpStatus.CONFLICT.value(), "이미 활성 구독이 존재합니다.");
         }
 
@@ -92,13 +96,45 @@ public class SubscriptionService {
         return webhookNoticeUrl == null || webhookNoticeUrl.isBlank() ? null : List.of(webhookNoticeUrl);
     }
 
+    // F-22: 정기결제 자동 재청구 한 건. 스케줄러(SubscriptionBillingScheduler)가 매일 대상 구독마다 호출.
+    // 실패해도 예외를 던지지 않고 payment_failed_at만 기록 — 한 건의 실패가 배치 전체를 막지 않게 함.
+    // 일부러 이 메서드 자체는 @Transactional을 걸지 않음: createNextRoundPayment/verifyAndMarkPaid가
+    // 각자 독립된 트랜잭션으로 커밋되게 해서, 결제 실패로 인한 롤백이 이 메서드의 성공/실패 기록까지
+    // 함께 롤백시키지 않도록 함(같은 트랜잭션에 묶이면 verifyAndMarkPaid의 실패가 전체를 롤백시킴).
+    public void chargeNextRound(Subscription subscription) {
+        BillingKey billingKey = subscription.getBillingKey();
+        Long userId = subscription.getUser().getId();
+        Payment payment = paymentService.createNextRoundPayment(subscription);
+        String rawBillingKey = billingKeyEncryptor.decrypt(billingKey.getBillingKeyEncrypted());
+
+        try {
+            portOneClient.payWithBillingKey(payment.getPaymentId(), new PortOneBillingKeyPaymentRequest(
+                    rawBillingKey,
+                    portOneProperties.storeId(),
+                    portOneProperties.channelKeySubscription(),
+                    ORDER_NAME,
+                    new PortOneBillingKeyPaymentRequest.Customer(userId.toString()),
+                    new PortOneBillingKeyPaymentRequest.Amount(payment.getAmount()),
+                    payment.getCurrency(),
+                    noticeUrls()
+            ));
+
+            Payment paid = paymentService.verifyAndMarkPaid(userId, payment.getPaymentId());
+            subscription.chargeSucceeded(paid.getPaidAt());
+            subscriptionRepository.save(subscription);
+        } catch (RuntimeException e) {
+            subscription.markPaymentFailed();
+            subscriptionRepository.save(subscription);
+        }
+    }
+
     // 1개월 이용권 단건 구매 준비. 빌링키 없이 일반결제 채널로 카드결제창을 바로 염.
     @Transactional
     public PaymentPrepareResponse prepareOneTime(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
 
-        if (subscriptionRepository.existsByUserAndStatus(user, SubscriptionStatus.ACTIVE)) {
+        if (subscriptionRepository.existsByUserAndStatusIn(user, VALID_SUBSCRIPTION_STATUSES)) {
             throw new CustomException(HttpStatus.CONFLICT.value(), "이미 활성 구독이 존재합니다.");
         }
 
@@ -129,10 +165,16 @@ public class SubscriptionService {
                 .orElseGet(SubscriptionMeResponse::none);
     }
 
-    // F-23: 정기결제 해지 예약. 이미 승인된 회차는 그대로 두고 다음 결제만 막음.
+    // F-23: 해지 예약. 이미 승인된 회차는 그대로 두고 다음 결제만 막음.
+    // 유예기간(PAST_DUE) 중이면 더 기다릴 이유가 없으므로 즉시 만료시킴(cancelDuringGracePeriod).
     @Transactional
     public SubscriptionMeResponse cancel(Long userId, Long subscriptionId) {
-        Subscription subscription = findMyActiveRecurring(userId, subscriptionId);
+        Subscription subscription = findMyRecurring(userId, subscriptionId, VALID_SUBSCRIPTION_STATUSES);
+
+        if (subscription.getStatus() == SubscriptionStatus.PAST_DUE) {
+            subscription.cancelDuringGracePeriod();
+            return SubscriptionMeResponse.from(subscription);
+        }
 
         if (subscription.getCanceledAt() != null) {
             throw new CustomException(HttpStatus.CONFLICT.value(), "이미 해지 예약된 구독입니다.");
@@ -145,7 +187,7 @@ public class SubscriptionService {
     // F-23: 해지 예약 취소(재개). 아직 만료 전(ACTIVE)인 동안만 가능.
     @Transactional
     public SubscriptionMeResponse resume(Long userId, Long subscriptionId) {
-        Subscription subscription = findMyActiveRecurring(userId, subscriptionId);
+        Subscription subscription = findMyRecurring(userId, subscriptionId, EnumSet.of(SubscriptionStatus.ACTIVE));
 
         if (subscription.getCanceledAt() == null) {
             throw new CustomException(HttpStatus.CONFLICT.value(), "해지 예약 상태가 아닙니다.");
@@ -155,17 +197,26 @@ public class SubscriptionService {
         return SubscriptionMeResponse.from(subscription);
     }
 
-    private Subscription findMyActiveRecurring(Long userId, Long subscriptionId) {
-        Subscription subscription = subscriptionRepository.findById(subscriptionId)
+    // F-22: 결제 실패 배너의 [다시 결제]. 유예기간(PAST_DUE) 중인 구독만 대상 - 실패한 구독은
+    // 자동 배치가 더 이상 건드리지 않으므로, 이게 재시도할 수 있는 유일한 경로.
+    public SubscriptionMeResponse retryPayment(Long userId, Long subscriptionId) {
+        Subscription subscription = findMyRecurring(userId, subscriptionId, EnumSet.of(SubscriptionStatus.PAST_DUE));
+
+        chargeNextRound(subscription);
+        return SubscriptionMeResponse.from(subscription);
+    }
+
+    private Subscription findMyRecurring(Long userId, Long subscriptionId, Set<SubscriptionStatus> allowedStatuses) {
+        Subscription subscription = subscriptionRepository.findByIdWithUser(subscriptionId)
                 .filter(s -> s.getUser().getId().equals(userId))
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "구독을 찾을 수 없습니다."));
 
-        if (subscription.getStatus() != SubscriptionStatus.ACTIVE) {
-            throw new CustomException(HttpStatus.CONFLICT.value(), "이미 종료된 구독입니다.");
+        if (!allowedStatuses.contains(subscription.getStatus())) {
+            throw new CustomException(HttpStatus.CONFLICT.value(), "지금 상태에서는 처리할 수 없습니다.");
         }
 
         if (!subscription.isRecurring()) {
-            throw new CustomException(HttpStatus.CONFLICT.value(), "1개월 이용권은 해지/재개 대상이 아닙니다.");
+            throw new CustomException(HttpStatus.CONFLICT.value(), "1개월 이용권은 해지/재개/재시도 대상이 아닙니다.");
         }
 
         return subscription;
