@@ -6,7 +6,7 @@ import { uploadImage } from '../api/imageApi';
 import type { UserInfo, MyPost } from '../api/mypageApi';
 import { getMySubscription, getPaymentHistory } from '../api/subscriptionApi';
 import type { SubscriptionMeResult, PaymentHistoryItem } from '../api/subscriptionApi';
-import { getMyPets, createPet, updatePet, getPetPhotos, addPetPhoto, deletePetPhoto } from '../api/petApi';
+import { getMyPets, createPet, updatePet, deletePet, getPetPhotos, addPetPhoto, deletePetPhoto } from '../api/petApi';
 import type { Pet, PetForm, PetPhoto } from '../api/petApi';
 import { isAuthenticated } from '../utils/auth';
 
@@ -63,6 +63,11 @@ export default function MyPage() {
     const [photosLoading, setPhotosLoading] = useState(false);
     const [photoUploading, setPhotoUploading] = useState(false);
     const photoFileInputRef = useRef<HTMLInputElement>(null);
+    // 업로드 미리보기 모달
+    const [uploadPreview, setUploadPreview] = useState<{ file: File; previewUrl: string } | null>(null);
+    const [uploadCaption, setUploadCaption] = useState('');
+    // 라이트박스
+    const [lightbox, setLightbox] = useState<PetPhoto | null>(null);
     const emptyPetForm: PetForm = { petName: '', petType: '', petBirthday: '', petIntro: '', petImageUrl: '' };
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingPet, setEditingPet] = useState<Pet | null>(null);
@@ -248,28 +253,51 @@ export default function MyPage() {
         }
     };
 
-    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePhotoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file || !selectedPet) return;
+        if (!file) return;
+        setUploadPreview({ file, previewUrl: URL.createObjectURL(file) });
+        setUploadCaption('');
+        if (photoFileInputRef.current) photoFileInputRef.current.value = '';
+    };
+
+    const handlePhotoUploadConfirm = async () => {
+        if (!uploadPreview || !selectedPet) return;
         setPhotoUploading(true);
         try {
-            const url = await uploadImage(file);
-            const photo = await addPetPhoto(selectedPet.id, url);
+            const url = await uploadImage(uploadPreview.file);
+            const photo = await addPetPhoto(selectedPet.id, url, uploadCaption.trim() || undefined);
             setPetPhotos(prev => ({ ...prev, [selectedPet.id]: [photo, ...(prev[selectedPet.id] ?? [])] }));
+            URL.revokeObjectURL(uploadPreview.previewUrl);
+            setUploadPreview(null);
+            setUploadCaption('');
         } catch (e: any) {
             alert(e.response?.data?.message ?? '사진 업로드에 실패했습니다.');
         } finally {
             setPhotoUploading(false);
-            if (photoFileInputRef.current) photoFileInputRef.current.value = '';
         }
     };
 
     const handlePhotoDelete = async (photoId: number) => {
         if (!selectedPet) return;
         if (!confirm('이 사진을 삭제하시겠습니까?')) return;
+        setLightbox(null);
         try {
             await deletePetPhoto(selectedPet.id, photoId);
             setPetPhotos(prev => ({ ...prev, [selectedPet.id]: (prev[selectedPet.id] ?? []).filter(p => p.id !== photoId) }));
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '삭제에 실패했습니다.');
+        }
+    };
+
+    const handlePetDelete = async (petId: number) => {
+        if (!confirm('반려동물 프로필과 모든 사진이 삭제됩니다. 계속하시겠습니까?')) return;
+        try {
+            await deletePet(petId);
+            const next = pets.filter(p => p.id !== petId);
+            setPets(next);
+            setPetPhotos(prev => { const n = { ...prev }; delete n[petId]; return n; });
+            setSelectedPet(next.length > 0 ? next[0] : null);
         } catch (e: any) {
             alert(e.response?.data?.message ?? '삭제에 실패했습니다.');
         }
@@ -365,6 +393,58 @@ export default function MyPage() {
     return (
         <div style={{ background: '#f8f8f8', minHeight: '100vh' }}>
             <GNB />
+
+            {/* ── 사진 업로드 미리보기 모달 ── */}
+            {uploadPreview && (
+                <div onClick={() => { URL.revokeObjectURL(uploadPreview.previewUrl); setUploadPreview(null); }}
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                    <div onClick={e => e.stopPropagation()}
+                        style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 400, overflow: 'hidden' }}>
+                        <img src={uploadPreview.previewUrl} alt="미리보기" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
+                        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <input
+                                value={uploadCaption}
+                                onChange={e => setUploadCaption(e.target.value)}
+                                placeholder="코멘트 입력 (선택)"
+                                maxLength={200}
+                                style={{ padding: '10px 14px', border: '1px solid #e0e0e0', borderRadius: 8, fontSize: 14, width: '100%', boxSizing: 'border-box' }}
+                            />
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <button onClick={handlePhotoUploadConfirm} disabled={photoUploading}
+                                    style={{ ...solidBtn, flex: 1, opacity: photoUploading ? 0.7 : 1 }}>
+                                    {photoUploading ? '업로드 중...' : '업로드'}
+                                </button>
+                                <button onClick={() => { URL.revokeObjectURL(uploadPreview.previewUrl); setUploadPreview(null); }}
+                                    style={{ ...outlineBtn, flex: 1 }}>취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── 라이트박스 모달 ── */}
+            {lightbox && (
+                <div onClick={() => setLightbox(null)}
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                    <button onClick={() => setLightbox(null)}
+                        style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: '#fff', fontSize: 28, cursor: 'pointer', lineHeight: 1 }}>×</button>
+                    <img src={lightbox.imageUrl} alt={lightbox.caption ?? ''}
+                        style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: 8, display: 'block' }}
+                        onClick={e => e.stopPropagation()} />
+                    <div style={{ marginTop: 16, textAlign: 'center', width: '100%', maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+                        {lightbox.caption && (
+                            <p style={{ color: '#fff', fontSize: 15, margin: '0 0 8px', lineHeight: 1.5 }}>{lightbox.caption}</p>
+                        )}
+                        <p style={{ color: '#aaa', fontSize: 13, margin: '0 0 16px' }}>
+                            {new Date(lightbox.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </p>
+                        <button onClick={() => handlePhotoDelete(lightbox.id)}
+                            style={{ padding: '8px 20px', border: '1px solid #ff6b6b', borderRadius: 8, background: 'transparent', color: '#ff6b6b', cursor: 'pointer', fontSize: 13 }}>
+                            사진 삭제
+                        </button>
+                    </div>
+                </div>
+            )}
             <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 16px' }}>
 
                 {/* 탭 */}
@@ -653,9 +733,10 @@ export default function MyPage() {
                                                         : '🐾'}
                                                 </div>
                                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                                                         <span style={{ fontWeight: 700, fontSize: 17 }}>{selectedPet.petName}</span>
                                                         <button onClick={() => openEditPet(selectedPet)} style={{ ...outlineBtn, padding: '4px 12px', fontSize: 12 }}>수정</button>
+                                                        <button onClick={() => handlePetDelete(selectedPet.id)} style={{ ...outlineBtn, padding: '4px 12px', fontSize: 12, color: '#e03131', borderColor: '#ffa8a8' }}>삭제</button>
                                                     </div>
                                                     <div style={{ fontSize: 13, color: '#888' }}>
                                                         {selectedPet.petType}
@@ -699,35 +780,26 @@ export default function MyPage() {
                                                         gap: 4, border: '2px dashed #e0e0e0',
                                                     }}
                                                 >
-                                                    {photoUploading
-                                                        ? <span style={{ fontSize: 12, color: '#bbb' }}>업로드 중...</span>
-                                                        : <>
-                                                            <span style={{ fontSize: 28, color: '#ccc' }}>+</span>
-                                                            <span style={{ fontSize: 11, color: '#bbb' }}>사진 추가</span>
-                                                          </>
-                                                    }
+                                                    <span style={{ fontSize: 28, color: '#ccc' }}>+</span>
+                                                    <span style={{ fontSize: 11, color: '#bbb' }}>사진 추가</span>
                                                 </div>
-                                                <input ref={photoFileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+                                                <input ref={photoFileInputRef} type="file" accept="image/*" onChange={handlePhotoFileSelect} style={{ display: 'none' }} />
 
                                                 {/* 사진 목록 */}
                                                 {(petPhotos[selectedPet.id] ?? []).map(photo => (
-                                                    <div key={photo.id} style={{ position: 'relative', aspectRatio: '1', overflow: 'hidden' }}
-                                                        onMouseEnter={e => (e.currentTarget.querySelector<HTMLElement>('.del-btn')!.style.opacity = '1')}
-                                                        onMouseLeave={e => (e.currentTarget.querySelector<HTMLElement>('.del-btn')!.style.opacity = '0')}
+                                                    <div key={photo.id} onClick={() => setLightbox(photo)}
+                                                        style={{ position: 'relative', aspectRatio: '1', overflow: 'hidden', cursor: 'pointer' }}
                                                     >
-                                                        <img src={photo.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                                                        <button
-                                                            className="del-btn"
-                                                            onClick={() => handlePhotoDelete(photo.id)}
-                                                            style={{
-                                                                position: 'absolute', top: 4, right: 4,
-                                                                width: 24, height: 24, borderRadius: '50%',
-                                                                border: 'none', background: 'rgba(0,0,0,0.55)', color: '#fff',
-                                                                cursor: 'pointer', fontSize: 14, lineHeight: 1,
-                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                opacity: 0, transition: 'opacity 0.15s',
-                                                            }}
-                                                        >×</button>
+                                                        <img src={photo.imageUrl} alt={photo.caption ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                                        {photo.caption && (
+                                                            <div style={{
+                                                                position: 'absolute', bottom: 0, left: 0, right: 0,
+                                                                background: 'linear-gradient(transparent, rgba(0,0,0,0.55))',
+                                                                padding: '16px 6px 5px',
+                                                                fontSize: 10, color: '#fff',
+                                                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                            }}>{photo.caption}</div>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>

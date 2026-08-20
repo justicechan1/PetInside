@@ -7,7 +7,7 @@ import {
     prepareBillingKey, createBillingKey, createSubscription,
     prepareOneTimePurchase, completeOneTimePurchase,
     getMySubscription,
-    cancelSubscription, resumeSubscription,
+    cancelSubscription, resumeSubscription, retrySubscriptionPayment,
 } from '../api/subscriptionApi';
 import type { SubscriptionResult, SubscriptionMeResult } from '../api/subscriptionApi';
 import { isAuthenticated, getUserIdFromToken } from '../utils/auth';
@@ -49,6 +49,7 @@ export default function SubscriptionPage() {
     const [mySubscription, setMySubscription] = useState<SubscriptionMeResult | null>(null);
     const [statusLoading, setStatusLoading] = useState(true);
     const [cancelLoading, setCancelLoading] = useState(false);
+    const [retryLoading, setRetryLoading] = useState(false);
 
     const loadStatus = async () => {
         setStatusLoading(true);
@@ -180,120 +181,246 @@ export default function SubscriptionPage() {
         }
     };
 
+    const handleRetryPayment = async () => {
+        if (!mySubscription?.subscriptionId) return;
+        setRetryLoading(true);
+        setError('');
+        try {
+            const updated = await retrySubscriptionPayment(mySubscription.subscriptionId);
+            setMySubscription(updated);
+            if (updated.status === 'PAST_DUE') {
+                setError('결제가 아직 실패 상태예요. 카드 정보를 확인한 뒤 다시 시도해주세요.');
+            }
+        } catch (e: any) {
+            setError(e.response?.data?.message ?? '결제 재시도 중 오류가 발생했습니다.');
+        } finally {
+            setRetryLoading(false);
+        }
+    };
+
+    // ─── 디자인 토큰 ───────────────────────────────────────────────────
+    const primary = 'var(--primary, #FF8C00)';
+    const ink = '#22262B';
+    const muted = '#767C86';
+    const border = '#ECEAE6';
+    const page = '#FAF9F7';
+
     const inputStyle: React.CSSProperties = {
-        padding: '11px 14px', border: '1px solid #e0e0e0', borderRadius: 8,
+        padding: '13px 15px', border: `1px solid ${border}`, borderRadius: 12,
         fontSize: 14, width: '100%', boxSizing: 'border-box', background: '#fff',
+        outline: 'none',
     };
 
     const cardStyle: React.CSSProperties = {
-        background: '#fff', borderRadius: 16, border: '1px solid #f0f0f0',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '24px 28px',
+        background: '#fff', borderRadius: 24, border: `1px solid ${border}`,
+        boxShadow: '0 1px 2px rgba(20,16,8,0.03), 0 12px 32px -16px rgba(20,16,8,0.10)',
+        padding: '30px 28px',
     };
 
     const tabBtnStyle = (active: boolean): React.CSSProperties => ({
-        flex: 1, padding: '10px 0', border: 'none', borderRadius: 20, cursor: 'pointer', fontWeight: 600,
-        background: active ? 'var(--primary, #FF8C00)' : '#f0f0f0',
-        color: active ? '#fff' : '#333',
+        flex: 1, padding: '11px 0', border: 'none', borderRadius: 12, cursor: 'pointer',
+        fontWeight: 700, fontSize: 14, transition: 'background .15s, color .15s',
+        background: active ? primary : '#F2F1EE',
+        color: active ? '#fff' : muted,
+    });
+
+    const primaryBtnStyle = (disabled: boolean): React.CSSProperties => ({
+        border: 'none', borderRadius: 14, background: primary, color: '#fff',
+        fontWeight: 700, fontSize: 15, cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.55 : 1, transition: 'opacity .15s',
+    });
+
+    const outlineBtnStyle = (disabled: boolean): React.CSSProperties => ({
+        border: `1px solid ${border}`, borderRadius: 14, background: '#fff', color: ink,
+        fontWeight: 700, fontSize: 15, cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.55 : 1, transition: 'opacity .15s, border-color .15s',
     });
 
     const isActiveSubscriber = mySubscription?.hasSubscription && mySubscription.status === 'ACTIVE';
+    const isPastDue = mySubscription?.hasSubscription && mySubscription.status === 'PAST_DUE';
 
-    const benefitBoxStyle: React.CSSProperties = {
-        marginTop: 16, padding: '14px 16px', borderRadius: 10,
-        background: '#fff8ec', border: '1px solid #ffe1b3', fontSize: 13, color: '#9a6a1f',
-    };
+    const BENEFITS = [
+        { icon: '😺', label: '프리미엄 이모티콘' },
+        { icon: '✅', label: '인증 뱃지' },
+        { icon: '🐾', label: '반려동물 프로필' },
+        { icon: '🎨', label: '프로필 커스터마이징' },
+    ];
+
+    const renderBenefits = () => (
+        <div>
+            <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, letterSpacing: '0.04em', color: muted, textTransform: 'uppercase' }}>
+                Membership Benefits
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                {BENEFITS.map(b => (
+                    <div key={b.label} style={{
+                        display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
+                        borderRadius: 14, background: '#FFF8EC',
+                    }}>
+                        <span style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            width: 30, height: 30, borderRadius: '50%', background: '#fff',
+                            fontSize: 15, flexShrink: 0,
+                        }}>{b.icon}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#8A5A16', lineHeight: 1.25 }}>{b.label}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
+    const InfoRow = ({ icon, label, value }: { icon: string; label: string; value: string }) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0' }}>
+            <span style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 34, height: 34, borderRadius: 10, background: page, fontSize: 15, flexShrink: 0,
+            }}>{icon}</span>
+            <span style={{ fontSize: 13, color: muted, flex: 1 }}>{label}</span>
+            <span style={{ fontSize: 13.5, color: ink, fontWeight: 700 }}>{value}</span>
+        </div>
+    );
 
     return (
-        <div style={{ background: '#f8f8f8', minHeight: '100vh' }}>
+        <div style={{ background: page, minHeight: '100vh' }}>
             <GNB />
-            <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                    <h2 style={{ margin: 0 }}>PetInside 구독</h2>
+            <div style={{ maxWidth: 460, margin: '0 auto', padding: '40px 16px 64px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 22 }}>
+                    <div>
+                        <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', color: primary, textTransform: 'uppercase' }}>
+                            PetInside
+                        </p>
+                        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: ink, letterSpacing: '-0.01em' }}>
+                            프리미엄 멤버십
+                        </h1>
+                    </div>
                     <button onClick={() => navigate('/subscription/history')} style={{
-                        border: 'none', background: 'none', color: '#666', fontSize: 13,
-                        fontWeight: 600, cursor: 'pointer', textDecoration: 'underline',
+                        border: 'none', background: 'none', color: muted, fontSize: 13,
+                        fontWeight: 700, cursor: 'pointer', padding: 0,
                     }}>
-                        결제 내역
+                        결제 내역 →
                     </button>
                 </div>
 
                 {statusLoading ? (
                     <div style={cardStyle}>
-                        <p style={{ color: '#666', fontSize: 14 }}>불러오는 중...</p>
+                        <p style={{ color: muted, fontSize: 14, margin: 0 }}>불러오는 중...</p>
                     </div>
                 ) : result || isActiveSubscriber ? (
                     <div style={cardStyle}>
-                        <p style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
-                            {mySubscription?.type === 'RECURRING' ? '정기결제 구독 중 🎉' : '이용권 이용 중 🎉'}
-                        </p>
-                        <p style={{ color: '#666', fontSize: 14 }}>상태: {result?.status ?? mySubscription?.status}</p>
-                        {mySubscription?.startAt && mySubscription?.nextBillingAt && (
-                            <>
-                                <p style={{ color: '#666', fontSize: 14 }}>
-                                    결제일: {formatKoreanDate(mySubscription.startAt)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 22 }}>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: 52, height: 52, borderRadius: 16, flexShrink: 0,
+                                background: 'linear-gradient(135deg, #FFD9A0, #FF8C00)', fontSize: 24,
+                            }}>🐾</div>
+                            <div>
+                                <p style={{ margin: 0, fontWeight: 800, fontSize: 17, color: ink }}>
+                                    {mySubscription?.type === 'RECURRING' ? '정기결제 이용 중' : '1개월 이용권 이용 중'}
                                 </p>
-                                <p style={{ color: '#666', fontSize: 14 }}>
-                                    구독 기간: {formatISODate(mySubscription.startAt)} ~ {formatISODate(mySubscription.nextBillingAt)}
+                                <p style={{ margin: '2px 0 0', fontSize: 13, color: muted }}>
+                                    PetInside 프리미엄 멤버십
                                 </p>
-                                {mySubscription.type === 'RECURRING' && (
-                                    <p style={{ color: '#666', fontSize: 14 }}>
-                                        다음 결제일: {formatISODate(addDays(mySubscription.nextBillingAt, 1))}
-                                    </p>
-                                )}
-                            </>
-                        )}
-
-                        <div style={benefitBoxStyle}>
-                            구독 혜택은 현재 준비 중이에요. 확정되는 대로 이 화면에서 안내해드릴게요.
+                            </div>
                         </div>
 
+                        {mySubscription?.startAt && mySubscription?.nextBillingAt && (
+                            <div style={{ marginBottom: 22 }}>
+                                <InfoRow icon="💳" label="결제일" value={formatKoreanDate(mySubscription.startAt)} />
+                                <InfoRow icon="📅" label="이용 기간"
+                                    value={`${formatISODate(mySubscription.startAt)} ~ ${formatISODate(mySubscription.nextBillingAt)}`} />
+                                {mySubscription.type === 'RECURRING' && !mySubscription.canceledAt && (
+                                    <InfoRow icon="🔄" label="다음 결제일"
+                                        value={formatISODate(addDays(mySubscription.nextBillingAt, 1))} />
+                                )}
+                            </div>
+                        )}
+
+                        <div style={{ height: 1, background: border, margin: '0 0 22px' }} />
+
+                        {renderBenefits()}
+
                         {mySubscription?.type === 'RECURRING' && (
-                            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
+                            <div style={{ marginTop: 24 }}>
                                 {mySubscription.canceledAt ? (
                                     <>
-                                        <p style={{ fontSize: 13, color: '#f44336', marginBottom: 10 }}>
-                                            해지 예약됨 — 다음 결제일 이후 자동 만료됩니다.
-                                        </p>
-                                        <button onClick={handleResume} disabled={cancelLoading} style={{
-                                            width: '100%', padding: '11px', border: '1px solid var(--primary, #FF8C00)',
-                                            borderRadius: 8, background: '#fff', color: 'var(--primary, #FF8C00)',
-                                            fontWeight: 700, fontSize: 14, cursor: cancelLoading ? 'default' : 'pointer',
+                                        <div style={{
+                                            padding: '12px 14px', borderRadius: 12, background: '#FFF3E0',
+                                            fontSize: 13, color: '#B85C00', fontWeight: 600, marginBottom: 12,
                                         }}>
+                                            해지 예약됨 — 다음 결제일 이후 자동 만료됩니다.
+                                        </div>
+                                        <button onClick={handleResume} disabled={cancelLoading}
+                                            style={{ ...outlineBtnStyle(cancelLoading), width: '100%', padding: '13px', borderColor: primary, color: primary }}>
                                             {cancelLoading ? '처리 중...' : '구독 재개하기'}
                                         </button>
                                     </>
                                 ) : (
-                                    <button onClick={handleCancel} disabled={cancelLoading} style={{
-                                        width: '100%', padding: '11px', border: '1px solid #e0e0e0',
-                                        borderRadius: 8, background: '#fff', color: '#666',
-                                        fontWeight: 700, fontSize: 14, cursor: cancelLoading ? 'default' : 'pointer',
-                                    }}>
+                                    <button onClick={handleCancel} disabled={cancelLoading}
+                                        style={{ ...outlineBtnStyle(cancelLoading), width: '100%', padding: '13px' }}>
                                         {cancelLoading ? '처리 중...' : '구독 해지하기'}
                                     </button>
                                 )}
                                 {error && (
-                                    <p style={{ margin: '10px 0 0', fontSize: 13, color: '#f44336' }}>{error}</p>
+                                    <p style={{ margin: '10px 0 0', fontSize: 13, color: '#e03131' }}>{error}</p>
                                 )}
                             </div>
                         )}
                     </div>
-                ) : (
+                ) : isPastDue ? (
                     <div style={cardStyle}>
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-                            <button style={tabBtnStyle(mode === 'ONE_TIME')} onClick={() => { setMode('ONE_TIME'); setError(''); }}>
-                                1개월 이용권 (단건)
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: 52, height: 52, borderRadius: 16, flexShrink: 0,
+                                background: '#FFF0F0', fontSize: 24,
+                            }}>😥</div>
+                            <div>
+                                <p style={{ margin: 0, fontWeight: 800, fontSize: 17, color: '#C92A2A' }}>
+                                    결제에 실패했어요
+                                </p>
+                                <p style={{ margin: '2px 0 0', fontSize: 13, color: muted }}>
+                                    카드 상태를 확인하고 다시 결제해주세요
+                                </p>
+                            </div>
+                        </div>
+                        <p style={{ fontSize: 13.5, color: muted, lineHeight: 1.6, margin: '0 0 22px' }}>
+                            계속 실패하면 구독이 자동으로 종료돼요. 등록된 카드의 한도·잔액을 확인한 뒤 [다시 결제]로 재시도해보세요.
+                        </p>
+                        {error && (
+                            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#e03131' }}>{error}</p>
+                        )}
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <button onClick={handleCancel} disabled={cancelLoading}
+                                style={{ ...outlineBtnStyle(cancelLoading), flex: 1, padding: '13px' }}>
+                                {cancelLoading ? '처리 중...' : '구독 취소'}
                             </button>
-                            <button style={tabBtnStyle(mode === 'RECURRING')} onClick={() => { setMode('RECURRING'); setError(''); }}>
-                                정기결제 (자동갱신)
+                            <button onClick={handleRetryPayment} disabled={retryLoading}
+                                style={{ ...primaryBtnStyle(retryLoading), flex: 1, padding: '13px' }}>
+                                {retryLoading ? '재시도 중...' : '다시 결제'}
                             </button>
                         </div>
 
-                        <p style={{ color: '#666', fontSize: 14, marginBottom: 20 }}>
+                        <div style={{ height: 1, background: border, margin: '22px 0' }} />
+
+                        {renderBenefits()}
+                    </div>
+                ) : (
+                    <div style={cardStyle}>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
+                            <button style={tabBtnStyle(mode === 'ONE_TIME')} onClick={() => { setMode('ONE_TIME'); setError(''); }}>
+                                1개월 이용권
+                            </button>
+                            <button style={tabBtnStyle(mode === 'RECURRING')} onClick={() => { setMode('RECURRING'); setError(''); }}>
+                                정기결제
+                            </button>
+                        </div>
+
+                        <p style={{ color: muted, fontSize: 13.5, lineHeight: 1.6, margin: '0 0 22px' }}>
                             {mode === 'ONE_TIME'
                                 ? '1,900원 결제로 1개월간 이용할 수 있어요. 자동으로 다시 결제되지 않고, 한 달 뒤 자동 만료돼요.'
                                 : '월 1,900원 정기결제로 카드를 등록합니다. 카드 등록 창이 뜨면 안내에 따라 진행해주세요.'}
                         </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
                             <input value={fullName} onChange={e => setFullName(e.target.value)}
                                 placeholder="이름" style={inputStyle} />
                             <input value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)}
@@ -302,22 +429,16 @@ export default function SubscriptionPage() {
                                 placeholder="이메일" style={inputStyle} />
                         </div>
                         {error && (
-                            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#f44336' }}>{error}</p>
+                            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#e03131' }}>{error}</p>
                         )}
                         <button
                             onClick={mode === 'ONE_TIME' ? handleOneTimePurchase : handleSubscribe}
                             disabled={loading}
-                            style={{
-                                width: '100%', padding: '13px', border: 'none', borderRadius: 8,
-                                background: 'var(--primary, #FF8C00)', color: '#fff', fontWeight: 700, fontSize: 15,
-                                cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1,
-                            }}>
+                            style={{ ...primaryBtnStyle(loading), width: '100%', padding: '14px', marginBottom: 26 }}>
                             {loading ? '처리 중...' : mode === 'ONE_TIME' ? '1개월 이용권 구매하기' : '구독 시작하기'}
                         </button>
 
-                        <div style={benefitBoxStyle}>
-                            구독하면 어떤 혜택이 있는지는 현재 준비 중이에요. 확정되는 대로 안내해드릴게요.
-                        </div>
+                        {renderBenefits()}
                     </div>
                 )}
             </div>

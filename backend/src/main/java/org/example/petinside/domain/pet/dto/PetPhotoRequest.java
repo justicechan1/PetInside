@@ -7,4 +7,5 @@ import lombok.Getter;
 public class PetPhotoRequest {
     @NotBlank
     private String imageUrl;
+    private String caption; // nullable
 }
