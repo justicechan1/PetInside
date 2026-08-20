@@ -1,6 +1,8 @@
 package org.example.petinside.domain.user.repository;
 
 import org.example.petinside.domain.user.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,6 +17,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByNickname(String nickname);
     boolean existsByNicknameAndIdNot(String nickname, Long id);
     long countByCreatedAtAfter(LocalDateTime startOfDay);
+    Page<User> findByIsDeletedFalse(Pageable pageable);
 
     @Modifying
     @Query("UPDATE User u SET u.role = :role WHERE u.id = :userId")
