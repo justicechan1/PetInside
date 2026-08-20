@@ -25,12 +25,15 @@ public class EmojiCatalogSeeder implements ApplicationRunner {
         }
 
         List<Emoji> catalog = List.of(
-                Emoji.builder().name("웃음").imageUrl("/emojis/smile.png").build(),
-                Emoji.builder().name("슬픔").imageUrl("/emojis/sad.png").build(),
-                Emoji.builder().name("하트").imageUrl("/emojis/heart.png").build(),
-                Emoji.builder().name("최고").imageUrl("/emojis/thumbsup.png").build(),
-                Emoji.builder().name("놀람").imageUrl("/emojis/surprised.png").build(),
-                Emoji.builder().name("화남").imageUrl("/emojis/angry.png").build()
+                Emoji.builder().name("신나!").imageUrl("/emojis/excited.png").build(),
+                Emoji.builder().name("행복해!").imageUrl("/emojis/happy.png").build(),
+                Emoji.builder().name("생각 중...").imageUrl("/emojis/thinking.png").build(),
+                Emoji.builder().name("덥다!").imageUrl("/emojis/hot.png").build(),
+                Emoji.builder().name("멀미...").imageUrl("/emojis/carsick.png").build(),
+                Emoji.builder().name("뭐야?").imageUrl("/emojis/what.png").build(),
+                Emoji.builder().name("밥 줘!").imageUrl("/emojis/feedme.png").build(),
+                Emoji.builder().name("안녕!").imageUrl("/emojis/hello.png").build(),
+                Emoji.builder().name("간식?").imageUrl("/emojis/snack.png").build()
         );
 
         emojiRepository.saveAll(catalog);
