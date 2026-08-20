@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import GNB from '../components/GNB';
 import CommentSection from '../components/CommentSection';
+import LikeButton from '../components/LikeButton';
 import { getPost, deletePost } from '../api/postApi';
 import type { PostDetail } from '../api/postApi';
 
@@ -58,10 +59,11 @@ export default function PostDetailPage() {
                         {post.category === 'QNA' ? 'Q&A' : '자랑'}
                     </span>
                     <h1 style={{ margin: '8px 0', fontSize: 24 }}>{post.title}</h1>
-                    <div style={{ color: '#999', fontSize: 14, display: 'flex', gap: 16 }}>
+                    <div style={{ color: '#999', fontSize: 14, display: 'flex', gap: 16, alignItems: 'center' }}>
                         <span>{post.authorNickname}</span>
                         <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                         <span>조회 {post.viewCount}</span>
+                        <LikeButton targetType="post" targetId={Number(postId)} />
                     </div>
                 </div>
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getComments, createComment, updateComment, deleteComment } from '../api/commentApi';
 import type { CommentItem } from '../api/commentApi';
+import LikeButton from './LikeButton';
 
 const inputStyle = {
     width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #ddd',
@@ -120,12 +121,15 @@ export default function CommentSection({ postId }: { postId: number }) {
                     <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{comment.content}</p>
                 )}
 
-                {!isReply && (
-                    <button style={{ ...linkButtonStyle, marginTop: 6 }}
-                            onClick={() => { setReplyTargetId(replyTargetId === comment.id ? null : comment.id); setReplyContent(''); }}>
-                        답글
-                    </button>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
+                    <LikeButton targetType="comment" targetId={comment.id} />
+                    {!isReply && (
+                        <button style={linkButtonStyle}
+                                onClick={() => { setReplyTargetId(replyTargetId === comment.id ? null : comment.id); setReplyContent(''); }}>
+                            답글
+                        </button>
+                    )}
+                </div>
 
                 {replyTargetId === comment.id && (
                     <div style={{ display: 'flex', gap: 8, marginTop: 8, marginLeft: 32 }}>

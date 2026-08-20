@@ -66,11 +66,13 @@ public class SecurityConfig {
                                 "/error",
                                 "/images/**" // 로컬 디스크에 업로드된 이미지 정적 서빙 - 비회원도 조회 가능해야 함
                         ).permitAll()
-                        // 게시글 목록/상세, 댓글 목록 조회는 비회원도 가능
+                        // 게시글 목록/상세, 댓글 목록, 좋아요 상태(개수) 조회는 비회원도 가능
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/posts",
                                 "/api/v1/posts/*",
-                                "/api/v1/posts/*/comments"
+                                "/api/v1/posts/*/comments",
+                                "/api/v1/posts/*/likes/me",
+                                "/api/v1/comments/*/likes/me"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
