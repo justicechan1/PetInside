@@ -8,6 +8,7 @@ import org.example.petinside.domain.mypage.dto.MyPostResponse;
 import org.example.petinside.domain.mypage.dto.NicknameUpdateRequest;
 import org.example.petinside.domain.mypage.dto.PasswordUpdateRequest;
 import org.example.petinside.domain.mypage.dto.ProfileImageUpdateRequest;
+import org.example.petinside.domain.mypage.dto.ProfileLayoutUpdateRequest;
 import org.example.petinside.domain.mypage.dto.UserInfoResponse;
 import org.example.petinside.domain.mypage.service.MypageService;
 import org.springframework.data.domain.Page;
@@ -56,6 +57,15 @@ public class MypageController {
             @Valid @RequestBody ProfileImageUpdateRequest request) {
         mypageService.updateProfileImage(userId, request);
         return ResponseEntity.ok(ApiResponse.success(200, "프로필 이미지가 변경되었습니다."));
+    }
+
+    @Operation(summary = "피드 레이아웃 변경", description = "내 게시글 탭의 레이아웃을 GRID 또는 LIST로 저장합니다.")
+    @PatchMapping("/profile-layout")
+    public ResponseEntity<ApiResponse<Void>> updateProfileLayout(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody ProfileLayoutUpdateRequest request) {
+        mypageService.updateProfileLayout(userId, request);
+        return ResponseEntity.ok(ApiResponse.success(200, "레이아웃이 변경되었습니다."));
     }
 
     @Operation(summary = "내 게시글 목록 조회", description = "내가 작성한 게시글을 최신순으로 조회합니다. category(QNA/BOAST)와 keyword(제목 검색)로 필터링할 수 있습니다.")
