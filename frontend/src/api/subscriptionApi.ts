@@ -28,10 +28,11 @@ export interface SubscriptionMeResult {
     hasSubscription: boolean;
     subscriptionId: number | null;
     type: 'RECURRING' | 'ONE_TIME' | null;
-    status: 'ACTIVE' | 'EXPIRED' | null;
+    status: 'ACTIVE' | 'PAST_DUE' | 'EXPIRED' | null;
     startAt: string | null;
     nextBillingAt: string | null;
     canceledAt: string | null;
+    paymentFailedAt: string | null;
 }
 
 export interface PaymentHistoryItem {
@@ -67,6 +68,9 @@ export const cancelSubscription = (subscriptionId: number) =>
 
 export const resumeSubscription = (subscriptionId: number) =>
     axiosInstance.patch<{ data: SubscriptionMeResult }>(`/api/v1/subscriptions/${subscriptionId}/resume`).then(r => r.data.data);
+
+export const retrySubscriptionPayment = (subscriptionId: number) =>
+    axiosInstance.post<{ data: SubscriptionMeResult }>(`/api/v1/subscriptions/${subscriptionId}/retry-payment`).then(r => r.data.data);
 
 export const getPaymentHistory = () =>
     axiosInstance.get<{ data: PaymentHistoryItem[] }>('/api/v1/payments').then(r => r.data.data);
