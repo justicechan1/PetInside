@@ -8,6 +8,7 @@ import org.example.petinside.domain.comment.repository.CommentRepository;
 import org.example.petinside.domain.emoji.entity.CommentEmoji;
 import org.example.petinside.domain.emoji.entity.Emoji;
 import org.example.petinside.domain.emoji.service.EmojiService;
+import org.example.petinside.domain.notification.service.NotificationService;
 import org.example.petinside.domain.post.dto.IdResponse;
 import org.example.petinside.domain.post.entity.Category;
 import org.example.petinside.domain.post.entity.Post;
@@ -50,6 +51,8 @@ class CommentServiceTest {
     @Mock
     private UserRepository userRepository;
     @Mock
+    private NotificationService notificationService;
+    @Mock
     private EmojiService emojiService;
 
     private CommentService commentService;
@@ -59,7 +62,7 @@ class CommentServiceTest {
 
     @BeforeEach
     void setUp() {
-        commentService = new CommentService(commentRepository, postRepository, userRepository, emojiService);
+        commentService = new CommentService(commentRepository, postRepository, userRepository, notificationService, emojiService);
 
         lenient().when(emojiService.resolveEmojisForAttach(anyLong(), any())).thenReturn(List.of());
 
