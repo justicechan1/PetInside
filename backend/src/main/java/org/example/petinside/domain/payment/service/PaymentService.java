@@ -35,6 +35,7 @@ public class PaymentService {
     static final int PLAN_AMOUNT = 1900;
     static final String CURRENCY = "KRW";
     private static final String PAID_STATUS = "PAID";
+    private static final String TEST_CHANNEL_TYPE = "TEST";
 
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
@@ -120,7 +121,9 @@ public class PaymentService {
         boolean verified = PAID_STATUS.equalsIgnoreCase(detail.status())
                 && detail.amount() != null && detail.amount().total() == payment.getAmount()
                 && CURRENCY.equalsIgnoreCase(detail.currency())
-                && portOneProperties.storeId().equals(detail.storeId());
+                && portOneProperties.storeId().equals(detail.storeId())
+                && isOurChannel(detail.channel())
+                && isTestChannel(detail.channel());
 
         // PortOne이 부여한 승인 시도(transactionId)를 결과와 무관하게 기록.
         paymentTransactionRepository.save(PaymentTransaction.record(
@@ -134,5 +137,20 @@ public class PaymentService {
 
         payment.markPaid(LocalDateTime.now());
         payment.getOrder().markCompleted();
+    }
+
+    // 테스트 상점은 여러 팀이 공용으로 써서, storeId만으로는 다른 팀 채널로 발생한 결제를 걸러내지 못함.
+    // 단건결제 채널(channelKey)과 정기결제 채널(channelKeySubscription) 둘 중 하나와 일치해야 우리 결제로 인정.
+    private boolean isOurChannel(PortOnePaymentDetail.Channel channel) {
+        if (channel == null || channel.key() == null) {
+            return false;
+        }
+        return channel.key().equals(portOneProperties.channelKey())
+                || channel.key().equals(portOneProperties.channelKeySubscription());
+    }
+
+    // 실수로 실결제가 발생하지 않도록, 테스트 채널로 발생한 결제만 인정.
+    private boolean isTestChannel(PortOnePaymentDetail.Channel channel) {
+        return channel != null && TEST_CHANNEL_TYPE.equalsIgnoreCase(channel.type());
     }
 }
