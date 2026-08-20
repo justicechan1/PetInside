@@ -1,9 +1,13 @@
 package org.example.petinside.domain.pet.service;
 
 import lombok.RequiredArgsConstructor;
+import org.example.petinside.domain.pet.dto.PetPhotoRequest;
+import org.example.petinside.domain.pet.dto.PetPhotoResponse;
 import org.example.petinside.domain.pet.dto.PetRequest;
 import org.example.petinside.domain.pet.dto.PetResponse;
 import org.example.petinside.domain.pet.entity.Pet;
+import org.example.petinside.domain.pet.entity.PetPhoto;
+import org.example.petinside.domain.pet.repository.PetPhotoRepository;
 import org.example.petinside.domain.pet.repository.PetRepository;
 import org.example.petinside.domain.subscription.entity.SubscriptionStatus;
 import org.example.petinside.domain.subscription.repository.SubscriptionRepository;
@@ -14,12 +18,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class PetService {
 
     private final PetRepository petRepository;
+    private final PetPhotoRepository petPhotoRepository;
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
 
@@ -74,5 +80,37 @@ public class PetService {
                 request.getPetImageUrl()
         );
         return PetResponse.from(pet);
+    }
+
+    // 펫 사진 조회 - 구독 여부 무관
+    public List<PetPhotoResponse> getPhotos(Long petId) {
+        if (!petRepository.existsById(petId)) {
+            throw new CustomException(404, "펫을 찾을 수 없습니다.");
+        }
+        return petPhotoRepository.findByPetIdOrderByCreatedAtDesc(petId).stream()
+                .map(PetPhotoResponse::from)
+                .toList();
+    }
+
+    // 펫 사진 추가 - 구독자 + 본인 소유 펫
+    @Transactional
+    public PetPhotoResponse addPhoto(Long userId, Long petId, PetPhotoRequest request) {
+        validateSubscriberAndGetUser(userId);
+        Pet pet = petRepository.findByIdAndUserId(petId, userId)
+                .orElseThrow(() -> new CustomException(404, "펫을 찾을 수 없습니다."));
+        return PetPhotoResponse.from(petPhotoRepository.save(PetPhoto.of(pet, request.getImageUrl())));
+    }
+
+    // 펫 사진 삭제 - 구독자 + 본인 소유 펫의 사진
+    @Transactional
+    public void deletePhoto(Long userId, Long petId, Long photoId) {
+        validateSubscriberAndGetUser(userId);
+        PetPhoto photo = petPhotoRepository.findById(photoId)
+                .orElseThrow(() -> new CustomException(404, "사진을 찾을 수 없습니다."));
+        if (!Objects.equals(photo.getPet().getId(), petId) ||
+            !Objects.equals(photo.getPet().getUser().getId(), userId)) {
+            throw new CustomException(403, "권한이 없습니다.");
+        }
+        petPhotoRepository.delete(photo);
     }
 }
