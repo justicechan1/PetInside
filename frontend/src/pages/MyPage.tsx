@@ -4,7 +4,7 @@ import GNB from '../components/GNB';
 import { getMyInfo, updateNickname, updatePassword, updateProfileImage, getMyPosts, updateProfileLayout } from '../api/mypageApi';
 import { uploadImage } from '../api/imageApi';
 import type { UserInfo, MyPost } from '../api/mypageApi';
-import { getMySubscription, getPaymentHistory, cancelSubscription, resumeSubscription } from '../api/subscriptionApi';
+import { getMySubscription, getPaymentHistory, cancelSubscription, resumeSubscription, retrySubscriptionPayment } from '../api/subscriptionApi';
 import type { SubscriptionMeResult, PaymentHistoryItem } from '../api/subscriptionApi';
 import { getMyPets, createPet, updatePet } from '../api/petApi';
 import type { Pet, PetForm } from '../api/petApi';
@@ -49,6 +49,7 @@ export default function MyPage() {
     const [subscription, setSubscription] = useState<SubscriptionMeResult | null>(null);
     const [payments, setPayments] = useState<PaymentHistoryItem[]>([]);
     const [payLoading, setPayLoading] = useState(false);
+    const [retryLoading, setRetryLoading] = useState(false);
 
     const [pets, setPets] = useState<Pet[]>([]);
     const [petsLoaded, setPetsLoaded] = useState(false);
@@ -166,6 +167,34 @@ export default function MyPage() {
         }
     };
 
+    const handleRetryPayment = async () => {
+        if (!subscription?.subscriptionId) return;
+        setRetryLoading(true);
+        try {
+            const updated = await retrySubscriptionPayment(subscription.subscriptionId);
+            setSubscription(updated);
+            if (updated.status === 'PAST_DUE') {
+                alert('결제가 아직 실패 상태입니다. 카드 정보를 확인한 뒤 다시 시도해주세요.');
+            }
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '결제 재시도 중 오류가 발생했습니다.');
+        } finally {
+            setRetryLoading(false);
+        }
+    };
+
+    // 유예기간 중 해지는 남은 기간을 기다리지 않고 즉시 종료됨(cancelDuringGracePeriod)
+    const handleCancelDuringGracePeriod = async () => {
+        if (!subscription?.subscriptionId) return;
+        if (!confirm('구독을 지금 바로 종료하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+        try {
+            const updated = await cancelSubscription(subscription.subscriptionId);
+            setSubscription(updated);
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '해지 처리 중 오류가 발생했습니다.');
+        }
+    };
+
     const handleLayoutToggle = async (newLayout: 'LIST' | 'GRID') => {
         if (newLayout === layout) return;
         const prev = layout;
@@ -273,6 +302,25 @@ export default function MyPage() {
                     {nextBillingAt && !isRecurring && <div style={{ fontSize: 13, color: '#1971C2', marginTop: 4 }}>{formatDate(nextBillingAt)}까지 이용 가능</div>}
                 </div>
                 {isRecurring && <button onClick={handleCancel} style={outlineBtn}>해지 예약</button>}
+            </div>
+        );
+
+        // 정기결제 실패 · 유예기간(PAST_DUE): 혜택은 즉시 차단, [다시 결제]로 재시도하거나 [구독 취소]로 바로 종료
+        if (status === 'PAST_DUE') return (
+            <div style={{ background: '#FFF5F5', border: '1px solid #FFA8A8', borderRadius: 12, padding: '18px 20px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                    <div style={{ fontWeight: 700, color: '#C92A2A' }}>결제에 실패했습니다</div>
+                    <div style={{ fontSize: 13, color: '#e03131', marginTop: 4 }}>
+                        카드 상태를 확인하고 다시 결제해주세요. 계속 실패하면 구독이 자동으로 종료됩니다.
+                    </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={handleCancelDuringGracePeriod} style={outlineBtn}>구독 취소</button>
+                    <button onClick={handleRetryPayment} disabled={retryLoading} style={{ ...solidBtn, opacity: retryLoading ? 0.6 : 1 }}>
+                        {retryLoading ? '재시도 중…' : '다시 결제'}
+                    </button>
+                </div>
             </div>
         );
 
