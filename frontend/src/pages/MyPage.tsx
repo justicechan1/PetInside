@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GNB from '../components/GNB';
 import { getMyInfo, updateNickname, updatePassword, updateProfileImage, getMyPosts, updateProfileLayout } from '../api/mypageApi';
@@ -29,7 +29,7 @@ export default function MyPage() {
         if (!isAuthenticated()) navigate('/login');
     }, [navigate]);
 
-    // ??? ?좎? ?뺣낫 ???????????????????????????????????????????????????
+    // ─── 유저 정보 ───────────────────────────────────────────────────
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [nickname, setNickname] = useState('');
     const [nicknameError, setNicknameError] = useState('');
@@ -41,21 +41,21 @@ export default function MyPage() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [imageError, setImageError] = useState('');
 
-    // ??? 寃뚯떆湲 ??????????????????????????????????????????????????????
+    // ─── 게시글 ──────────────────────────────────────────────────────
     const [posts, setPosts] = useState<MyPost[]>([]);
     const [totalPages, setTotalPages] = useState(0);
     const [page, setPage] = useState(0);
     const [categoryFilter, setCategoryFilter] = useState('');
     const [layout, setLayout] = useState<'LIST' | 'GRID'>('LIST');
 
-    // ??? 援щ룆 ????????????????????????????????????????????????????????
+    // ─── 구독 ────────────────────────────────────────────────────────
     const [subscription, setSubscription] = useState<SubscriptionMeResult | null>(null);
 
-    // ??? 寃곗젣 ?댁뿭 ???????????????????????????????????????????????????
+    // ─── 결제 내역 ───────────────────────────────────────────────────
     const [payments, setPayments] = useState<PaymentHistoryItem[]>([]);
     const [payLoading, setPayLoading] = useState(false);
 
-    // ??? 諛섎젮?숇Ъ ?????????????????????????????????????????????????????
+    // ─── 반려동물 ─────────────────────────────────────────────────────
     const [pets, setPets] = useState<Pet[]>([]);
     const [petsLoaded, setPetsLoaded] = useState(false);
     const emptyPetForm: PetForm = { petName: '', petType: '', petBirthday: '', petIntro: '', petImageUrl: '' };
@@ -68,7 +68,7 @@ export default function MyPage() {
     const [petSaving, setPetSaving] = useState(false);
     const petFileInputRef = useRef<HTMLInputElement>(null);
 
-    // ??? 珥덇린 濡쒕뱶 ???????????????????????????????????????????????????
+    // ─── 초기 로드 ───────────────────────────────────────────────────
     useEffect(() => {
         getMyInfo().then(info => {
             setUserInfo(info);
@@ -97,7 +97,7 @@ export default function MyPage() {
         getPaymentHistory().then(setPayments).catch(() => {}).finally(() => setPayLoading(false));
     }, [tab]);
 
-    // ??? ?꾨줈???대?吏 ????????????????????????????????????????????????
+    // ─── 프로필 이미지 ────────────────────────────────────────────────
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -116,7 +116,7 @@ export default function MyPage() {
             window.dispatchEvent(new StorageEvent('storage', { key: 'profileImageUrl', newValue: url }));
             handleProfileImageCancel();
         } catch (e: any) {
-            setImageError(e.response?.data?.message ?? '?꾨줈???대?吏 蹂寃쎌뿉 ?ㅽ뙣?덉뒿?덈떎.');
+            setImageError(e.response?.data?.message ?? '프로필 이미지 변경에 실패했습니다.');
         }
     };
 
@@ -127,36 +127,36 @@ export default function MyPage() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    // ??? ?됰꽕??鍮꾨?踰덊샇 ??????????????????????????????????????????????
+    // ─── 닉네임/비밀번호 ──────────────────────────────────────────────
     const handleNicknameUpdate = async () => {
         setNicknameError('');
-        if (!nickname.trim()) { setNicknameError('?됰꽕?꾩쓣 ?낅젰?댁＜?몄슂.'); return; }
-        if (nickname === userInfo?.nickname) { setNicknameError('?꾩옱 ?됰꽕?꾧낵 ?숈씪?⑸땲??'); return; }
+        if (!nickname.trim()) { setNicknameError('닉네임을 입력해주세요.'); return; }
+        if (nickname === userInfo?.nickname) { setNicknameError('현재 닉네임과 동일합니다.'); return; }
         try {
             await updateNickname(nickname);
-            alert('?됰꽕?꾩씠 蹂寃쎈릺?덉뒿?덈떎.');
+            alert('닉네임이 변경되었습니다.');
             localStorage.setItem('nickname', nickname);
             window.dispatchEvent(new StorageEvent('storage', { key: 'nickname', newValue: nickname }));
             setUserInfo(prev => prev ? { ...prev, nickname } : prev);
         } catch (e: any) {
-            setNicknameError(e.response?.data?.message ?? '?됰꽕??蹂寃쎌뿉 ?ㅽ뙣?덉뒿?덈떎.');
+            setNicknameError(e.response?.data?.message ?? '닉네임 변경에 실패했습니다.');
         }
     };
 
     const handlePasswordUpdate = async () => {
         setPasswordError('');
-        if (!currentPassword || !newPassword) { setPasswordError('鍮꾨?踰덊샇瑜??낅젰?댁＜?몄슂.'); return; }
+        if (!currentPassword || !newPassword) { setPasswordError('비밀번호를 입력해주세요.'); return; }
         try {
             await updatePassword(currentPassword, newPassword);
-            alert('鍮꾨?踰덊샇媛 蹂寃쎈릺?덉뒿?덈떎.');
+            alert('비밀번호가 변경되었습니다.');
             setCurrentPassword('');
             setNewPassword('');
         } catch (e: any) {
-            setPasswordError(e.response?.data?.message ?? '鍮꾨?踰덊샇 蹂寃쎌뿉 ?ㅽ뙣?덉뒿?덈떎.');
+            setPasswordError(e.response?.data?.message ?? '비밀번호 변경에 실패했습니다.');
         }
     };
 
-    // ??? ?덉씠?꾩썐 ?좉? ????????????????????????????????????????????????
+    // ─── 레이아웃 토글 ────────────────────────────────────────────────
     const handleLayoutToggle = async (newLayout: 'LIST' | 'GRID') => {
         if (newLayout === layout) return;
         const prev = layout;
@@ -164,7 +164,7 @@ export default function MyPage() {
         await updateProfileLayout(newLayout).catch(() => setLayout(prev));
     };
 
-    // ??? 諛섎젮?숇Ъ ?????????????????????????????????????????????????????
+    // ─── 반려동물 ─────────────────────────────────────────────────────
     const openAddPet = () => {
         setEditingPet(null);
         setPetForm(emptyPetForm);
@@ -203,8 +203,8 @@ export default function MyPage() {
     };
 
     const handlePetSave = async () => {
-        if (!petForm.petName.trim()) { setPetError('???대쫫???낅젰?댁＜?몄슂.'); return; }
-        if (!petForm.petType.trim()) { setPetError('??醫낅쪟瑜??낅젰?댁＜?몄슂.'); return; }
+        if (!petForm.petName.trim()) { setPetError('펫 이름을 입력해주세요.'); return; }
+        if (!petForm.petType.trim()) { setPetError('펫 종류를 입력해주세요.'); return; }
         setPetSaving(true);
         setPetError('');
         try {
@@ -223,7 +223,7 @@ export default function MyPage() {
             }
             closePetForm();
         } catch (e: any) {
-            setPetError(e.response?.data?.message ?? '???以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
+            setPetError(e.response?.data?.message ?? '저장 중 오류가 발생했습니다.');
         } finally {
             setPetSaving(false);
         }
@@ -231,7 +231,7 @@ export default function MyPage() {
 
     const isSubscriber = subscription?.status === 'ACTIVE';
 
-    // ??? ?ㅽ????곸닔 ???????????????????????????????????????????????????
+    // ─── 스타일 상수 ───────────────────────────────────────────────────
     const tabBtnStyle = (active: boolean): React.CSSProperties => ({
         padding: '10px 20px', border: 'none', borderRadius: 20, cursor: 'pointer', fontWeight: 600, fontSize: 14,
         background: active ? 'var(--primary, #FF8C00)' : '#f0f0f0',
@@ -258,12 +258,12 @@ export default function MyPage() {
         background: '#fff', cursor: 'pointer', fontSize: 13,
     };
 
-    // ??? ???몃씪?????????????????????????????????????????????????????
+    // ─── 펫 인라인 폼 ─────────────────────────────────────────────────
     const renderPetForm = (title: string) => (
         <div style={{ ...cardStyle, padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: '#222' }}>{title}</div>
 
-            {/* ?대?吏 ?낅줈??*/}
+            {/* 이미지 업로드 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div
                     onClick={() => petFileInputRef.current?.click()}
@@ -275,27 +275,27 @@ export default function MyPage() {
                     }}
                 >
                     {petImagePreview
-                        ? <img src={petImagePreview} alt="誘몃━蹂닿린" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ? <img src={petImagePreview} alt="미리보기" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         : petForm.petImageUrl
-                            ? <img src={petForm.petImageUrl} alt="?꾩옱" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            : '?맽'}
+                            ? <img src={petForm.petImageUrl} alt="현재" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : '🐾'}
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, color: '#666', marginBottom: 6 }}>?ъ쭊???대┃?댁꽌 蹂寃쏀븯?몄슂</div>
+                    <div style={{ fontSize: 13, color: '#666', marginBottom: 6 }}>사진을 클릭해서 변경하세요</div>
                     <button onClick={() => petFileInputRef.current?.click()} style={{ ...outlineBtn, fontSize: 12, padding: '5px 12px' }}>
-                        ?ъ쭊 ?좏깮
+                        사진 선택
                     </button>
                 </div>
                 <input ref={petFileInputRef} type="file" accept="image/*" onChange={handlePetImageSelect} style={{ display: 'none' }} />
             </div>
 
-            <input placeholder="?대쫫 *" value={petForm.petName}
+            <input placeholder="이름 *" value={petForm.petName}
                 onChange={e => setPetForm(p => ({ ...p, petName: e.target.value }))} style={inputStyle} />
-            <input placeholder="醫낅쪟 * (?? 怨⑤뱺由ы듃由щ쾭, ?섎Ⅴ?쒖븞 怨좎뼇??" value={petForm.petType}
+            <input placeholder="종류 * (예: 골든리트리버, 페르시안 고양이)" value={petForm.petType}
                 onChange={e => setPetForm(p => ({ ...p, petType: e.target.value }))} style={inputStyle} />
             <input type="date" value={petForm.petBirthday}
                 onChange={e => setPetForm(p => ({ ...p, petBirthday: e.target.value }))} style={inputStyle} />
-            <textarea placeholder="?뚭컻 (?좏깮)" value={petForm.petIntro}
+            <textarea placeholder="소개 (선택)" value={petForm.petIntro}
                 onChange={e => setPetForm(p => ({ ...p, petIntro: e.target.value }))}
                 rows={3} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
 
@@ -303,30 +303,31 @@ export default function MyPage() {
 
             <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={handlePetSave} disabled={petSaving} style={{ ...solidBtn, opacity: petSaving ? 0.7 : 1 }}>
-                    {petSaving ? '???以?..' : '???}
+                    {petSaving ? '저장 중...' : '저장'}
                 </button>
-                <button onClick={closePetForm} style={outlineBtn}>痍⑥냼</button>
+                <button onClick={closePetForm} style={outlineBtn}>취소</button>
             </div>
-        );
+        </div>
+    );
 
     return (
         <div style={{ background: '#f8f8f8', minHeight: '100vh' }}>
             <GNB />
             <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 16px' }}>
 
-                {/* ??*/}
+                {/* 탭 */}
                 <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
-                    <button style={tabBtnStyle(tab === 'profile')} onClick={() => setTab('profile')}>?꾨줈??/button>
-                    <button style={tabBtnStyle(tab === 'posts')} onClick={() => setTab('posts')}>??寃뚯떆湲</button>
-                    <button style={tabBtnStyle(tab === 'pets')} onClick={() => setTab('pets')}>?맽 諛섎젮?숇Ъ</button>
-                    <button style={tabBtnStyle(tab === 'payment')} onClick={() => setTab('payment')}>援щ룆쨌寃곗젣</button>
+                    <button style={tabBtnStyle(tab === 'profile')} onClick={() => setTab('profile')}>프로필</button>
+                    <button style={tabBtnStyle(tab === 'posts')} onClick={() => setTab('posts')}>내 게시글</button>
+                    <button style={tabBtnStyle(tab === 'pets')} onClick={() => setTab('pets')}>🐾 반려동물</button>
+                    <button style={tabBtnStyle(tab === 'payment')} onClick={() => setTab('payment')}>구독·결제</button>
                 </div>
 
-                {/* ????? ?꾨줈????????? */}
+                {/* ───── 프로필 탭 ───── */}
                 {tab === 'profile' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-                        {/* ?꾨줈??移대뱶 */}
+                        {/* 프로필 카드 */}
                         <div style={cardStyle}>
                             <div style={{ height: 80, background: 'linear-gradient(135deg, #FF8C00 0%, #ffb347 100%)' }} />
                             <div style={{ padding: '0 28px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: -44 }}>
@@ -338,14 +339,14 @@ export default function MyPage() {
                                         fontSize: 40, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                                     }}>
                                         {previewUrl
-                                            ? <img src={previewUrl} alt="誘몃━蹂닿린" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ? <img src={previewUrl} alt="미리보기" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                             : userInfo?.profileImageUrl
-                                                ? <img src={userInfo.profileImageUrl} alt="?꾨줈?? style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                : '?뫀'}
+                                                ? <img src={userInfo.profileImageUrl} alt="프로필" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                : '👤'}
                                     </div>
                                     <button
                                         onClick={() => fileInputRef.current?.click()}
-                                        title="?꾨줈???ъ쭊 蹂寃?
+                                        title="프로필 사진 변경"
                                         style={{
                                             position: 'absolute', bottom: 4, right: 4,
                                             width: 26, height: 26, borderRadius: '50%',
@@ -353,7 +354,7 @@ export default function MyPage() {
                                             color: '#fff', fontSize: 11, cursor: 'pointer',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         }}
-                                    >?륅툘</button>
+                                    >✏️</button>
                                     <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} style={{ display: 'none' }} />
                                 </div>
 
@@ -364,7 +365,7 @@ export default function MyPage() {
                                     </div>
                                     <div style={{ color: '#999', fontSize: 14, marginTop: 4 }}>{userInfo?.username}</div>
                                     <div style={{ fontSize: 12, color: '#bbb', marginTop: 6 }}>
-                                        媛?낆씪 {userInfo ? new Date(userInfo.createdAt).toLocaleDateString() : '-'}
+                                        가입일 {userInfo ? new Date(userInfo.createdAt).toLocaleDateString() : '-'}
                                     </div>
                                 </div>
 
@@ -374,11 +375,11 @@ export default function MyPage() {
                                             <button onClick={handleProfileImageSave} style={{
                                                 padding: '8px 20px', border: 'none', borderRadius: 8,
                                                 background: 'var(--primary, #FF8C00)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-                                            }}>???/button>
+                                            }}>저장</button>
                                             <button onClick={handleProfileImageCancel} style={{
                                                 padding: '8px 20px', border: '1px solid #ddd', borderRadius: 8,
                                                 background: '#fff', cursor: 'pointer', fontSize: 13,
-                                            }}>痍⑥냼</button>
+                                            }}>취소</button>
                                         </div>
                                         {imageError && <p style={{ margin: 0, fontSize: 13, color: '#f44336' }}>{imageError}</p>}
                                     </div>
@@ -386,42 +387,42 @@ export default function MyPage() {
                             </div>
                         </div>
 
-                        {/* ?됰꽕??蹂寃?*/}
+                        {/* 닉네임 변경 */}
                         <div style={cardStyle}>
                             <div style={{ padding: '20px 24px' }}>
-                                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14, color: '#222' }}>?됰꽕??蹂寃?/div>
+                                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14, color: '#222' }}>닉네임 변경</div>
                                 <div style={{ display: 'flex', gap: 8 }}>
                                     <input value={nickname}
                                         onChange={e => { setNickname(e.target.value); setNicknameError(''); }}
-                                        placeholder="???됰꽕??
+                                        placeholder="새 닉네임"
                                         style={{ ...inputStyle, flex: 1, borderColor: nicknameError ? '#f44336' : '#e0e0e0' }} />
                                     <button onClick={handleNicknameUpdate} style={{
                                         padding: '11px 20px', border: 'none', borderRadius: 8, whiteSpace: 'nowrap',
                                         background: 'var(--primary, #FF8C00)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 14,
-                                    }}>蹂寃?/button>
+                                    }}>변경</button>
                                 </div>
                                 {nicknameError && <p style={{ margin: '8px 0 0', fontSize: 13, color: '#f44336' }}>{nicknameError}</p>}
                             </div>
                         </div>
 
-                        {/* 鍮꾨?踰덊샇 蹂寃?*/}
+                        {/* 비밀번호 변경 */}
                         {!userInfo?.provider && (
                             <div style={cardStyle}>
                                 <div style={{ padding: '20px 24px' }}>
-                                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14, color: '#222' }}>鍮꾨?踰덊샇 蹂寃?/div>
+                                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14, color: '#222' }}>비밀번호 변경</div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                                         <input type="password" value={currentPassword}
                                             onChange={e => setCurrentPassword(e.target.value)}
-                                            placeholder="?꾩옱 鍮꾨?踰덊샇" style={inputStyle} />
+                                            placeholder="현재 비밀번호" style={inputStyle} />
                                         <input type="password" value={newPassword}
                                             onChange={e => { setNewPassword(e.target.value); setPasswordError(''); }}
-                                            placeholder="??鍮꾨?踰덊샇 (8???댁긽, ?곷Ц+?レ옄+?뱀닔臾몄옄)"
+                                            placeholder="새 비밀번호 (8자 이상, 영문+숫자+특수문자)"
                                             style={{ ...inputStyle, borderColor: passwordError ? '#f44336' : '#e0e0e0' }} />
                                         {passwordError && <p style={{ margin: 0, fontSize: 13, color: '#f44336' }}>{passwordError}</p>}
                                         <button onClick={handlePasswordUpdate} style={{
                                             padding: '11px', border: 'none', borderRadius: 8,
                                             background: 'var(--primary, #FF8C00)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 14,
-                                        }}>蹂寃?/button>
+                                        }}>변경</button>
                                     </div>
                                 </div>
                             </div>
@@ -429,12 +430,12 @@ export default function MyPage() {
                     </div>
                 )}
 
-                {/* ????? ??寃뚯떆湲 ??????? */}
+                {/* ───── 내 게시글 탭 ───── */}
                 {tab === 'posts' && (
                     <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                             <div style={{ display: 'flex', gap: 8 }}>
-                                {[['', '?꾩껜'], ['QNA', 'Q&A'], ['BOAST', '?먮옉']].map(([val, label]) => (
+                                {[['', '전체'], ['QNA', 'Q&A'], ['BOAST', '자랑']].map(([val, label]) => (
                                     <button key={val} onClick={() => { setCategoryFilter(val); setPage(0); }}
                                         style={tabBtnStyle(categoryFilter === val)}>
                                         {label}
@@ -451,14 +452,14 @@ export default function MyPage() {
                                         boxShadow: layout === l ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
                                         fontSize: 13,
                                     }}>
-                                        {l === 'LIST' ? '?? : '??}
+                                        {l === 'LIST' ? '☰' : '⊞'}
                                     </button>
                                 ))}
                             </div>
                         </div>
 
                         {posts.length === 0 ? (
-                            <p style={{ textAlign: 'center', color: '#999', marginTop: 40 }}>?묒꽦??寃뚯떆湲???놁뒿?덈떎.</p>
+                            <p style={{ textAlign: 'center', color: '#999', marginTop: 40 }}>작성한 게시글이 없습니다.</p>
                         ) : layout === 'GRID' ? (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                 {posts.map(post => (
@@ -469,7 +470,7 @@ export default function MyPage() {
                                         <div style={{ height: 120, background: '#f5f5f5', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                             {post.thumbnailImageUrl
                                                 ? <img src={post.thumbnailImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                : <span style={{ fontSize: 32 }}>?뱷</span>}
+                                                : <span style={{ fontSize: 32 }}>📝</span>}
                                         </div>
                                         <div style={{ padding: '10px 12px' }}>
                                             <span style={{
@@ -477,7 +478,7 @@ export default function MyPage() {
                                                 background: post.category === 'QNA' ? '#E3F2FD' : '#FFF3E0',
                                                 color: post.category === 'QNA' ? '#1565C0' : '#E65100',
                                             }}>
-                                                {post.category === 'QNA' ? 'Q&A' : '?먮옉'}
+                                                {post.category === 'QNA' ? 'Q&A' : '자랑'}
                                             </span>
                                             <div style={{ fontWeight: 600, fontSize: 13, marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.title}</div>
                                             <div style={{ fontSize: 11, color: '#bbb', marginTop: 4 }}>{new Date(post.createdAt).toLocaleDateString()}</div>
@@ -499,7 +500,7 @@ export default function MyPage() {
                                                 background: post.category === 'QNA' ? '#E3F2FD' : '#FFF3E0',
                                                 color: post.category === 'QNA' ? '#1565C0' : '#E65100',
                                             }}>
-                                                {post.category === 'QNA' ? 'Q&A' : '?먮옉'}
+                                                {post.category === 'QNA' ? 'Q&A' : '자랑'}
                                             </span>
                                             <span style={{ fontWeight: 600 }}>{post.title}</span>
                                         </div>
@@ -525,33 +526,33 @@ export default function MyPage() {
                     </div>
                 )}
 
-                {/* ????? ?맽 諛섎젮?숇Ъ ??????? */}
+                {/* ───── 🐾 반려동물 탭 ───── */}
                 {tab === 'pets' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
                         {!isSubscriber ? (
                             <div style={{ ...cardStyle, padding: '48px 24px', textAlign: 'center' }}>
-                                <div style={{ fontSize: 48, marginBottom: 12 }}>?뵏</div>
-                                <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 8 }}>?꾨━誘몄뾼 援щ룆???꾩슜 湲곕뒫</div>
+                                <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
+                                <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 8 }}>프리미엄 구독자 전용 기능</div>
                                 <div style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>
-                                    諛섎젮?숇Ъ ?꾨줈?꾩쓣 ?깅줉?섍퀬 怨듦컻 ?꾨줈?꾩뿉 ?몄텧?대낫?몄슂.
+                                    반려동물 프로필을 등록하고 공개 프로필에 노출해보세요.
                                 </div>
                                 <button onClick={() => navigate('/subscription')} style={{ ...solidBtn, padding: '12px 28px', fontSize: 15 }}>
-                                    援щ룆?섍린
+                                    구독하기
                                 </button>
                             </div>
                         ) : (
                             <>
-                                {/* ??移대뱶 紐⑸줉 */}
+                                {/* 펫 카드 목록 */}
                                 {pets.map(pet => (
                                     <div key={pet.id}>
-                                        {/* ?섏젙 ?쇱씠 ?대┛ ??*/}
+                                        {/* 수정 폼이 열린 펫 */}
                                         {editingPet?.id === pet.id ? (
-                                            renderPetForm('???뺣낫 ?섏젙')
+                                            renderPetForm('펫 정보 수정')
                                         ) : (
                                             <div style={{ ...cardStyle, padding: '20px 24px' }}>
                                                 <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                                                    {/* ?ъ쭊 */}
+                                                    {/* 사진 */}
                                                     <div style={{
                                                         width: 80, height: 80, borderRadius: '50%',
                                                         background: '#f0f0f0', overflow: 'hidden', flexShrink: 0,
@@ -560,15 +561,15 @@ export default function MyPage() {
                                                     }}>
                                                         {pet.petImageUrl
                                                             ? <img src={pet.petImageUrl} alt={pet.petName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                            : '?맽'}
+                                                            : '🐾'}
                                                     </div>
 
-                                                    {/* ?뺣낫 */}
+                                                    {/* 정보 */}
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 2 }}>{pet.petName}</div>
                                                         <div style={{ fontSize: 14, color: '#666' }}>
                                                             {pet.petType}
-                                                            {pet.petBirthday && <span style={{ color: '#bbb' }}> 쨌 {pet.petBirthday}</span>}
+                                                            {pet.petBirthday && <span style={{ color: '#bbb' }}> · {pet.petBirthday}</span>}
                                                         </div>
                                                         {pet.petIntro && (
                                                             <div style={{ fontSize: 14, color: '#444', marginTop: 8, lineHeight: 1.5 }}>
@@ -577,18 +578,18 @@ export default function MyPage() {
                                                         )}
                                                     </div>
 
-                                                    {/* ?섏젙 踰꾪듉 */}
-                                                    <button onClick={() => openEditPet(pet)} style={outlineBtn}>?섏젙</button>
+                                                    {/* 수정 버튼 */}
+                                                    <button onClick={() => openEditPet(pet)} style={outlineBtn}>수정</button>
                                                 </div>
                                             </div>
                                         )}
                                     </div>
                                 ))}
 
-                                {/* ??諛섎젮?숇Ъ 異붽? ??*/}
-                                {showAddForm && renderPetForm('??諛섎젮?숇Ъ ?깅줉')}
+                                {/* 새 반려동물 추가 폼 */}
+                                {showAddForm && renderPetForm('새 반려동물 등록')}
 
-                                {/* 異붽? 踰꾪듉 */}
+                                {/* 추가 버튼 */}
                                 {!showAddForm && !editingPet && (
                                     <button
                                         onClick={openAddPet}
@@ -599,7 +600,7 @@ export default function MyPage() {
                                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                                         }}
                                     >
-                                        <span style={{ fontSize: 20 }}>+</span> ??諛섎젮?숇Ъ 異붽?
+                                        <span style={{ fontSize: 20 }}>+</span> 새 반려동물 추가
                                     </button>
                                 )}
                             </>
@@ -607,17 +608,17 @@ export default function MyPage() {
                     </div>
                 )}
 
-                {/* ????? 援щ룆쨌寃곗젣 ??????? */}
+                {/* ───── 구독·결제 탭 ───── */}
                 {tab === 'payment' && (
                     <div style={cardStyle}>
                         <div style={{ padding: '20px 24px' }}>
-                            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: '#222' }}>寃곗젣 ?댁뿭</div>
+                            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: '#222' }}>결제 내역</div>
                             {payLoading ? (
-                                <p style={{ color: '#999', textAlign: 'center', padding: '20px 0' }}>遺덈윭?ㅻ뒗 以?..</p>
+                                <p style={{ color: '#999', textAlign: 'center', padding: '20px 0' }}>불러오는 중...</p>
                             ) : payments.length === 0 ? (
                                 <div style={{ textAlign: 'center', padding: '32px 0' }}>
-                                    <p style={{ color: '#999', margin: '0 0 16px' }}>寃곗젣 ?댁뿭???놁뒿?덈떎.</p>
-                                    <button onClick={() => navigate('/subscription')} style={solidBtn}>援щ룆?섎윭 媛湲?/button>
+                                    <p style={{ color: '#999', margin: '0 0 16px' }}>결제 내역이 없습니다.</p>
+                                    <button onClick={() => navigate('/subscription')} style={solidBtn}>구독하러 가기</button>
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -628,7 +629,7 @@ export default function MyPage() {
                                         }}>
                                             <div>
                                                 <div style={{ fontWeight: 700, fontSize: 16 }}>
-                                                    {item.amount.toLocaleString()}{item.currency === 'KRW' ? '?? : ` ${item.currency}`}
+                                                    {item.amount.toLocaleString()}{item.currency === 'KRW' ? '원' : ` ${item.currency}`}
                                                 </div>
                                                 <div style={{ fontSize: 13, color: '#999', marginTop: 4 }}>
                                                     {new Date(item.paidAt ?? item.createdAt).toLocaleString('ko-KR')}
@@ -639,7 +640,7 @@ export default function MyPage() {
                                                 color: item.status === 'PAID' ? '#2e7d32' : item.status === 'FAILED' ? '#c62828' : '#666',
                                                 background: item.status === 'PAID' ? '#e8f5e9' : item.status === 'FAILED' ? '#ffebee' : '#f0f0f0',
                                             }}>
-                                                {item.status === 'PAID' ? '寃곗젣?꾨즺' : item.status === 'FAILED' ? '?ㅽ뙣' : '以鍮꾩쨷'}
+                                                {item.status === 'PAID' ? '결제완료' : item.status === 'FAILED' ? '실패' : '준비중'}
                                             </span>
                                         </div>
                                     ))}
