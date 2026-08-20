@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -69,7 +70,8 @@ public class SubscriptionService {
                 ORDER_NAME,
                 new PortOneBillingKeyPaymentRequest.Customer(userId.toString()),
                 new PortOneBillingKeyPaymentRequest.Amount(payment.getAmount()),
-                payment.getCurrency()
+                payment.getCurrency(),
+                noticeUrls()
         ));
 
         // 빌링키 결제 요청의 즉시 응답은 카드사 승인이 최종 확정(PAID)되기 전 중간 상태일 수 있어 신뢰하지 않음.
@@ -82,6 +84,12 @@ public class SubscriptionService {
         payment.linkSubscription(subscription);
 
         return new SubscriptionCompleteResponse(subscription.getId(), subscription.getStatus(), subscription.getNextBillingAt());
+    }
+
+    // PortOne, 요청 건별로 noticeUrls를 실어 보내 웹훅을 받음.
+    private List<String> noticeUrls() {
+        String webhookNoticeUrl = portOneProperties.webhookNoticeUrl();
+        return webhookNoticeUrl == null || webhookNoticeUrl.isBlank() ? null : List.of(webhookNoticeUrl);
     }
 
     // 1개월 이용권 단건 구매 준비. 빌링키 없이 일반결제 채널로 카드결제창을 바로 염.
