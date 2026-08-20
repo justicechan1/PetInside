@@ -5,12 +5,13 @@ import org.example.petinside.domain.subscription.entity.SubscriptionStatus;
 import java.time.LocalDateTime;
 
 public record SubscriptionSummaryResponse (
-        Long subscripstionId,
+        Long subscriptionId,
         Long userId,
         String username,
         String nickname,
         SubscriptionStatus status,
-        LocalDateTime nextBillingAt
+        LocalDateTime nextBillingAt,
+        LocalDateTime canceledAt
 ) {
     public static SubscriptionSummaryResponse from(Subscription subscription) {
         return new SubscriptionSummaryResponse(
@@ -19,7 +20,8 @@ public record SubscriptionSummaryResponse (
                 subscription.getUser().getUsername(),
                 subscription.getUser().getNickname(),
                 subscription.getStatus(),
-                subscription.getNextBillingAt()
+                subscription.getNextBillingAt(),
+                subscription.getCanceledAt()
         );
     }
 }
