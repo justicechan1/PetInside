@@ -1,5 +1,6 @@
 package org.example.petinside.domain.comment.entity;
 
+import org.example.petinside.domain.emoji.entity.CommentEmoji;
 import org.example.petinside.domain.post.entity.Post;
 import org.example.petinside.domain.user.entity.User;
 import jakarta.persistence.*;
@@ -41,6 +42,10 @@ public class Comment {
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
     private List<Comment> children = new ArrayList<>();
 
+    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    private List<CommentEmoji> emojis = new ArrayList<>();
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
@@ -79,6 +84,18 @@ public class Comment {
     public void decreaseLikeCount() {
         if (this.likeCount > 0) {
             this.likeCount--;
+        }
+    }
+
+    public void addEmoji(CommentEmoji emoji) {
+        this.emojis.add(emoji);
+        emoji.setComment(this);
+    }
+
+    public void updateEmojis(List<CommentEmoji> newEmojis) {
+        this.emojis.clear();
+        for (CommentEmoji emoji : newEmojis) {
+            addEmoji(emoji);
         }
     }
 }
