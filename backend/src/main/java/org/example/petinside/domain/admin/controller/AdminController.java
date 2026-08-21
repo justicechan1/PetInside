@@ -138,7 +138,7 @@ public class AdminController {
     })
     @GetMapping("/subscriptions")
     public ResponseEntity<ApiResponse<Page<SubscriptionSummaryResponse>>> getSubscriptions(
-            @Parameter(description = "구독 회원 정보(ACTIVE/CANCELLED/EXPIRED)", example = "ACTIVE")
+            @Parameter(description = "구독 회원 정보(ACTIVE/PAST_DUE/EXPIRED)", example = "ACTIVE")
             @RequestParam(required = false) SubscriptionStatus status,
             @Parameter(description = "가입일 시작일")
             @RequestParam(required = false) LocalDateTime startDate,

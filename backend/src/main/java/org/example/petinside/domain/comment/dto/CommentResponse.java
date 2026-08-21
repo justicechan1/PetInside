@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import org.example.petinside.domain.emoji.dto.EmojiResponse;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -22,6 +23,8 @@ public class CommentResponse {
     private String authorNickname;
     @Schema(description = "작성자 프로필 사진 URL, 없으면 null")
     private String authorProfileImageUrl;
+    @Schema(description = "첨부 이모지 목록")
+    private List<EmojiResponse> emojis;
     @Schema(description = "작성 일시")
     private LocalDateTime createdAt;
     @Schema(description = "대댓글 목록 (대댓글 자신의 children은 항상 null, 2단계까지만 지원)")

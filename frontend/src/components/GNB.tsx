@@ -3,6 +3,7 @@ import axiosInstance from '../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 import { getRoleFromToken } from '../utils/auth';
 import Avatar from './Avatar';
+import NotificationDropdown from "./NotificationDropDown";
 
 export default function GNB() {
     const navigate = useNavigate();
@@ -78,6 +79,8 @@ export default function GNB() {
                                 관리자 페이지
                             </button>
                         )}
+
+                        <NotificationDropdown />
 
                         {/* 프로필 동그라미 */}
                         <div style={{ position: 'relative' }}>

@@ -95,6 +95,16 @@ export default function PostDetailPage() {
                     </div>
                 )}
 
+                {/* 이모지 */}
+                {post.emojis?.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 24 }}>
+                        {post.emojis.map(e => (
+                            <img key={e.id} src={e.imageUrl} alt={e.name} title={e.name}
+                                 style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                        ))}
+                    </div>
+                )}
+
                 {/* 작성자 버튼 */}
                 {isAuthor && (
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 32 }}>

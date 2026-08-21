@@ -4,8 +4,12 @@ import lombok.RequiredArgsConstructor;
 import org.example.petinside.domain.notification.dto.NotificationReadResponse;
 import org.example.petinside.domain.notification.dto.NotificationResponse;
 import org.example.petinside.domain.notification.entity.Notification;
+import org.example.petinside.domain.notification.entity.NotificationType;
 import org.example.petinside.domain.notification.repository.NotificationRepository;
+import org.example.petinside.domain.user.entity.User;
+import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.global.exception.CustomException;
+import org.example.petinside.global.exception.UserNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -16,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class NotificationService {
     private  final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
 
     // F-36-1: 알림 목록 조회
     @Transactional(readOnly = true)
@@ -36,5 +41,21 @@ public class NotificationService {
 
         notification.markAsRead();
         return new NotificationReadResponse(notification.getId());
+    }
+
+    // F-36-3: 알림 생성 기능
+    @Transactional
+    public void createNotification(Long receiverUserId, NotificationType type,String content, Long targetId, String linkUrl) {
+       User receiver = userRepository.findById(receiverUserId)
+               .orElseThrow(() -> new UserNotFoundException(receiverUserId));
+
+        Notification notification = Notification.builder()
+                .user(receiver)
+                .type(type)
+                .content(content)
+                .targetId(targetId)
+                .linkUrl(linkUrl)
+                .build();
+        notificationRepository.save(notification);
     }
 }

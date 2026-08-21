@@ -142,6 +142,7 @@ export default function AdminPage() {
         )
     );
 
+    // @ts-ignore
     return (
         <div>
             <GNB />
@@ -239,13 +240,14 @@ export default function AdminPage() {
                             }} style={inputStyle}>
                                 <option value="">상태 전체</option>
                                 <option value="ACTIVE">ACTIVE (구독 중)</option>
+                                <option value="PAST_DUE">PAST_DUE</option>
                                 <option value="EXPIRED">EXPIRED (만료됨)</option>
                             </select>
                         </div>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                             <tr style={{ background: '#f8f8f8' }}>
-                                {['ID', '회원', '상태', '다음 결제일', '해지일'].map(h => (
+                                {['ID', '회원', '유형', '상태', '다음 결제일', '결제 시작일'].map(h => (
                                     <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#666', borderBottom: '1px solid #eee' }}>{h}</th>
                                 ))}
                             </tr>
@@ -255,11 +257,16 @@ export default function AdminPage() {
                                 <tr key={sub.subscriptionId} style={{ borderBottom: '1px solid #f0f0f0' }}>
                                     <td style={{ padding: '12px 16px', fontSize: 13, color: '#999' }}>{sub.subscriptionId}</td>
                                     <td style={{ padding: '12px 16px', fontSize: 14 }}>{sub.nickname} ({sub.username})</td>
+                                    <td style={{ padding: '12px 16px', fontSize: 13, color: '#666' }}>
+                                        {sub.type === 'RECURRING' ? '정기결제' : '1개월 이용권'}
+                                    </td>
                                     <td style={{ padding: '12px 16px' }}>
                                         <span style={{
                                             fontSize: 12, padding: '2px 10px', borderRadius: 10,
-                                            background: sub.status === 'ACTIVE' ? '#e6f4ea' : '#f0f0f0',
-                                            color: sub.status === 'ACTIVE' ? '#1e7e34' : '#666',
+                                            background:  sub.status === 'ACTIVE' ? '#e6f4ea' :
+                                                         sub.status === 'PAST_DUE' ? '#fff3cd' : '#f0f0f0',
+                                            color: sub.status === 'ACTIVE' ? '#1e7e34' :
+                                                   sub.status === 'PAST_DUE' ? '#856404' : '#666',
                                         }}>{sub.status}</span>
                                     </td>
                                     <td style={{ padding: '12px 16px', fontSize: 13, color: '#999' }}>{sub.nextBillingAt ? new Date(sub.nextBillingAt).toLocaleDateString() : '-'}</td>

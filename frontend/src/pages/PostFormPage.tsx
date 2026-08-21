@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import GNB from '../components/GNB';
+import EmojiPicker from '../components/EmojiPicker';
 import { createPost, updatePost, getPost } from '../api/postApi';
 import { uploadImage } from '../api/imageApi';
+import { isAuthenticated } from '../utils/auth';
 
 const MAX_IMAGES = 5;
 
@@ -11,10 +13,19 @@ export default function PostFormPage() {
     const navigate = useNavigate();
     const isEdit = !!postId;
 
+    // URL을 직접 입력해서 들어오는 경우까지 막기 위한 방어(글쓰기 버튼 자체는 목록 페이지에서 이미 막음)
+    useEffect(() => {
+        if (!isAuthenticated()) {
+            alert('로그인 후 이용할 수 있습니다.');
+            navigate('/login');
+        }
+    }, [navigate]);
+
     const [category, setCategory] = useState('QNA');
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [imageUrls, setImageUrls] = useState<string[]>([]);
+    const [emojiIds, setEmojiIds] = useState<number[]>([]);
     const [uploading, setUploading] = useState(false);
     const [loading, setLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -26,6 +37,7 @@ export default function PostFormPage() {
             setTitle(post.title);
             setContent(post.content);
             setImageUrls(post.imageUrls ?? []);
+            setEmojiIds((post.emojis ?? []).map(e => e.id));
         });
     }, [postId]);
 
@@ -62,10 +74,10 @@ export default function PostFormPage() {
         setLoading(true);
         try {
             if (isEdit) {
-                await updatePost(Number(postId), { category, title, content, imageUrls });
+                await updatePost(Number(postId), { category, title, content, imageUrls, emojiIds });
                 navigate(`/posts/${postId}`);
             } else {
-                const res = await createPost({ category, title, content, imageUrls });
+                const res = await createPost({ category, title, content, imageUrls, emojiIds });
                 navigate(`/posts/${res.data.id}`);
             }
         } finally {
@@ -142,6 +154,11 @@ export default function PostFormPage() {
                         onChange={handleFileSelect}
                         style={{ display: 'none' }}
                     />
+                </div>
+
+                {/* 이모지 */}
+                <div style={{ marginTop: 16 }}>
+                    <EmojiPicker selectedIds={emojiIds} onChange={setEmojiIds} />
                 </div>
 
                 {/* 버튼 */}

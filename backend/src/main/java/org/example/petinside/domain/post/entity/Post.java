@@ -1,6 +1,7 @@
 package org.example.petinside.domain.post.entity;
 
 import org.example.petinside.domain.comment.entity.Comment;
+import org.example.petinside.domain.emoji.entity.PostEmoji;
 import org.example.petinside.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -64,6 +65,10 @@ public class Post {
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL)
     private List<Comment> comments = new ArrayList<>();
 
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    private List<PostEmoji> emojis = new ArrayList<>();
+
     @Builder
     public Post(User author, Category category, String title, String content) {
         this.author = author;
@@ -107,6 +112,18 @@ public class Post {
         this.images.clear();
         for (PostImage image : newImages) {
             addImage(image);
+        }
+    }
+
+    public void addEmoji(PostEmoji emoji) {
+        this.emojis.add(emoji);
+        emoji.setPost(this);
+    }
+
+    public void updateEmojis(List<PostEmoji> newEmojis) {
+        this.emojis.clear();
+        for (PostEmoji emoji : newEmojis) {
+            addEmoji(emoji);
         }
     }
 }
