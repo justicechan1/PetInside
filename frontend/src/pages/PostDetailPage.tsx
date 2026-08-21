@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import GNB from '../components/GNB';
 import Avatar from '../components/Avatar';
 import EmojiText from '../components/EmojiText';
+import VerifiedBadge from '../components/VerifiedBadge';
 import { profilePath } from '../utils/profileNav';
 import CommentSection from '../components/CommentSection';
 import LikeButton from '../components/LikeButton';
@@ -69,6 +70,7 @@ export default function PostDetailPage() {
                         >
                             <Avatar imageUrl={post.authorProfileImageUrl} nickname={post.authorNickname} size={22} />
                             {post.authorNickname}
+                            {post.authorVerified && <VerifiedBadge size={26} />}
                         </span>
                         <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                         <span>조회 {post.viewCount}</span>

@@ -15,6 +15,8 @@ import org.example.petinside.domain.notification.service.NotificationService;
 import org.example.petinside.domain.post.dto.IdResponse;
 import org.example.petinside.domain.post.entity.Post;
 import org.example.petinside.domain.post.repository.PostRepository;
+import org.example.petinside.domain.subscription.entity.SubscriptionStatus;
+import org.example.petinside.domain.subscription.repository.SubscriptionRepository;
 import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.global.exception.CommentNotFoundException;
@@ -26,7 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +42,7 @@ public class CommentService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final EmojiService emojiService;
+    private final SubscriptionRepository subscriptionRepository;
 
     /**
      * 댓글 및 대댓글 작성
@@ -122,6 +127,20 @@ public class CommentService {
 
         List<Comment> parentComments = commentRepository.findAllByPostIdAndParentIsNullAndIsDeletedFalseOrderByIdAsc(postId);
 
+        // 인증 뱃지: 이 글의 댓글/대댓글 작성자들의 활성 구독 여부를 한 번에 조회(N+1 방지).
+        List<Long> authorIds = parentComments.stream()
+                .flatMap(comment -> Stream.concat(
+                        Stream.of(comment.getUser().getId()),
+                        comment.getChildren().stream()
+                                .filter(child -> !child.isDeleted())
+                                .map(child -> child.getUser().getId())
+                ))
+                .distinct()
+                .collect(Collectors.toList());
+        Set<Long> verifiedAuthorIds = authorIds.isEmpty()
+                ? Set.of()
+                : subscriptionRepository.findUserIdsByUserIdInAndStatus(authorIds, SubscriptionStatus.ACTIVE);
+
         return parentComments.stream()
                 .map(comment -> new CommentResponse(
                         comment.getId(),
@@ -129,6 +148,7 @@ public class CommentService {
                         comment.getUser().getId(),
                         comment.getUser().getNickname(),
                         comment.getUser().getProfileImageUrl(),
+                        verifiedAuthorIds.contains(comment.getUser().getId()),
                         toEmojiResponses(comment),
                         comment.getCreatedAt(),
                         // 대댓글 목록 매핑
@@ -140,6 +160,7 @@ public class CommentService {
                                         child.getUser().getId(),
                                         child.getUser().getNickname(),
                                         child.getUser().getProfileImageUrl(),
+                                        verifiedAuthorIds.contains(child.getUser().getId()),
                                         toEmojiResponses(child),
                                         child.getCreatedAt(),
                                         null

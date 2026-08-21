@@ -13,6 +13,8 @@ import org.example.petinside.domain.post.dto.IdResponse;
 import org.example.petinside.domain.post.entity.Category;
 import org.example.petinside.domain.post.entity.Post;
 import org.example.petinside.domain.post.repository.PostRepository;
+import org.example.petinside.domain.subscription.entity.SubscriptionStatus;
+import org.example.petinside.domain.subscription.repository.SubscriptionRepository;
 import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.global.exception.CommentNotFoundException;
@@ -54,6 +56,8 @@ class CommentServiceTest {
     private NotificationService notificationService;
     @Mock
     private EmojiService emojiService;
+    @Mock
+    private SubscriptionRepository subscriptionRepository;
 
     private CommentService commentService;
 
@@ -62,9 +66,10 @@ class CommentServiceTest {
 
     @BeforeEach
     void setUp() {
-        commentService = new CommentService(commentRepository, postRepository, userRepository, notificationService, emojiService);
+        commentService = new CommentService(commentRepository, postRepository, userRepository, notificationService, emojiService, subscriptionRepository);
 
         lenient().when(emojiService.resolveEmojisForAttach(anyLong(), any())).thenReturn(List.of());
+        lenient().when(subscriptionRepository.findUserIdsByUserIdInAndStatus(any(), any())).thenReturn(java.util.Set.of());
 
         author = User.builder()
                 .username("author")
@@ -236,6 +241,27 @@ class CommentServiceTest {
             assertThat(result.get(0).getAuthorProfileImageUrl()).isEqualTo("http://profile/author.png");
             assertThat(result.get(0).getChildren().get(0).getAuthorNickname()).isEqualTo("author-nick");
             assertThat(result.get(0).getChildren().get(0).getAuthorProfileImageUrl()).isEqualTo("http://profile/author.png");
+            assertThat(result.get(0).isAuthorVerified()).isFalse();
+            assertThat(result.get(0).getChildren().get(0).isAuthorVerified()).isFalse();
+        }
+
+        @Test
+        @DisplayName("작성자가 활성 구독자면 인증 뱃지가 true다")
+        void getComments_verifiedAuthor_setsAuthorVerifiedTrue() {
+            Comment parent = buildComment(1L, post, author, null, false);
+            Comment activeChild = buildComment(2L, post, author, parent, false);
+            ReflectionTestUtils.setField(parent, "children", List.of(activeChild));
+
+            when(postRepository.existsById(10L)).thenReturn(true);
+            when(commentRepository.findAllByPostIdAndParentIsNullAndIsDeletedFalseOrderByIdAsc(10L))
+                    .thenReturn(List.of(parent));
+            when(subscriptionRepository.findUserIdsByUserIdInAndStatus(List.of(1L), SubscriptionStatus.ACTIVE))
+                    .thenReturn(java.util.Set.of(1L));
+
+            List<CommentResponse> result = commentService.getCommentsByPostId(10L);
+
+            assertThat(result.get(0).isAuthorVerified()).isTrue();
+            assertThat(result.get(0).getChildren().get(0).isAuthorVerified()).isTrue();
         }
     }
 
