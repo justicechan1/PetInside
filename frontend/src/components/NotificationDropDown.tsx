@@ -6,7 +6,7 @@ import type { NotificationItem } from '../api/notificationApi.ts';
 
 // 💡 1. 여기에 방금 저장한 고양이 이미지 경로를 적어줍니다!
 // (파일을 저장한 위치에 따라 '../assets/cat_icon.png' 등으로 수정해주세요)
-import catIcon from './cat_icon.png';
+import catIcon from "../assets/cat_icon.png";
 
 export default function NotificationDropdown() {
     const navigate = useNavigate();
