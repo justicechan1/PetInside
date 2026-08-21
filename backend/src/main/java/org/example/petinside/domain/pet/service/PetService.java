@@ -12,6 +12,8 @@ import org.example.petinside.domain.pet.entity.PetPhotoLike;
 import org.example.petinside.domain.pet.repository.PetPhotoLikeRepository;
 import org.example.petinside.domain.pet.repository.PetPhotoRepository;
 import org.example.petinside.domain.pet.repository.PetRepository;
+import org.example.petinside.domain.notification.entity.NotificationType;
+import org.example.petinside.domain.notification.service.NotificationService;
 import org.example.petinside.domain.subscription.entity.SubscriptionStatus;
 import org.example.petinside.domain.subscription.repository.SubscriptionRepository;
 import org.example.petinside.domain.user.entity.User;
@@ -31,6 +33,7 @@ public class PetService {
     private final PetPhotoLikeRepository petPhotoLikeRepository;
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final NotificationService notificationService;
 
     // 구독자 검증 - PetService 안에서만 쓰이므로 private
     // User 객체를 반환해서 이후 로직에서 재사용 (DB 조회 1번으로 끝냄)
@@ -109,16 +112,26 @@ public class PetService {
     // 펫 사진 좋아요 토글
     @Transactional
     public PetPhotoLikeResponse toggleLike(Long userId, Long photoId) {
-        if (!petPhotoRepository.existsById(photoId)) {
-            throw new CustomException(404, "사진을 찾을 수 없습니다.");
-        }
-        petPhotoLikeRepository.findByPhotoIdAndUserId(photoId, userId)
-                .ifPresentOrElse(
-                        petPhotoLikeRepository::delete,
-                        () -> petPhotoLikeRepository.save(PetPhotoLike.of(photoId, userId))
-                );
+        PetPhoto photo = petPhotoRepository.findById(photoId)
+                .orElseThrow(() -> new CustomException(404, "사진을 찾을 수 없습니다."));
+
+        boolean wasLiked = petPhotoLikeRepository.findByPhotoIdAndUserId(photoId, userId)
+                .map(like -> { petPhotoLikeRepository.delete(like); return true; })
+                .orElseGet(() -> { petPhotoLikeRepository.save(PetPhotoLike.of(photoId, userId)); return false; });
+
         long count = petPhotoLikeRepository.countByPhotoId(photoId);
-        boolean liked = petPhotoLikeRepository.existsByPhotoIdAndUserId(photoId, userId);
+        boolean liked = !wasLiked;
+
+        // 좋아요 추가 시에만 알림 (자신 제외)
+        if (liked) {
+            Long ownerId = photo.getPet().getUser().getId();
+            if (!ownerId.equals(userId)) {
+                notificationService.createNotification(ownerId, NotificationType.PET_PHOTO_LIKE,
+                        "펫 사진에 좋아요가 달렸습니다.", photoId,
+                        "/users/" + ownerId + "?tab=pets");
+            }
+        }
+
         return new PetPhotoLikeResponse(liked, count);
     }
 
