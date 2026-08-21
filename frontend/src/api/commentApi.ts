@@ -1,4 +1,5 @@
 import axiosInstance from './axiosInstance';
+import type { Emoji } from './emojiApi';
 
 export interface CommentItem {
     id: number;
@@ -6,6 +7,7 @@ export interface CommentItem {
     authorId: number;
     authorNickname: string;
     authorProfileImageUrl: string | null;
+    emojis: Emoji[];
     createdAt: string;
     children: CommentItem[] | null;
 }
@@ -13,10 +15,10 @@ export interface CommentItem {
 export const getComments = (postId: number) =>
     axiosInstance.get<{ data: CommentItem[] }>(`/api/v1/posts/${postId}/comments`).then(r => r.data.data);
 
-export const createComment = (postId: number, body: { content: string; parentId?: number | null }) =>
+export const createComment = (postId: number, body: { content: string; parentId?: number | null; emojiIds?: number[] }) =>
     axiosInstance.post(`/api/v1/posts/${postId}/comments`, body).then(r => r.data);
 
-export const updateComment = (commentId: number, body: { content: string }) =>
+export const updateComment = (commentId: number, body: { content: string; emojiIds?: number[] }) =>
     axiosInstance.put(`/api/v1/comments/${commentId}`, body).then(r => r.data);
 
 export const deleteComment = (commentId: number) =>

@@ -25,4 +25,7 @@ public class PostUpdateRequest {
 
     @Schema(description = "첨부 이미지 URL 목록 (선택, 전달된 목록으로 기존 이미지를 전부 대체)")
     private List<String> imageUrls;
+
+    @Schema(description = "첨부 이모지 ID 목록 (선택, 전달된 목록으로 기존 이모지를 전부 대체)")
+    private List<Long> emojiIds;
 }

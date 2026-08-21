@@ -16,6 +16,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 
 import java.util.Arrays;
@@ -74,6 +75,12 @@ public class SecurityConfig {
                                 "/api/v1/posts",
                                 "/api/v1/posts/*",
                                 "/api/v1/posts/*/comments"
+                        ).permitAll()
+                        // F-33 공개 프로필/작성글 조회는 비회원도 가능 - "/api/v1/users/me"(내 정보, 인증 필요)와
+                        // 겹치지 않도록 숫자 userId만 매칭하는 정규식 사용(Ant 패턴의 *는 "me"도 매칭해버림)
+                        .requestMatchers(
+                                new RegexRequestMatcher("^/api/v1/users/\\d+$", "GET"),
+                                new RegexRequestMatcher("^/api/v1/users/\\d+/posts$", "GET")
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
