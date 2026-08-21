@@ -34,19 +34,19 @@ export default function EmojiPicker({ selectedIds, onChange }: { selectedIds: nu
     const selectedEmojis = (emojis ?? []).filter(e => selectedIds.includes(e.id));
 
     return (
-        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, maxWidth: '100%' }}>
             <button type="button" onClick={handleToggleOpen} style={{
                 padding: '6px 12px', borderRadius: 8, border: '1px solid #ddd', background: '#fff',
-                cursor: 'pointer', fontSize: 13,
+                cursor: 'pointer', fontSize: 13, flexShrink: 0,
             }}>
-                😀 이모지{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
+                😀{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
             </button>
 
             {selectedEmojis.length > 0 && (
-                <span style={{ display: 'inline-flex', gap: 4 }}>
+                <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4, maxWidth: 260 }}>
                     {selectedEmojis.map(e => (
                         <img key={e.id} src={e.imageUrl} alt={e.name} title={e.name}
-                             style={{ width: 20, height: 20, objectFit: 'contain' }} />
+                             style={{ width: 20, height: 20, objectFit: 'contain', flexShrink: 0 }} />
                     ))}
                 </span>
             )}
@@ -55,7 +55,7 @@ export default function EmojiPicker({ selectedIds, onChange }: { selectedIds: nu
                 <div style={{
                     position: 'absolute', top: '110%', left: 0, zIndex: 50,
                     background: '#fff', border: '1px solid #ddd', borderRadius: 8,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: 10, minWidth: 200,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: 10, minWidth: 200, maxWidth: 280,
                 }}>
                     {loading ? (
                         <span style={{ fontSize: 13, color: '#999' }}>불러오는 중...</span>
