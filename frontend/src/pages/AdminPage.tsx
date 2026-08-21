@@ -247,7 +247,7 @@ export default function AdminPage() {
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                             <tr style={{ background: '#f8f8f8' }}>
-                                {['ID', '회원', '유형', '상태', '다음 결제일', '해지일'].map(h => (
+                                {['ID', '회원', '유형', '상태', '다음 결제일', '결제 시작일'].map(h => (
                                     <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#666', borderBottom: '1px solid #eee' }}>{h}</th>
                                 ))}
                             </tr>
