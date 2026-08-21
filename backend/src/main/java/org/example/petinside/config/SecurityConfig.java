@@ -70,12 +70,13 @@ public class SecurityConfig {
                                 "/error",
                                 "/images/**" // 로컬 디스크에 업로드된 이미지 정적 서빙 - 비회원도 조회 가능해야 함
                         ).permitAll()
-                        // 게시글 목록/상세, 댓글 목록 조회는 비회원도 가능
+                        // 게시글 목록/상세, 댓글 목록, 좋아요 상태(개수) 조회는 비회원도 가능
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/posts",
                                 "/api/v1/posts/*",
                                 "/api/v1/posts/*/comments",
-                                "/api/v1/pets/photos/popular"
+                                "/api/v1/posts/*/likes/me",
+                                "/api/v1/comments/*/likes/me"
                         ).permitAll()
                         // F-33 공개 프로필/작성글 조회는 비회원도 가능 - "/api/v1/users/me"(내 정보, 인증 필요)와
                         // 겹치지 않도록 숫자 userId만 매칭하는 정규식 사용(Ant 패턴의 *는 "me"도 매칭해버림)
