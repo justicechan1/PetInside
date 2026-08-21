@@ -44,6 +44,9 @@ public class Post {
     @Column(name = "view_count", nullable = false)
     private int viewCount = 0;
 
+    @Column(name = "like_count", nullable = false)
+    private long likeCount = 0;
+
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
 
@@ -88,6 +91,16 @@ public class Post {
 
     public void increaseViewCount() {
         this.viewCount++;
+    }
+
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
     }
 
     public void addImage(PostImage image) {

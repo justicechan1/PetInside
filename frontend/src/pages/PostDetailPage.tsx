@@ -5,6 +5,7 @@ import Avatar from '../components/Avatar';
 import EmojiText from '../components/EmojiText';
 import { profilePath } from '../utils/profileNav';
 import CommentSection from '../components/CommentSection';
+import LikeButton from '../components/LikeButton';
 import { getPost, deletePost } from '../api/postApi';
 import type { PostDetail } from '../api/postApi';
 
@@ -71,6 +72,7 @@ export default function PostDetailPage() {
                         </span>
                         <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                         <span>조회 {post.viewCount}</span>
+                        <LikeButton targetType="post" targetId={Number(postId)} />
                     </div>
                 </div>
 
