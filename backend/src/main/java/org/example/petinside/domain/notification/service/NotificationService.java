@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -44,7 +45,7 @@ public class NotificationService {
     }
 
     // F-36-3: 알림 생성 기능
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createNotification(Long receiverUserId, NotificationType type,String content, Long targetId, String linkUrl) {
        User receiver = userRepository.findById(receiverUserId)
                .orElseThrow(() -> new UserNotFoundException(receiverUserId));

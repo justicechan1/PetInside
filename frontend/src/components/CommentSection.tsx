@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getComments, createComment, updateComment, deleteComment } from '../api/commentApi';
 import type { CommentItem } from '../api/commentApi';
 import Avatar from './Avatar';
 import EmojiPicker from './EmojiPicker';
+import EmojiText from './EmojiText';
 import { profilePath } from '../utils/profileNav';
+import { extractEmojiIds, withLegacyEmojiTokens } from '../utils/emojiText';
 
 const inputStyle = {
     width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #ddd',
@@ -29,13 +31,15 @@ export default function CommentSection({ postId }: { postId: number }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
     const [newContent, setNewContent] = useState('');
-    const [newEmojiIds, setNewEmojiIds] = useState<number[]>([]);
+    const [newPickerCloseSignal, setNewPickerCloseSignal] = useState(0);
+    const newTextareaRef = useRef<HTMLTextAreaElement>(null);
     const [replyTargetId, setReplyTargetId] = useState<number | null>(null);
     const [replyContent, setReplyContent] = useState('');
-    const [replyEmojiIds, setReplyEmojiIds] = useState<number[]>([]);
+    const [replyPickerCloseSignal, setReplyPickerCloseSignal] = useState(0);
+    const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
     const [editTargetId, setEditTargetId] = useState<number | null>(null);
     const [editContent, setEditContent] = useState('');
-    const [editEmojiIds, setEditEmojiIds] = useState<number[]>([]);
+    const editTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     const loadComments = () => {
         setLoading(true);
@@ -53,9 +57,9 @@ export default function CommentSection({ postId }: { postId: number }) {
     const handleCreate = async () => {
         if (!newContent.trim()) return;
         try {
-            await createComment(postId, { content: newContent, emojiIds: newEmojiIds });
+            await createComment(postId, { content: newContent, emojiIds: extractEmojiIds(newContent) });
             setNewContent('');
-            setNewEmojiIds([]);
+            setNewPickerCloseSignal(s => s + 1);
             loadComments();
         } catch (e: any) {
             alert(e.response?.data?.message ?? '댓글 등록에 실패했습니다.');
@@ -65,9 +69,9 @@ export default function CommentSection({ postId }: { postId: number }) {
     const handleReplySubmit = async (parentId: number) => {
         if (!replyContent.trim()) return;
         try {
-            await createComment(postId, { content: replyContent, parentId, emojiIds: replyEmojiIds });
+            await createComment(postId, { content: replyContent, parentId, emojiIds: extractEmojiIds(replyContent) });
             setReplyContent('');
-            setReplyEmojiIds([]);
+            setReplyPickerCloseSignal(s => s + 1);
             setReplyTargetId(null);
             loadComments();
         } catch (e: any) {
@@ -78,7 +82,7 @@ export default function CommentSection({ postId }: { postId: number }) {
     const handleEditSubmit = async (commentId: number) => {
         if (!editContent.trim()) return;
         try {
-            await updateComment(commentId, { content: editContent, emojiIds: editEmojiIds });
+            await updateComment(commentId, { content: editContent, emojiIds: extractEmojiIds(editContent) });
             setEditTargetId(null);
             loadComments();
         } catch (e: any) {
@@ -115,7 +119,7 @@ export default function CommentSection({ postId }: { postId: number }) {
                     </div>
                     {isAuthor && !isEditing && (
                         <div style={{ display: 'flex', gap: 10 }}>
-                            <button style={linkButtonStyle} onClick={() => { setEditTargetId(comment.id); setEditContent(comment.content); setEditEmojiIds((comment.emojis ?? []).map(e => e.id)); }}>수정</button>
+                            <button style={linkButtonStyle} onClick={() => { setEditTargetId(comment.id); setEditContent(withLegacyEmojiTokens(comment.content, comment.emojis ?? [])); }}>수정</button>
                             <button style={linkButtonStyle} onClick={() => handleDelete(comment.id)}>삭제</button>
                         </div>
                     )}
@@ -124,7 +128,7 @@ export default function CommentSection({ postId }: { postId: number }) {
                 {isEditing ? (
                     <div style={{ marginTop: 6 }}>
                         <div style={{ display: 'flex', gap: 8 }}>
-                            <textarea rows={2} style={inputStyle} value={editContent} onChange={e => setEditContent(e.target.value)} />
+                            <textarea ref={editTextareaRef} rows={2} style={inputStyle} value={editContent} onChange={e => setEditContent(e.target.value)} />
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                 <button style={buttonStyle} onClick={() => handleEditSubmit(comment.id)}>저장</button>
                                 <button style={{ ...buttonStyle, background: '#fff', color: '#333', border: '1px solid #ddd' }}
@@ -132,21 +136,13 @@ export default function CommentSection({ postId }: { postId: number }) {
                             </div>
                         </div>
                         <div style={{ marginTop: 8 }}>
-                            <EmojiPicker selectedIds={editEmojiIds} onChange={setEditEmojiIds} />
+                            <EmojiPicker textareaRef={editTextareaRef} value={editContent} onChange={setEditContent} />
                         </div>
                     </div>
                 ) : (
-                    <>
-                        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{comment.content}</p>
-                        {comment.emojis?.length > 0 && (
-                            <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-                                {comment.emojis.map(e => (
-                                    <img key={e.id} src={e.imageUrl} alt={e.name} title={e.name}
-                                         style={{ width: 20, height: 20, objectFit: 'contain' }} />
-                                ))}
-                            </div>
-                        )}
-                    </>
+                    <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                        <EmojiText text={comment.content} emojis={comment.emojis} size={135} />
+                    </p>
                 )}
 
                 {!isReply && (
@@ -159,12 +155,12 @@ export default function CommentSection({ postId }: { postId: number }) {
                 {replyTargetId === comment.id && (
                     <div style={{ marginTop: 8, marginLeft: 32 }}>
                         <div style={{ display: 'flex', gap: 8 }}>
-                            <textarea rows={2} style={inputStyle} placeholder="답글을 입력하세요"
+                            <textarea ref={replyTextareaRef} rows={2} style={inputStyle} placeholder="답글을 입력하세요"
                                       value={replyContent} onChange={e => setReplyContent(e.target.value)} />
                             <button style={buttonStyle} onClick={() => handleReplySubmit(comment.id)}>등록</button>
                         </div>
                         <div style={{ marginTop: 8 }}>
-                            <EmojiPicker selectedIds={replyEmojiIds} onChange={setReplyEmojiIds} />
+                            <EmojiPicker textareaRef={replyTextareaRef} value={replyContent} onChange={setReplyContent} closeSignal={replyPickerCloseSignal} />
                         </div>
                     </div>
                 )}
@@ -185,12 +181,12 @@ export default function CommentSection({ postId }: { postId: number }) {
             {isLoggedIn ? (
                 <div style={{ marginBottom: 24 }}>
                     <div style={{ display: 'flex', gap: 8 }}>
-                        <textarea rows={2} style={inputStyle} placeholder="댓글을 입력하세요"
+                        <textarea ref={newTextareaRef} rows={2} style={inputStyle} placeholder="댓글을 입력하세요"
                                   value={newContent} onChange={e => setNewContent(e.target.value)} />
                         <button style={buttonStyle} onClick={handleCreate}>등록</button>
                     </div>
                     <div style={{ marginTop: 8 }}>
-                        <EmojiPicker selectedIds={newEmojiIds} onChange={setNewEmojiIds} />
+                        <EmojiPicker textareaRef={newTextareaRef} value={newContent} onChange={setNewContent} closeSignal={newPickerCloseSignal} />
                     </div>
                 </div>
             ) : (

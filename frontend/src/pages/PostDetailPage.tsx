@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import GNB from '../components/GNB';
 import Avatar from '../components/Avatar';
+import EmojiText from '../components/EmojiText';
 import { profilePath } from '../utils/profileNav';
 import CommentSection from '../components/CommentSection';
+import LikeButton from '../components/LikeButton';
 import { getPost, deletePost } from '../api/postApi';
 import type { PostDetail } from '../api/postApi';
 
@@ -70,12 +72,13 @@ export default function PostDetailPage() {
                         </span>
                         <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                         <span>조회 {post.viewCount}</span>
+                        <LikeButton targetType="post" targetId={Number(postId)} />
                     </div>
                 </div>
 
                 {/* 본문 */}
                 <div style={{ lineHeight: 1.8, fontSize: 16, marginBottom: 24, whiteSpace: 'pre-wrap' }}>
-                    {post.content}
+                    <EmojiText text={post.content} emojis={post.emojis} size={180} />
                 </div>
 
                 {/* 이미지 */}
@@ -89,16 +92,6 @@ export default function PostDetailPage() {
                                 onClick={() => setPreviewUrl(url)}
                                 style={{ width: 200, height: 200, objectFit: 'cover', borderRadius: 8, cursor: 'zoom-in' }}
                             />
-                        ))}
-                    </div>
-                )}
-
-                {/* 이모지 */}
-                {post.emojis?.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 24 }}>
-                        {post.emojis.map(e => (
-                            <img key={e.id} src={e.imageUrl} alt={e.name} title={e.name}
-                                 style={{ width: 28, height: 28, objectFit: 'contain' }} />
                         ))}
                     </div>
                 )}
