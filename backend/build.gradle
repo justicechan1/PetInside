@@ -19,6 +19,10 @@ repositories {
 }
 
 dependencies {
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.78'
+
+    implementation 'nl.martijndwars:web-push:5.1.1'
+
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
     // JWT
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'

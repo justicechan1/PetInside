@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { getRoleFromToken } from '../utils/auth';
 import Avatar from './Avatar';
 import NotificationDropdown from "./NotificationDropDown";
+import { subscribePush } from '../api/notificationApi';
+import { urlBase64ToUint8Array } from '../utils/push';
 
 export default function GNB() {
     const navigate = useNavigate();
@@ -25,6 +27,30 @@ export default function GNB() {
         window.addEventListener('storage', onStorage);
         return () => window.removeEventListener('storage', onStorage);
     }, []);
+
+    useEffect(() => {
+        if (!isLoggedIn) return;
+
+        const setupPush = async () => {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+            const registration = await navigator.serviceWorker.register('/sw.js');
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') return;
+
+            const existing = await registration.pushManager.getSubscription();
+            if (existing) return;
+
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC_KEY),
+            });
+
+            await subscribePush(subscription.toJSON());
+        };
+
+        setupPush();
+    }, [isLoggedIn]);
 
 
     const handleLogout = async () => {

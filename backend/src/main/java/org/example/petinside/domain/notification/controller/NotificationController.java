@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.domain.notification.dto.NotificationReadResponse;
 import org.example.petinside.domain.notification.dto.NotificationResponse;
+import org.example.petinside.domain.notification.dto.PushSubscribeRequest;
 import org.example.petinside.domain.notification.service.NotificationService;
 import org.example.petinside.global.response.ApiResponse;
 import org.springframework.data.domain.Page;
@@ -56,5 +57,21 @@ public class NotificationController {
         NotificationReadResponse response = notificationService.markAsRead(userId, notificationId);
         return ResponseEntity.ok(ApiResponse.of(200, "읽음 처리되었습니다.", response));
         }
+
+    // F-34: 웹푸시 구독 등록
+    @Operation(summary = "웹푸시 구독 등록", description = "브라우저 푸시 구독 정보를 저장")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "구독 등록 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증이 필요합니다.")
+    })
+    @PostMapping("/subscribe")
+    public ResponseEntity<ApiResponse<Void>> subscribe(
+            @AuthenticationPrincipal Long userId,
+            @RequestBody PushSubscribeRequest request
+    ) {
+        notificationService.savePushSubscription(userId, request);
+        return ResponseEntity.ok(ApiResponse.of(200, "구독 등록 성공", null));
+    }
+
     }
 

@@ -1,14 +1,59 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:petinside-test;MODE=MySQL
+    url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver
     username: sa
     password:
-
   jpa:
     hibernate:
       ddl-auto: create-drop
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-client-id
+            client-secret: REDACTED
+            redirect-uri: http://localhost:8080/login/oauth2/code/google
+            scope:
+              - openid
+              - email
+              - profile
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+cors:
+  allowed-origins: http://localhost:5173
+
+server:
+  port: 8080
+  forward-headers-strategy: framework
+
+jwt:
+  secret: REDACTED
+  access-token-expiration: 3600000
+  refresh-token-expiration: 604800000
+
+portone:
+  store-id: test-store-id
+  channel-key: test-channel-key
+  channel-key-subscription: test-channel-key-sub
+  api-secret: REDACTED
+  webhook-secret: REDACTED
+  payment-id-prefix: PI
+  billing-key-encryption-secret: REDACTED
+  webhook-notice-url: http://localhost:8080/webhook
+
+app:
+  oauth2:
+    redirect-uri: http://localhost:3000/oauth/callback
+  upload:
+    dir: ./uploads
+
+webpush:
+  vapid:
+    public-key: dGVzdC1kdW1teS1wdWJsaWMta2V5LWZvci10ZXN0
+    private-key: REDACTED
+    subject: mailto:test@example.com

@@ -64,6 +64,12 @@ app:
   upload:
     dir: ${UPLOAD_DIR:./uploads}
 
+webpush:
+  vapid:
+    public-key: ${VAPID_PUBLIC_KEY:}
+    private-key: ${VAPID_PRIVATE_KEY:}
+    subject: ${VAPID_SUBJECT:mailto:test@example.com}
+
 # --- H2 로컬 테스트로 되돌릴 때 아래 주석 해제, MySQL datasource 주석 처리 ---
 # spring:
 #   datasource:

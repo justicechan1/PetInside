@@ -20,3 +20,8 @@ export const getNotifications = (page = 0) =>
 // F-34: 알림 단건 읽음 처리
 export const readNotification = (notificationId: number) =>
     axiosInstance.patch(`/api/v1/notifications/${notificationId}/read`).then(r => r.data.data);
+
+// F-34: 구독 요청 함수 추가
+export const subscribePush = (subscription: PushSubscriptionJSON) => {
+    return axiosInstance.post('/api/v1/notifications/subscribe', subscription);
+};
