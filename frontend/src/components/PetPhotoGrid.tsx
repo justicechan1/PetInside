@@ -6,9 +6,10 @@ interface Props {
     loading?: boolean;
     onPhotoClick: (photo: PetPhoto) => void;
     onAdd?: (file: File) => void;
+    onLike?: (photo: PetPhoto) => void;
 }
 
-export default function PetPhotoGrid({ photos, loading, onPhotoClick, onAdd }: Props) {
+export default function PetPhotoGrid({ photos, loading, onPhotoClick, onAdd, onLike }: Props) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     if (loading) return <p style={{ textAlign: 'center', color: '#bbb', padding: '32px 0' }}>불러오는 중...</p>;
@@ -37,14 +38,22 @@ export default function PetPhotoGrid({ photos, loading, onPhotoClick, onAdd }: P
                         style={{ position: 'relative', aspectRatio: '1', overflow: 'hidden', cursor: 'pointer' }}>
                         <img src={photo.imageUrl} alt={photo.caption ?? ''}
                             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                        {photo.caption && (
-                            <div style={{
-                                position: 'absolute', bottom: 0, left: 0, right: 0,
-                                background: 'linear-gradient(transparent, rgba(0,0,0,0.55))',
-                                padding: '16px 6px 5px', fontSize: 10, color: '#fff',
-                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            }}>{photo.caption}</div>
-                        )}
+                        <div style={{
+                            position: 'absolute', bottom: 0, left: 0, right: 0,
+                            background: 'linear-gradient(transparent, rgba(0,0,0,0.55))',
+                            padding: '16px 6px 5px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+                        }}>
+                            <span style={{ fontSize: 10, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                                {photo.caption ?? ''}
+                            </span>
+                            {onLike && (
+                                <button onClick={e => { e.stopPropagation(); onLike(photo); }}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                                    <span style={{ fontSize: 13 }}>{photo.liked ? '❤️' : '🤍'}</span>
+                                    {photo.likeCount > 0 && <span style={{ fontSize: 10, color: '#fff', fontWeight: 600 }}>{photo.likeCount}</span>}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 ))}
             </div>

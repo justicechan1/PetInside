@@ -4,10 +4,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.example.petinside.domain.pet.dto.PetPhotoLikeResponse;
 import org.example.petinside.domain.pet.dto.PetPhotoRequest;
 import org.example.petinside.domain.pet.dto.PetPhotoResponse;
 import org.example.petinside.domain.pet.dto.PetRequest;
 import org.example.petinside.domain.pet.dto.PetResponse;
+import org.example.petinside.domain.pet.dto.PopularPetPhotoResponse;
 import org.example.petinside.domain.pet.service.PetService;
 import org.example.petinside.global.response.ApiResponse;
 import org.springframework.http.HttpStatus;
@@ -25,6 +27,13 @@ import java.util.List;
 public class PetController {
 
     private final PetService petService;
+
+    @Operation(summary = "인기 펫 사진 조회", description = "좋아요 순 인기 펫 사진 목록 (비회원 공개)")
+    @GetMapping("/pets/photos/popular")
+    public ResponseEntity<ApiResponse<List<PopularPetPhotoResponse>>> getPopularPhotos(
+            @RequestParam(defaultValue = "6") int limit) {
+        return ResponseEntity.ok(ApiResponse.success(200, "조회 성공", petService.getPopularPhotos(limit)));
+    }
 
     @Operation(summary = "펫 등록", description = "반려동물 프로필을 등록합니다. 구독자(ACTIVE)만 이용 가능합니다.")
     @PostMapping("/pets")
@@ -70,8 +79,18 @@ public class PetController {
     @Operation(summary = "펫 사진 목록 조회")
     @GetMapping("/pets/{petId}/photos")
     public ResponseEntity<ApiResponse<List<PetPhotoResponse>>> getPhotos(
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long petId) {
-        return ResponseEntity.ok(ApiResponse.success(200, "조회 성공", petService.getPhotos(petId)));
+        return ResponseEntity.ok(ApiResponse.success(200, "조회 성공", petService.getPhotos(petId, userId)));
+    }
+
+    @Operation(summary = "펫 사진 좋아요 토글")
+    @PostMapping("/pets/{petId}/photos/{photoId}/like")
+    public ResponseEntity<ApiResponse<PetPhotoLikeResponse>> toggleLike(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long petId,
+            @PathVariable Long photoId) {
+        return ResponseEntity.ok(ApiResponse.success(200, "처리 완료", petService.toggleLike(userId, photoId)));
     }
 
     @Operation(summary = "펫 사진 추가", description = "구독자(ACTIVE)만 이용 가능합니다.")

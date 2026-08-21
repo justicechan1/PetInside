@@ -38,6 +38,8 @@ export interface PetPhoto {
     imageUrl: string;
     caption: string | null;
     createdAt: string;
+    likeCount: number;
+    liked: boolean;
 }
 
 export const getPetPhotos = (petId: number) =>
@@ -48,3 +50,6 @@ export const addPetPhoto = (petId: number, imageUrl: string, caption?: string) =
 
 export const deletePetPhoto = (petId: number, photoId: number) =>
     axiosInstance.delete(`/api/v1/pets/${petId}/photos/${photoId}`);
+
+export const togglePhotoLike = (petId: number, photoId: number) =>
+    axiosInstance.post<{ data: { liked: boolean; likeCount: number } }>(`/api/v1/pets/${petId}/photos/${photoId}/like`).then(r => r.data.data);

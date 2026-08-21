@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import GNB from '../components/GNB';
 import { getPublicProfile, getPublicPosts } from '../api/mypageApi';
 import type { PublicProfile, MyPost } from '../api/mypageApi';
-import { getUserPets, getPetPhotos } from '../api/petApi';
+import { getUserPets, getPetPhotos, togglePhotoLike } from '../api/petApi';
 import type { Pet, PetPhoto } from '../api/petApi';
 import { cardStyle } from '../styles/common';
 import PhotoLightbox from '../components/PhotoLightbox';
@@ -210,6 +210,9 @@ export default function PublicProfilePage() {
                                         photos={petPhotos[selectedPet.id] ?? []}
                                         loading={photosLoading}
                                         onPhotoClick={setLightbox}
+                                        onLike={photo => togglePhotoLike(selectedPet.id, photo.id).then(result =>
+                                            setPetPhotos(prev => ({ ...prev, [selectedPet.id]: (prev[selectedPet.id] ?? []).map(p => p.id === photo.id ? { ...p, ...result } : p) }))
+                                        )}
                                     />
                                 )}
                             </>
