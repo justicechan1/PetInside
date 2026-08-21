@@ -5,6 +5,7 @@ import type { CommentItem } from '../api/commentApi';
 import Avatar from './Avatar';
 import EmojiPicker from './EmojiPicker';
 import EmojiText from './EmojiText';
+import VerifiedBadge from './VerifiedBadge';
 import { profilePath } from '../utils/profileNav';
 import { extractEmojiIds, withLegacyEmojiTokens } from '../utils/emojiText';
 
@@ -113,7 +114,10 @@ export default function CommentSection({ postId }: { postId: number }) {
                             style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
                         >
                             <Avatar imageUrl={comment.authorProfileImageUrl} nickname={comment.authorNickname} size={20} />
-                            <span style={{ fontWeight: 600, fontSize: 13 }}>{comment.authorNickname}</span>
+                            <span style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                {comment.authorNickname}
+                                {comment.authorVerified && <VerifiedBadge size={20} />}
+                            </span>
                         </span>
                         <span style={{ color: '#aaa', fontSize: 12 }}>{new Date(comment.createdAt).toLocaleString()}</span>
                     </div>

@@ -53,8 +53,8 @@ class CommentControllerTest {
     @Test
     @DisplayName("GET /api/v1/posts/{postId}/comments - 200")
     void getComments_ok() throws Exception {
-        CommentResponse child = new CommentResponse(2L, "답글", 3L, "고양이집사", null, List.of(), LocalDateTime.now(), List.of());
-        CommentResponse parent = new CommentResponse(1L, "댓글", 5L, "강아지박사", null, List.of(), LocalDateTime.now(), List.of(child));
+        CommentResponse child = new CommentResponse(2L, "답글", 3L, "고양이집사", null, false, List.of(), LocalDateTime.now(), List.of());
+        CommentResponse parent = new CommentResponse(1L, "댓글", 5L, "강아지박사", null, false, List.of(), LocalDateTime.now(), List.of(child));
         when(commentService.getCommentsByPostId(10L)).thenReturn(List.of(parent));
 
         mockMvc.perform(get("/api/v1/posts/{postId}/comments", 10L))

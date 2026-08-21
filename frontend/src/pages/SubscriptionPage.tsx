@@ -13,6 +13,12 @@ import type { SubscriptionResult, SubscriptionMeResult } from '../api/subscripti
 import { isAuthenticated, getUserIdFromToken } from '../utils/auth';
 import petProfileRegisterImg from '../assets/benefit-pet-profile-register.png';
 import petProfileFeedImg from '../assets/benefit-pet-profile-feed.png';
+import petProfileMainImg from '../assets/benefit-pet-profile-main.png';
+import emojiUsageImg from '../assets/benefit-emoji-usage.png';
+import emojiPostImg from '../assets/benefit-emoji-post.png';
+import emojiCommentImg from '../assets/benefit-emoji-comment.png';
+import badgePostImg from '../assets/benefit-badge-post.png';
+import badgeProfileImg from '../assets/benefit-badge-profile.png';
 
 type Mode = 'RECURRING' | 'ONE_TIME';
 
@@ -255,11 +261,26 @@ export default function SubscriptionPage() {
             screenshots: [
                 { src: petProfileRegisterImg, caption: '반려동물 등록' },
                 { src: petProfileFeedImg, caption: '프로필 & 사진 피드' },
+                { src: petProfileMainImg, caption: '반려동물 프로필 메인 페이지' },
             ],
         },
-        { icon: '😺', title: '프리미엄 이모티콘', description: '채팅과 게시글에서 쓸 수 있는 PetInside 전용 이모티콘이 열려요.' },
-        { icon: '✅', title: '인증 뱃지', description: '닉네임 옆에 프리미엄 멤버십 인증 뱃지가 붙어요.' },
-        { icon: '🎨', title: '프로필 커스터마이징', description: '프로필 테마와 배경을 취향대로 꾸밀 수 있어요.' },
+        {
+            icon: '😺', title: '프리미엄 이모티콘',
+            description: '채팅과 게시글에서 쓸 수 있는 PetInside 전용 이모티콘이 열려요.',
+            screenshots: [
+                { src: emojiUsageImg, caption: '이모티콘 사용' },
+                { src: emojiPostImg, caption: '게시글에서 이모티콘' },
+                { src: emojiCommentImg, caption: '댓글에서 이모티콘' },
+            ],
+        },
+        {
+            icon: '✅', title: '인증 뱃지',
+            description: '닉네임 옆에 프리미엄 멤버십 인증 뱃지가 붙어요.',
+            screenshots: [
+                { src: badgeProfileImg, caption: '프로필의 인증 뱃지' },
+                { src: badgePostImg, caption: '게시글의 인증 뱃지' },
+            ],
+        },
     ];
 
     const renderBenefitShowcase = () => (
@@ -267,7 +288,7 @@ export default function SubscriptionPage() {
             <p style={{ margin: '0 0 14px', fontSize: 12, fontWeight: 800, letterSpacing: '0.04em', color: muted, textTransform: 'uppercase' }}>
                 이런 혜택이 있어요
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {BENEFIT_DETAILS.map(b => (
                     <div key={b.title} style={{ padding: '16px', borderRadius: 16, background: '#FFF8EC' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>

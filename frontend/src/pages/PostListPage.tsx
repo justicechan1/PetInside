@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GNB from '../components/GNB';
 import Avatar from '../components/Avatar';
+import VerifiedBadge from '../components/VerifiedBadge';
 import { profilePath } from '../utils/profileNav';
 import { getPosts } from '../api/postApi';
 import type { PostListItem } from '../api/postApi';
@@ -125,6 +126,7 @@ export default function PostListPage() {
                                         >
                                             <Avatar imageUrl={post.authorProfileImageUrl} nickname={post.authorNickname} size={18} />
                                             {post.authorNickname}
+                                            {post.authorVerified && <VerifiedBadge />}
                                         </span>
                                         · {new Date(post.createdAt).toLocaleDateString()}
                                     </div>

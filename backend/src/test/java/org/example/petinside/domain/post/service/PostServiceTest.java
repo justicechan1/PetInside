@@ -15,6 +15,7 @@ import org.example.petinside.domain.post.entity.Post;
 import org.example.petinside.domain.post.entity.PostImage;
 import org.example.petinside.domain.post.repository.PostImageRepository;
 import org.example.petinside.domain.post.repository.PostRepository;
+import org.example.petinside.domain.subscription.repository.SubscriptionRepository;
 import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.global.exception.CustomException;
@@ -61,6 +62,8 @@ class PostServiceTest {
     private UserRepository userRepository;
     @Mock
     private EmojiService emojiService;
+    @Mock
+    private SubscriptionRepository subscriptionRepository;
 
     private PostService postService;
 
@@ -68,7 +71,9 @@ class PostServiceTest {
 
     @BeforeEach
     void setUp() {
-        postService = new PostService(postRepository, postImageRepository, commentRepository, userRepository, emojiService);
+        postService = new PostService(postRepository, postImageRepository, commentRepository, userRepository, emojiService, subscriptionRepository);
+
+        lenient().when(subscriptionRepository.findUserIdsByUserIdInAndStatus(any(), any())).thenReturn(java.util.Set.of());
 
         author = User.builder()
                 .username("author")
@@ -243,6 +248,22 @@ class PostServiceTest {
             assertThat(dto.getAuthorId()).isEqualTo(1L);
             assertThat(dto.getAuthorNickname()).isEqualTo("author-nick");
             assertThat(dto.getAuthorProfileImageUrl()).isEqualTo("http://profile/author.png");
+            assertThat(dto.isAuthorVerified()).isFalse();
+        }
+
+        @Test
+        @DisplayName("작성자가 활성 구독자면 인증 뱃지가 true다")
+        void getPostList_verifiedAuthor_setsAuthorVerifiedTrue() {
+            Post post = buildPost(1L, author, Category.QNA, false);
+            Pageable pageable = PageRequest.of(0, 10);
+            when(postRepository.search(any(), any(), eq(pageable)))
+                    .thenReturn(new PageImpl<>(List.of(post)));
+            when(subscriptionRepository.findUserIdsByUserIdInAndStatus(List.of(1L), org.example.petinside.domain.subscription.entity.SubscriptionStatus.ACTIVE))
+                    .thenReturn(java.util.Set.of(1L));
+
+            PageResponse<PostListResponse> result = postService.getPostList(null, null, pageable);
+
+            assertThat(result.content().get(0).isAuthorVerified()).isTrue();
         }
 
         @Test
@@ -277,6 +298,20 @@ class PostServiceTest {
             assertThat(response.getAuthorId()).isEqualTo(1L);
             assertThat(response.getAuthorNickname()).isEqualTo("author-nick");
             assertThat(response.getAuthorProfileImageUrl()).isEqualTo("http://profile/author.png");
+            assertThat(response.isAuthorVerified()).isFalse();
+        }
+
+        @Test
+        @DisplayName("작성자가 활성 구독자면 인증 뱃지가 true다")
+        void getPostDetail_verifiedAuthor_setsAuthorVerifiedTrue() {
+            Post post = buildPost(1L, author, Category.QNA, false);
+            when(postRepository.findById(1L)).thenReturn(Optional.of(post));
+            when(subscriptionRepository.existsByUser_IdAndStatus(1L, org.example.petinside.domain.subscription.entity.SubscriptionStatus.ACTIVE))
+                    .thenReturn(true);
+
+            PostDetailResponse response = postService.getPostDetail(1L);
+
+            assertThat(response.isAuthorVerified()).isTrue();
         }
 
         @Test
