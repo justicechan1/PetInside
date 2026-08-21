@@ -6,7 +6,7 @@ import type { NotificationItem } from '../api/notificationApi.ts';
 
 // 💡 1. 여기에 방금 저장한 고양이 이미지 경로를 적어줍니다!
 // (파일을 저장한 위치에 따라 '../assets/cat_icon.png' 등으로 수정해주세요)
-import catIcon from "../assets/cat_icon.png";
+// import catIcon from "../assets/cat_icon.png";
 
 export default function NotificationDropdown() {
     const navigate = useNavigate();
@@ -36,21 +36,26 @@ export default function NotificationDropdown() {
 
     return (
         <div style={{ position: 'relative' }}>
-            <div onClick={() => setOpen(!open)} style={{ cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center' }}>
-
-                {/* 💡 2. 긴 코드 대신 딱 이 한 줄로 이미지를 띄웁니다 */}
-                <img src={catIcon} alt="알림" style={{ width: 28, height: 28, objectFit: 'contain' }} />
-
+            <div onClick={() => setOpen(!open)} style={{ cursor: 'pointer', position: 'relative' }}>
+                <svg width="22" height="22" viewBox="0 0 100 100">
+                    <path
+                        d="M55 0 C34 0 22 15 22 34 C22 62 10 72 10 82 L100 82 C100 72 88 62 88 34 C88 15 76 0 55 0 Z"
+                        fill="#1a1a1a"
+                    />
+                    <path
+                        d="M44 90 Q55 100 66 90"
+                        fill="none" stroke="#1a1a1a" strokeWidth="6" strokeLinecap="round"
+                    />
+                </svg>
                 {unreadCount > 0 && (
                     <span style={{
                         position: 'absolute', top: -4, right: -4,
-                        background: '#E03131', color: '#fff',
+                        background: '#9F1239', color: '#fff',
                         borderRadius: '50%', width: 16, height: 16,
                         fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontWeight: 'bold'
                     }}>
-                        {unreadCount}
-                    </span>
+            {unreadCount}
+        </span>
                 )}
             </div>
 
