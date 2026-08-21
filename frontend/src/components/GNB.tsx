@@ -65,21 +65,6 @@ export default function GNB() {
                             글쓰기
                         </button>
 
-                        {role === 'ADMIN' && (
-                            <button onClick={() => navigate('/admin')}
-                                    style={{
-                                        padding: '8px 16px',
-                                        border: '1px solid var(--primary)',
-                                        borderRadius: 8,
-                                        background: 'white',
-                                        color: 'var(--primary)',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer'
-                                    }}>
-                                관리자 페이지
-                            </button>
-                        )}
-
                         <NotificationDropdown />
 
                         {/* 프로필 동그라미 */}
@@ -87,7 +72,6 @@ export default function GNB() {
                             <div onClick={() => setDropdownOpen(!dropdownOpen)} style={{ cursor: 'pointer' }}>
                                 <Avatar imageUrl={profileImageUrl} nickname={nickname ?? ''} size={40} />
                             </div>
-
 
                             {/* 드롭다운 */}
                             {dropdownOpen && (
@@ -105,6 +89,15 @@ export default function GNB() {
                                          style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
                                         구독
                                     </div>
+
+                                    {/* ✅ 관리자일 때만 드롭다운 안쪽에 '관리자 페이지'가 나타나도록 배치 */}
+                                    {role === 'ADMIN' && (
+                                        <div onClick={() => { navigate('/admin'); setDropdownOpen(false); }}
+                                             style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: 'var(--primary)' }}>
+                                            관리자 페이지
+                                        </div>
+                                    )}
+
                                     <div onClick={handleLogout}
                                          style={{ padding: '12px 16px', cursor: 'pointer', color: '#E03131' }}>
                                         로그아웃
