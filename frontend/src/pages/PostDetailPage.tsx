@@ -76,7 +76,7 @@ export default function PostDetailPage() {
 
                 {/* 본문 */}
                 <div style={{ lineHeight: 1.8, fontSize: 16, marginBottom: 24, whiteSpace: 'pre-wrap' }}>
-                    <EmojiText text={post.content} emojis={post.emojis} size={24} />
+                    <EmojiText text={post.content} emojis={post.emojis} size={60} />
                 </div>
 
                 {/* 이미지 */}

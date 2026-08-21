@@ -141,7 +141,7 @@ export default function CommentSection({ postId }: { postId: number }) {
                     </div>
                 ) : (
                     <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                        <EmojiText text={comment.content} emojis={comment.emojis} size={18} />
+                        <EmojiText text={comment.content} emojis={comment.emojis} size={45} />
                     </p>
                 )}
 
