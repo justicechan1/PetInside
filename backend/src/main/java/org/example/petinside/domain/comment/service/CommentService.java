@@ -6,6 +6,10 @@ import org.example.petinside.domain.comment.dto.CommentResponse;
 import org.example.petinside.domain.comment.dto.CommentUpdateRequest;
 import org.example.petinside.domain.comment.entity.Comment;
 import org.example.petinside.domain.comment.repository.CommentRepository;
+import org.example.petinside.domain.emoji.dto.EmojiResponse;
+import org.example.petinside.domain.emoji.entity.CommentEmoji;
+import org.example.petinside.domain.emoji.entity.Emoji;
+import org.example.petinside.domain.emoji.service.EmojiService;
 import org.example.petinside.domain.notification.entity.NotificationType;
 import org.example.petinside.domain.notification.service.NotificationService;
 import org.example.petinside.domain.post.dto.IdResponse;
@@ -20,6 +24,7 @@ import org.example.petinside.global.exception.UserNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,6 +37,7 @@ public class CommentService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final EmojiService emojiService;
 
     /**
      * 댓글 및 대댓글 작성
@@ -66,6 +72,11 @@ public class CommentService {
                 .user(user)
                 .parent(parentComment)
                 .build();
+
+        List<Emoji> emojis = emojiService.resolveEmojisForAttach(userId, request.getEmojiIds());
+        for (int i = 0; i < emojis.size(); i++) {
+            comment.addEmoji(CommentEmoji.builder().emoji(emojis.get(i)).sortOrder(i).build());
+        }
 
         Comment savedComment = commentRepository.save(comment);
 
@@ -118,6 +129,7 @@ public class CommentService {
                         comment.getUser().getId(),
                         comment.getUser().getNickname(),
                         comment.getUser().getProfileImageUrl(),
+                        toEmojiResponses(comment),
                         comment.getCreatedAt(),
                         // 대댓글 목록 매핑
                         comment.getChildren().stream()
@@ -128,11 +140,21 @@ public class CommentService {
                                         child.getUser().getId(),
                                         child.getUser().getNickname(),
                                         child.getUser().getProfileImageUrl(),
+                                        toEmojiResponses(child),
                                         child.getCreatedAt(),
                                         null
                                 ))
                                 .collect(Collectors.toList())
                 ))
+                .collect(Collectors.toList());
+    }
+
+    private List<EmojiResponse> toEmojiResponses(Comment comment) {
+        return comment.getEmojis().stream()
+                .map(commentEmoji -> new EmojiResponse(
+                        commentEmoji.getEmoji().getId(),
+                        commentEmoji.getEmoji().getImageUrl(),
+                        commentEmoji.getEmoji().getName()))
                 .collect(Collectors.toList());
     }
 
@@ -151,6 +173,13 @@ public class CommentService {
         }
 
         comment.update(request.getContent());
+
+        List<Emoji> emojis = emojiService.resolveEmojisForAttach(userId, request.getEmojiIds());
+        List<CommentEmoji> newEmojis = new ArrayList<>();
+        for (int i = 0; i < emojis.size(); i++) {
+            newEmojis.add(CommentEmoji.builder().emoji(emojis.get(i)).sortOrder(i).build());
+        }
+        comment.updateEmojis(newEmojis);
 
         return new IdResponse(comment.getId());
     }

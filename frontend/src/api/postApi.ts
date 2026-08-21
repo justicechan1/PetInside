@@ -1,4 +1,5 @@
 import axiosInstance from './axiosInstance';
+import type { Emoji } from './emojiApi';
 
 export interface PostListItem {
     id: number;
@@ -23,6 +24,7 @@ export interface PostDetail {
     authorNickname: string;
     authorProfileImageUrl: string | null;
     imageUrls: string[];
+    emojis: Emoji[];
     createdAt: string;
     updatedAt: string;
 }
@@ -40,10 +42,10 @@ export const getPosts = (params: { category?: string; keyword?: string; page?: n
 export const getPost = (postId: number) =>
     axiosInstance.get<{ data: PostDetail }>(`/api/v1/posts/${postId}`).then(r => r.data.data);
 
-export const createPost = (body: { category: string; title: string; content: string; imageUrls?: string[] }) =>
+export const createPost = (body: { category: string; title: string; content: string; imageUrls?: string[]; emojiIds?: number[] }) =>
     axiosInstance.post('/api/v1/posts', body).then(r => r.data);
 
-export const updatePost = (postId: number, body: { category: string; title: string; content: string; imageUrls?: string[] }) =>
+export const updatePost = (postId: number, body: { category: string; title: string; content: string; imageUrls?: string[]; emojiIds?: number[] }) =>
     axiosInstance.put(`/api/v1/posts/${postId}`, body).then(r => r.data);
 
 export const deletePost = (postId: number) =>

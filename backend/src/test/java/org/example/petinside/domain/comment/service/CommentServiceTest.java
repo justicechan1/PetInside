@@ -5,6 +5,10 @@ import org.example.petinside.domain.comment.dto.CommentResponse;
 import org.example.petinside.domain.comment.dto.CommentUpdateRequest;
 import org.example.petinside.domain.comment.entity.Comment;
 import org.example.petinside.domain.comment.repository.CommentRepository;
+import org.example.petinside.domain.emoji.entity.CommentEmoji;
+import org.example.petinside.domain.emoji.entity.Emoji;
+import org.example.petinside.domain.emoji.service.EmojiService;
+import org.example.petinside.domain.notification.service.NotificationService;
 import org.example.petinside.domain.post.dto.IdResponse;
 import org.example.petinside.domain.post.entity.Category;
 import org.example.petinside.domain.post.entity.Post;
@@ -31,6 +35,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,6 +50,10 @@ class CommentServiceTest {
     private PostRepository postRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private NotificationService notificationService;
+    @Mock
+    private EmojiService emojiService;
 
     private CommentService commentService;
 
@@ -52,7 +62,9 @@ class CommentServiceTest {
 
     @BeforeEach
     void setUp() {
-        commentService = new CommentService(commentRepository, postRepository, userRepository);
+        commentService = new CommentService(commentRepository, postRepository, userRepository, notificationService, emojiService);
+
+        lenient().when(emojiService.resolveEmojisForAttach(anyLong(), any())).thenReturn(List.of());
 
         author = User.builder()
                 .username("author")
@@ -76,6 +88,12 @@ class CommentServiceTest {
         CommentCreateRequest request = new CommentCreateRequest();
         ReflectionTestUtils.setField(request, "content", content);
         ReflectionTestUtils.setField(request, "parentId", parentId);
+        return request;
+    }
+
+    private CommentCreateRequest createRequest(String content, Long parentId, List<Long> emojiIds) {
+        CommentCreateRequest request = createRequest(content, parentId);
+        ReflectionTestUtils.setField(request, "emojiIds", emojiIds);
         return request;
     }
 
@@ -161,6 +179,26 @@ class CommentServiceTest {
                     .isInstanceOf(CommentNotFoundException.class);
             verify(commentRepository, never()).save(any());
         }
+
+        @Test
+        @DisplayName("emojiIds가 있으면 EmojiService로 검증된 이모지를 댓글에 첨부한다")
+        void createComment_withEmojiIds_addsEmojis() {
+            Emoji heart = Emoji.builder().name("하트").imageUrl("http://emoji/heart").build();
+            ReflectionTestUtils.setField(heart, "id", 4L);
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(author));
+            when(postRepository.findById(10L)).thenReturn(Optional.of(post));
+            when(emojiService.resolveEmojisForAttach(1L, List.of(4L))).thenReturn(List.of(heart));
+            when(commentRepository.save(any(Comment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            commentService.createComment(1L, 10L, createRequest("내용", null, List.of(4L)));
+
+            ArgumentCaptor<Comment> captor = ArgumentCaptor.forClass(Comment.class);
+            verify(commentRepository).save(captor.capture());
+            List<CommentEmoji> emojis = captor.getValue().getEmojis();
+            assertThat(emojis).hasSize(1);
+            assertThat(emojis.get(0).getEmoji().getId()).isEqualTo(4L);
+        }
     }
 
     @Nested
@@ -221,6 +259,29 @@ class CommentServiceTest {
 
             assertThat(response.getId()).isEqualTo(1L);
             assertThat(comment.getContent()).isEqualTo("수정된 내용");
+        }
+
+        @Test
+        @DisplayName("emojiIds를 전달하면 기존 이모지를 전부 교체한다")
+        void updateComment_withEmojiIds_replacesEmojis() {
+            Comment comment = buildComment(1L, post, author, null, false);
+            Emoji oldEmoji = Emoji.builder().name("old").imageUrl("http://emoji/old").build();
+            ReflectionTestUtils.setField(oldEmoji, "id", 9L);
+            comment.addEmoji(CommentEmoji.builder().emoji(oldEmoji).sortOrder(0).build());
+
+            Emoji newEmoji = Emoji.builder().name("new").imageUrl("http://emoji/new").build();
+            ReflectionTestUtils.setField(newEmoji, "id", 5L);
+
+            when(commentRepository.findById(1L)).thenReturn(Optional.of(comment));
+            when(emojiService.resolveEmojisForAttach(1L, List.of(5L))).thenReturn(List.of(newEmoji));
+
+            CommentUpdateRequest request = updateRequest("수정된 내용");
+            ReflectionTestUtils.setField(request, "emojiIds", List.of(5L));
+
+            commentService.updateComment(1L, 1L, request);
+
+            assertThat(comment.getEmojis()).hasSize(1);
+            assertThat(comment.getEmojis().get(0).getEmoji().getId()).isEqualTo(5L);
         }
 
         @Test

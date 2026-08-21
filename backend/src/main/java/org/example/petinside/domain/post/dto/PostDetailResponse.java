@@ -3,6 +3,7 @@ package org.example.petinside.domain.post.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
+import org.example.petinside.domain.emoji.dto.EmojiResponse;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -28,6 +29,8 @@ public class PostDetailResponse {
     private String authorProfileImageUrl;
     @Schema(description = "첨부 이미지 URL 목록")
     private List<String> imageUrls;
+    @Schema(description = "첨부 이모지 목록")
+    private List<EmojiResponse> emojis;
     @Schema(description = "작성 일시")
     private LocalDateTime createdAt;
     @Schema(description = "수정 일시")

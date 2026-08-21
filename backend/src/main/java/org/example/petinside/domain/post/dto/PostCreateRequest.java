@@ -25,4 +25,7 @@ public class PostCreateRequest {
 
     @Schema(description = "첨부 이미지 URL 목록 (선택, 등록 순서대로 sortOrder 부여)")
     private List<String> imageUrls;
+
+    @Schema(description = "첨부 이모지 ID 목록 (선택, 구독자만 사용 가능)")
+    private List<Long> emojiIds;
 }
