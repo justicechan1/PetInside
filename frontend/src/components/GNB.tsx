@@ -93,13 +93,13 @@ export default function GNB() {
                                     {/* ✅ 관리자일 때만 드롭다운 안쪽에 '관리자 페이지'가 나타나도록 배치 */}
                                     {role === 'ADMIN' && (
                                         <div onClick={() => { navigate('/admin'); setDropdownOpen(false); }}
-                                             style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontWeight: 'bold', color: 'var(--primary)' }}>
+                                             style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontWeight: 'bold'}}>
                                             관리자 페이지
                                         </div>
                                     )}
 
                                     <div onClick={handleLogout}
-                                         style={{ padding: '12px 16px', cursor: 'pointer', color: '#E03131' }}>
+                                         style={{ padding: '12px 16px', cursor: 'pointer'}}>
                                         로그아웃
                                     </div>
                                 </div>
