@@ -90,7 +90,7 @@ function PopularList({ title, category, navigate }: { title: string; category: s
                             <div style={{ fontSize: 12, color: '#999', display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                                     {post.authorNickname}
-                                    {post.authorVerified && <VerifiedBadge size={12} />}
+                                    {post.authorVerified && <VerifiedBadge size={18} />}
                                 </span>
                                 · 조회 {post.viewCount}
                             </div>

@@ -70,7 +70,7 @@ export default function PostDetailPage() {
                         >
                             <Avatar imageUrl={post.authorProfileImageUrl} nickname={post.authorNickname} size={22} />
                             {post.authorNickname}
-                            {post.authorVerified && <VerifiedBadge size={16} />}
+                            {post.authorVerified && <VerifiedBadge size={26} />}
                         </span>
                         <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                         <span>조회 {post.viewCount}</span>

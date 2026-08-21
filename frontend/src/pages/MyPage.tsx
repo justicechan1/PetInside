@@ -455,7 +455,7 @@ export default function MyPage() {
                                 <div style={{ marginTop: 12, textAlign: 'center' }}>
                                     <div style={{ fontWeight: 700, fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                                         {userInfo?.nickname}
-                                        {isSubscriber && <VerifiedBadge size={18} />}
+                                        {isSubscriber && <VerifiedBadge size={28} />}
                                     </div>
                                     <div style={{ color: '#999', fontSize: 14, marginTop: 4 }}>{userInfo?.username}</div>
                                     <div style={{ fontSize: 12, color: '#bbb', marginTop: 6 }}>

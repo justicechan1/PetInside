@@ -100,7 +100,7 @@ export default function CommentSection({ postId }: { postId: number }) {
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                         <span style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
                             {comment.authorNickname}
-                            {comment.authorVerified && <VerifiedBadge size={13} />}
+                            {comment.authorVerified && <VerifiedBadge size={20} />}
                         </span>
                         <span style={{ color: '#aaa', fontSize: 12 }}>{new Date(comment.createdAt).toLocaleString()}</span>
                     </div>
