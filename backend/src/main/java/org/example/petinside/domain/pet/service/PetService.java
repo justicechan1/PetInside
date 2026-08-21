@@ -6,6 +6,8 @@ import org.example.petinside.domain.pet.dto.PetPhotoRequest;
 import org.example.petinside.domain.pet.dto.PetPhotoResponse;
 import org.example.petinside.domain.pet.dto.PetRequest;
 import org.example.petinside.domain.pet.dto.PetResponse;
+import org.example.petinside.domain.pet.dto.PopularPetPhotoResponse;
+import org.springframework.data.domain.PageRequest;
 import org.example.petinside.domain.pet.entity.Pet;
 import org.example.petinside.domain.pet.entity.PetPhoto;
 import org.example.petinside.domain.pet.entity.PetPhotoLike;
@@ -106,6 +108,21 @@ public class PetService {
                 .map(p -> PetPhotoResponse.from(p,
                         petPhotoLikeRepository.countByPhotoId(p.getId()),
                         petPhotoLikeRepository.existsByPhotoIdAndUserId(p.getId(), userId)))
+                .toList();
+    }
+
+    // 인기 펫 사진 조회 (비회원 포함 전체 공개)
+    public List<PopularPetPhotoResponse> getPopularPhotos(int limit) {
+        return petPhotoLikeRepository.findTopPhotoIdsByLikeCount(PageRequest.of(0, limit))
+                .stream()
+                .map(row -> {
+                    Long photoId = (Long) row[0];
+                    long count = (long) row[1];
+                    return petPhotoRepository.findById(photoId)
+                            .map(photo -> PopularPetPhotoResponse.from(photo, count))
+                            .orElse(null);
+                })
+                .filter(r -> r != null)
                 .toList();
     }
 
