@@ -124,12 +124,14 @@ public class PetService {
 
         // 좋아요 추가 시에만 알림 (자신 제외)
         if (liked) {
-            Long ownerId = photo.getPet().getUser().getId();
-            if (!ownerId.equals(userId)) {
-                notificationService.createNotification(ownerId, NotificationType.PET_PHOTO_LIKE,
-                        "펫 사진에 좋아요가 달렸습니다.", photoId,
-                        "/users/" + ownerId + "?tab=pets");
-            }
+            try {
+                Long ownerId = photo.getPet().getUser().getId();
+                if (!ownerId.equals(userId)) {
+                    notificationService.createNotification(ownerId, NotificationType.PET_PHOTO_LIKE,
+                            "펫 사진에 좋아요가 달렸습니다.", photoId,
+                            "/users/" + ownerId + "?tab=pets");
+                }
+            } catch (Exception ignored) {}
         }
 
         return new PetPhotoLikeResponse(liked, count);
