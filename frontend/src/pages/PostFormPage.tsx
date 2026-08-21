@@ -5,6 +5,7 @@ import EmojiPicker from '../components/EmojiPicker';
 import { createPost, updatePost, getPost } from '../api/postApi';
 import { uploadImage } from '../api/imageApi';
 import { isAuthenticated } from '../utils/auth';
+import { extractEmojiIds, withLegacyEmojiTokens } from '../utils/emojiText';
 
 const MAX_IMAGES = 5;
 
@@ -25,19 +26,18 @@ export default function PostFormPage() {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [imageUrls, setImageUrls] = useState<string[]>([]);
-    const [emojiIds, setEmojiIds] = useState<number[]>([]);
     const [uploading, setUploading] = useState(false);
     const [loading, setLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const contentRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
         if (!isEdit) return;
         getPost(Number(postId)).then(post => {
             setCategory(post.category);
             setTitle(post.title);
-            setContent(post.content);
+            setContent(withLegacyEmojiTokens(post.content, post.emojis ?? []));
             setImageUrls(post.imageUrls ?? []);
-            setEmojiIds((post.emojis ?? []).map(e => e.id));
         });
     }, [postId]);
 
@@ -73,6 +73,7 @@ export default function PostFormPage() {
         }
         setLoading(true);
         try {
+            const emojiIds = extractEmojiIds(content);
             if (isEdit) {
                 await updatePost(Number(postId), { category, title, content, imageUrls, emojiIds });
                 navigate(`/posts/${postId}`);
@@ -114,12 +115,16 @@ export default function PostFormPage() {
 
                 {/* 내용 */}
                 <textarea
+                    ref={contentRef}
                     value={content}
                     onChange={e => setContent(e.target.value)}
                     placeholder="내용을 입력하세요"
                     rows={15}
                     style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid #ddd', fontSize: 15, resize: 'vertical', boxSizing: 'border-box' }}
                 />
+                <div style={{ marginTop: 8 }}>
+                    <EmojiPicker textareaRef={contentRef} value={content} onChange={setContent} />
+                </div>
 
                 {/* 이미지 */}
                 <div style={{ marginTop: 16 }}>
@@ -154,11 +159,6 @@ export default function PostFormPage() {
                         onChange={handleFileSelect}
                         style={{ display: 'none' }}
                     />
-                </div>
-
-                {/* 이모지 */}
-                <div style={{ marginTop: 16 }}>
-                    <EmojiPicker selectedIds={emojiIds} onChange={setEmojiIds} />
                 </div>
 
                 {/* 버튼 */}
