@@ -4,33 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { getNotifications, readNotification } from '../api/notificationApi.ts';
 import type { NotificationItem } from '../api/notificationApi.ts';
 
+// 💡 1. 여기에 방금 저장한 고양이 이미지 경로를 적어줍니다!
+// (파일을 저장한 위치에 따라 '../assets/cat_icon.png' 등으로 수정해주세요)
+import catIcon from './cat_icon.png';
+
 export default function NotificationDropdown() {
     const navigate = useNavigate();
     const [open, setOpen] = useState(false);
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
-
-    // 귀여운 치즈냥이 아이콘 컴포넌트
-    const CatIcon = () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="26" height="26">
-            {/* 귀 */}
-            <polygon points="4,15 2,5 9,10" fill="#F6A355"/>
-            <polygon points="20,15 22,5 15,10" fill="#F6A355"/>
-            <polygon points="4.5,13.5 3.5,7.5 8,11" fill="#FCDCB8"/>
-            <polygon points="19.5,13.5 20.5,7.5 16,11" fill="#FCDCB8"/>
-            {/* 얼굴 */}
-            <path d="M12 8c-4.418 0-8 3.134-8 7s3.582 7 8 7 8-3.134 8-7-3.582-7-8-7z" fill="#F6A355"/>
-            <path d="M4 15c0-3.866 3.582-7 8-7s8 3.134 8 7" fill="#F6A355"/>
-            <path d="M8 8.5c2.5 0 5.5 3.5 5.5 6.5H10.5C10.5 12 9 9.5 8 8.5z" fill="#FFFFFF"/>
-            <path d="M16 8.5c-2.5 0-5.5 3.5-5.5 6.5h3c0-3 1.5-5.5 2.5-6.5z" fill="#FFFFFF"/>
-            {/* 눈 */}
-            <circle cx="8.5" cy="14.5" r="1.5" fill="#4B3E3D"/>
-            <circle cx="15.5" cy="14.5" r="1.5" fill="#4B3E3D"/>
-            {/* 코와 입 */}
-            <path d="M12 16.5l-1-1h2z" fill="#E87A90"/>
-            <path d="M10 18.5a2 2 0 0 0 4 0" stroke="#4B3E3D" strokeWidth="1" fill="none"/>
-        </svg>
-    );
 
     useEffect(() => {
         loadNotifications();
@@ -54,10 +36,10 @@ export default function NotificationDropdown() {
 
     return (
         <div style={{ position: 'relative' }}>
-            <div onClick={() => setOpen(!open)} style={{ cursor: 'pointer', position: 'relative', fontSize: 22 }}>
+            <div onClick={() => setOpen(!open)} style={{ cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center' }}>
 
-                {/* 🔔 자리에 CatIcon을 렌더링합니다 */}
-                <CatIcon />
+                {/* 💡 2. 긴 코드 대신 딱 이 한 줄로 이미지를 띄웁니다 */}
+                <img src={catIcon} alt="알림" style={{ width: 28, height: 28, objectFit: 'contain' }} />
 
                 {unreadCount > 0 && (
                     <span style={{
@@ -65,6 +47,7 @@ export default function NotificationDropdown() {
                         background: '#E03131', color: '#fff',
                         borderRadius: '50%', width: 16, height: 16,
                         fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 'bold'
                     }}>
                         {unreadCount}
                     </span>
