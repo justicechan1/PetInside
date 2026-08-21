@@ -12,6 +12,8 @@ import org.example.petinside.domain.emoji.entity.Emoji;
 import org.example.petinside.domain.emoji.service.EmojiService;
 import org.example.petinside.domain.notification.entity.NotificationType;
 import org.example.petinside.domain.notification.service.NotificationService;
+import org.example.petinside.domain.notification.entity.NotificationType;
+import org.example.petinside.domain.notification.service.NotificationService;
 import org.example.petinside.domain.post.dto.IdResponse;
 import org.example.petinside.domain.post.entity.Post;
 import org.example.petinside.domain.post.repository.PostRepository;
@@ -38,6 +40,7 @@ public class CommentService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final EmojiService emojiService;
+    private final NotificationService notificationService;
 
     /**
      * 댓글 및 대댓글 작성

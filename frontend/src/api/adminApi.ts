@@ -21,8 +21,8 @@ export interface AdminUser {
     createdAt: string;
 }
 
-// 백엔드 SubscriptionStatus: ACTIVE | EXPIRED
-export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED';
+// 백엔드 SubscriptionStatus: ACTIVE | PAST_DUE | EXPIRED
+export type SubscriptionStatus = 'ACTIVE' | 'PAST_DUE' | 'EXPIRED';
 
 export interface Subscription {
     subscriptionId: number;

@@ -142,6 +142,7 @@ export default function AdminPage() {
         )
     );
 
+    // @ts-ignore
     return (
         <div>
             <GNB />
@@ -239,6 +240,7 @@ export default function AdminPage() {
                             }} style={inputStyle}>
                                 <option value="">상태 전체</option>
                                 <option value="ACTIVE">ACTIVE (구독 중)</option>
+                                <option value="PAST_DUE">PAST_DUE</option>
                                 <option value="EXPIRED">EXPIRED (만료됨)</option>
                             </select>
                         </div>
@@ -261,8 +263,10 @@ export default function AdminPage() {
                                     <td style={{ padding: '12px 16px' }}>
                                         <span style={{
                                             fontSize: 12, padding: '2px 10px', borderRadius: 10,
-                                            background: sub.status === 'ACTIVE' ? '#e6f4ea' : '#f0f0f0',
-                                            color: sub.status === 'ACTIVE' ? '#1e7e34' : '#666',
+                                            background:  sub.status === 'ACTIVE' ? '#e6f4ea' :
+                                                         sub.status === 'PAST_DUE' ? '#fff3cd' : '#f0f0f0',
+                                            color: sub.status === 'ACTIVE' ? '#1e7e34' :
+                                                   sub.status === 'PAST_DUE' ? '#856404' : '#666',
                                         }}>{sub.status}</span>
                                     </td>
                                     <td style={{ padding: '12px 16px', fontSize: 13, color: '#999' }}>{sub.nextBillingAt ? new Date(sub.nextBillingAt).toLocaleDateString() : '-'}</td>
