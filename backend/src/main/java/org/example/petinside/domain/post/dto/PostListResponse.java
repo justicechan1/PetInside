@@ -24,6 +24,8 @@ public class PostListResponse {
     private String authorNickname;
     @Schema(description = "작성자 프로필 사진 URL, 없으면 null")
     private String authorProfileImageUrl;
+    @Schema(description = "작성자 인증(구독) 뱃지 여부")
+    private boolean authorVerified;
     @Schema(description = "조회수")
     private int viewCount;
     @Schema(description = "댓글 수")

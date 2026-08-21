@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import GNB from '../components/GNB';
+import VerifiedBadge from '../components/VerifiedBadge';
 import axiosInstance from '../api/axiosInstance';
 
 interface PopularPhoto {
@@ -56,6 +57,7 @@ interface PostSummary {
     id: number;
     title: string;
     authorNickname: string;
+    authorVerified: boolean;
     viewCount: number;
     createdAt: string;
 }
@@ -85,8 +87,12 @@ function PopularList({ title, category, navigate }: { title: string; category: s
                             <div style={{ fontWeight: 600, fontSize: 14, color: '#222', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {post.title}
                             </div>
-                            <div style={{ fontSize: 12, color: '#999' }}>
-                                {post.authorNickname} · 조회 {post.viewCount}
+                            <div style={{ fontSize: 12, color: '#999', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                    {post.authorNickname}
+                                    {post.authorVerified && <VerifiedBadge size={12} />}
+                                </span>
+                                · 조회 {post.viewCount}
                             </div>
                         </li>
                     ))}

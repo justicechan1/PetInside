@@ -13,9 +13,19 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
     boolean existsByUserAndStatus(User user, SubscriptionStatus status);
+
+    // 인증 뱃지(F-XX) 단건 판정용: EmojiService와 동일하게 별도 플래그 없이 구독 상태를 실시간 조회.
+    boolean existsByUser_IdAndStatus(Long userId, SubscriptionStatus status);
+
+    // 인증 뱃지 배치 판정용(게시글/댓글 목록): 대상 유저 중 현재 ACTIVE 구독을 가진 유저 id만 반환.
+    // 구독이 해지되어 EXPIRED로 넘어가거나 결제 실패로 PAST_DUE가 되면 이 집합에서 자연히 빠져
+    // 뱃지가 즉시 회수됨(EmojiService의 F-28과 동일한 방식 - 별도 회수 로직 불필요).
+    @Query("SELECT DISTINCT s.user.id FROM Subscription s WHERE s.user.id IN :userIds AND s.status = :status")
+    Set<Long> findUserIdsByUserIdInAndStatus(@Param("userIds") Collection<Long> userIds, @Param("status") SubscriptionStatus status);
 
     // 신규 구독 시작 차단용: ACTIVE든 PAST_DUE(유예기간)든 이미 유효한 구독을 갖고 있으면 중복 가입 불가.
     boolean existsByUserAndStatusIn(User user, Collection<SubscriptionStatus> statuses);

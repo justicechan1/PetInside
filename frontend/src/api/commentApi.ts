@@ -7,6 +7,7 @@ export interface CommentItem {
     authorId: number;
     authorNickname: string;
     authorProfileImageUrl: string | null;
+    authorVerified: boolean;
     emojis: Emoji[];
     createdAt: string;
     children: CommentItem[] | null;

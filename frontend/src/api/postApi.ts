@@ -8,6 +8,7 @@ export interface PostListItem {
     authorId: number;
     authorNickname: string;
     authorProfileImageUrl: string | null;
+    authorVerified: boolean;
     viewCount: number;
     commentCount: number;
     thumbnailUrl: string | null;
@@ -23,6 +24,7 @@ export interface PostDetail {
     authorId: number;
     authorNickname: string;
     authorProfileImageUrl: string | null;
+    authorVerified: boolean;
     imageUrls: string[];
     emojis: Emoji[];
     createdAt: string;
