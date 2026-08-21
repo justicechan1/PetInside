@@ -14,15 +14,9 @@ import PhotoLightbox from '../components/PhotoLightbox';
 import PetStoryBubbles from '../components/PetStoryBubbles';
 import PetProfileHeader from '../components/PetProfileHeader';
 import PetPhotoGrid from '../components/PetPhotoGrid';
+import VerifiedBadge from '../components/VerifiedBadge';
 
 type Tab = 'profile' | 'posts' | 'pets' | 'payment';
-
-const BadgeIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-        <circle cx="9" cy="9" r="9" fill="#339AF0"/>
-        <path d="M5 9.5L7.5 12L13 6.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-);
 
 export default function MyPage() {
     const navigate = useNavigate();
@@ -461,7 +455,7 @@ export default function MyPage() {
                                 <div style={{ marginTop: 12, textAlign: 'center' }}>
                                     <div style={{ fontWeight: 700, fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                                         {userInfo?.nickname}
-                                        {isSubscriber && <BadgeIcon />}
+                                        {isSubscriber && <VerifiedBadge size={18} />}
                                     </div>
                                     <div style={{ color: '#999', fontSize: 14, marginTop: 4 }}>{userInfo?.username}</div>
                                     <div style={{ fontSize: 12, color: '#bbb', marginTop: 6 }}>
