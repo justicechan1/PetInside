@@ -6,7 +6,7 @@ import { uploadImage } from '../api/imageApi';
 import type { UserInfo, MyPost } from '../api/mypageApi';
 import { getMySubscription, getPaymentHistory } from '../api/subscriptionApi';
 import type { SubscriptionMeResult, PaymentHistoryItem } from '../api/subscriptionApi';
-import { getMyPets, createPet, updatePet, deletePet, getPetPhotos, addPetPhoto, deletePetPhoto } from '../api/petApi';
+import { getMyPets, createPet, updatePet, deletePet, getPetPhotos, addPetPhoto, deletePetPhoto, togglePhotoLike } from '../api/petApi';
 import type { Pet, PetForm, PetPhoto } from '../api/petApi';
 import { isAuthenticated } from '../utils/auth';
 import { cardStyle, solidBtn, outlineBtn, inputStyle as sharedInputStyle } from '../styles/common';
@@ -719,6 +719,9 @@ export default function MyPage() {
                                         loading={photosLoading}
                                         onPhotoClick={setLightbox}
                                         onAdd={handlePhotoFileSelect}
+                                        onLike={photo => togglePhotoLike(selectedPet.id, photo.id).then(result =>
+                                            setPetPhotos(prev => ({ ...prev, [selectedPet.id]: (prev[selectedPet.id] ?? []).map(p => p.id === photo.id ? { ...p, ...result } : p) }))
+                                        )}
                                     />
                                 )}
                             </div>

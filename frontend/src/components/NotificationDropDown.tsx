@@ -4,6 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { getNotifications, readNotification } from '../api/notificationApi.ts';
 import type { NotificationItem } from '../api/notificationApi.ts';
 
+// 💡 1. 여기에 방금 저장한 고양이 이미지 경로를 적어줍니다!
+// (파일을 저장한 위치에 따라 '../assets/cat_icon.png' 등으로 수정해주세요)
+import catIcon from "../assets/cat_icon.png";
+
 export default function NotificationDropdown() {
     const navigate = useNavigate();
     const [open, setOpen] = useState(false);
@@ -32,14 +36,18 @@ export default function NotificationDropdown() {
 
     return (
         <div style={{ position: 'relative' }}>
-            <div onClick={() => setOpen(!open)} style={{ cursor: 'pointer', position: 'relative', fontSize: 22 }}>
-                🔔
+            <div onClick={() => setOpen(!open)} style={{ cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center' }}>
+
+                {/* 💡 2. 긴 코드 대신 딱 이 한 줄로 이미지를 띄웁니다 */}
+                <img src={catIcon} alt="알림" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+
                 {unreadCount > 0 && (
                     <span style={{
                         position: 'absolute', top: -4, right: -4,
                         background: '#E03131', color: '#fff',
                         borderRadius: '50%', width: 16, height: 16,
                         fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 'bold'
                     }}>
                         {unreadCount}
                     </span>
