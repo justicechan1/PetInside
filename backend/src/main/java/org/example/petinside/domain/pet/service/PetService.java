@@ -7,7 +7,6 @@ import org.example.petinside.domain.pet.dto.PetPhotoResponse;
 import org.example.petinside.domain.pet.dto.PetRequest;
 import org.example.petinside.domain.pet.dto.PetResponse;
 import org.example.petinside.domain.pet.dto.PopularPetPhotoResponse;
-import org.springframework.data.domain.PageRequest;
 import org.example.petinside.domain.pet.entity.Pet;
 import org.example.petinside.domain.pet.entity.PetPhoto;
 import org.example.petinside.domain.pet.entity.PetPhotoLike;
@@ -74,12 +73,13 @@ public class PetService {
                 .toList();
     }
 
-    // [F-35] 펫 삭제 - 사진은 cascade로 자동 삭제
+    // [F-35] 펫 삭제 - 사진은 cascade로 자동 삭제, 좋아요는 cascade 없으므로 수동 삭제
     @Transactional
     public void delete(Long userId, Long petId) {
         validateSubscriberAndGetUser(userId);
         Pet pet = petRepository.findByIdAndUserId(petId, userId)
                 .orElseThrow(() -> new CustomException(404, "펫을 찾을 수 없습니다."));
+        pet.getPhotos().forEach(photo -> petPhotoLikeRepository.deleteAllByPhotoId(photo.getId()));
         petRepository.delete(pet);
     }
 
@@ -113,11 +113,11 @@ public class PetService {
 
     // 인기 펫 사진 조회 (비회원 포함 전체 공개)
     public List<PopularPetPhotoResponse> getPopularPhotos(int limit) {
-        return petPhotoLikeRepository.findTopPhotoIdsByLikeCount(PageRequest.of(0, limit))
+        return petPhotoLikeRepository.findTopPhotoIdsByLikeCount(limit)
                 .stream()
                 .map(row -> {
-                    Long photoId = (Long) row[0];
-                    long count = (long) row[1];
+                    Long photoId = ((Number) row[0]).longValue();
+                    long count = ((Number) row[1]).longValue();
                     return petPhotoRepository.findById(photoId)
                             .map(photo -> PopularPetPhotoResponse.from(photo, count))
                             .orElse(null);
@@ -174,6 +174,7 @@ public class PetService {
         if (!ownerPetId.equals(petId) || !ownerUserId.equals(userId)) {
             throw new CustomException(403, "권한이 없습니다.");
         }
+        petPhotoLikeRepository.deleteAllByPhotoId(photoId);
         petPhotoRepository.delete(photo);
     }
 }
