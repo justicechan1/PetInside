@@ -12,6 +12,7 @@ interface PopularPhoto {
     ownerId: number;
     ownerNickname: string;
     petName: string;
+    petId: number;
 }
 
 function PopularPetPhotos({ navigate }: { navigate: (path: string) => void }) {
@@ -32,7 +33,7 @@ function PopularPetPhotos({ navigate }: { navigate: (path: string) => void }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                 {photos.map(photo => (
-                    <div key={photo.photoId} onClick={() => navigate(`/users/${photo.ownerId}?tab=pets`)}
+                    <div key={photo.photoId} onClick={() => navigate(`/users/${photo.ownerId}?tab=pets&petId=${photo.petId}&photoId=${photo.photoId}`)}
                         style={{ position: 'relative', aspectRatio: '1', borderRadius: 8, overflow: 'hidden', cursor: 'pointer' }}>
                         <img src={photo.imageUrl} alt={photo.petName}
                             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />

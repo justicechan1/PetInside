@@ -9,7 +9,8 @@ public record PopularPetPhotoResponse(
         long likeCount,
         Long ownerId,
         String ownerNickname,
-        String petName
+        String petName,
+        Long petId
 ) {
     public static PopularPetPhotoResponse from(PetPhoto photo, long likeCount) {
         return new PopularPetPhotoResponse(
@@ -19,7 +20,8 @@ public record PopularPetPhotoResponse(
                 likeCount,
                 photo.getPet().getUser().getId(),
                 photo.getPet().getUser().getNickname(),
-                photo.getPet().getPetName()
+                photo.getPet().getPetName(),
+                photo.getPet().getId()
         );
     }
 }

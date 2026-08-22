@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import GNB from '../components/GNB';
 import { getPublicProfile, getPublicPosts } from '../api/mypageApi';
 import type { PublicProfile, MyPost } from '../api/mypageApi';
@@ -16,12 +16,16 @@ type Section = 'posts' | 'pets';
 export default function PublicProfilePage() {
     const { userId } = useParams<{ userId: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const uid = Number(userId);
+
+    const targetPetId = Number(searchParams.get('petId')) || null;
+    const targetPhotoId = Number(searchParams.get('photoId')) || null;
 
     const [profile, setProfile] = useState<PublicProfile | null>(null);
     const [notFound, setNotFound] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [section, setSection] = useState<Section>('posts');
+    const [section, setSection] = useState<Section>((searchParams.get('tab') as Section) || 'posts');
 
     const [posts, setPosts] = useState<MyPost[]>([]);
     const [totalPages, setTotalPages] = useState(0);
@@ -55,7 +59,8 @@ export default function PublicProfilePage() {
             .then(data => {
                 setPets(data);
                 setPetsLoaded(true);
-                if (data.length > 0) setSelectedPet(data[0]);
+                const target = targetPetId ? data.find(p => p.id === targetPetId) : null;
+                setSelectedPet(target ?? data[0] ?? null);
             })
             .catch(() => setPetsLoaded(true));
     }, [section, petsLoaded, uid]);
@@ -64,7 +69,13 @@ export default function PublicProfilePage() {
         if (!selectedPet || petPhotos[selectedPet.id] !== undefined) return;
         setPhotosLoading(true);
         getPetPhotos(selectedPet.id)
-            .then(photos => setPetPhotos(prev => ({ ...prev, [selectedPet.id]: photos })))
+            .then(photos => {
+                setPetPhotos(prev => ({ ...prev, [selectedPet.id]: photos }));
+                if (targetPhotoId) {
+                    const target = photos.find(p => p.id === targetPhotoId);
+                    if (target) setLightbox(target);
+                }
+            })
             .catch(() => setPetPhotos(prev => ({ ...prev, [selectedPet.id]: [] })))
             .finally(() => setPhotosLoading(false));
     }, [selectedPet]);

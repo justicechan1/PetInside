@@ -13,7 +13,7 @@ public interface PetPhotoLikeRepository extends JpaRepository<PetPhotoLike, Long
     long countByPhotoId(Long photoId);
     boolean existsByPhotoIdAndUserId(Long photoId, Long userId);
 
-    @Query(value = "SELECT photo_id, COUNT(*) AS like_count FROM pet_photo_likes GROUP BY photo_id ORDER BY like_count DESC LIMIT :limit", nativeQuery = true)
+    @Query(value = "SELECT pl.photo_id, COUNT(*) AS like_count FROM pet_photo_likes pl INNER JOIN pet_photos p ON pl.photo_id = p.id GROUP BY pl.photo_id ORDER BY like_count DESC LIMIT :limit", nativeQuery = true)
     List<Object[]> findTopPhotoIdsByLikeCount(@Param("limit") int limit);
 
     void deleteAllByPhotoId(Long photoId);
