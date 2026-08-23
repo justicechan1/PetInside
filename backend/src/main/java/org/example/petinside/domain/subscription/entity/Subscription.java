@@ -12,6 +12,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+// 사용자의 구독 계약 자체를 나타내는 엔티티(정기결제/1개월 이용권 공통).
+// 상태는 ACTIVE(정상 이용중) → PAST_DUE(결제 실패, 혜택 즉시 차단, 유예기간) → EXPIRED(종료) 순서.
+// canceledAt은 해지 의사를 언제 밝혔는지만 기록, 실제 종료(EXPIRED)는 배치나 즉시 만료 메서드가 처리.
 @Entity
 @Table(name = "subscription")
 @Getter

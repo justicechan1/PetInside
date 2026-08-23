@@ -31,6 +31,7 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
+    // 사전 결제 정보 등록
     @PostMapping("/prepare")
     public ResponseEntity<ApiResponse<PaymentPrepareResponse>> prepare(@AuthenticationPrincipal Long userId) {
         PaymentPrepareResponse response = paymentService.prepare(userId);
@@ -40,6 +41,7 @@ public class PaymentController {
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "결제 준비 완료", response));
     }
 
+    // 결제 완료 및 위변조 최종 검증
     @PostMapping("/complete")
     public ResponseEntity<ApiResponse<PaymentCompleteResponse>> complete(
             @AuthenticationPrincipal Long userId,
@@ -50,6 +52,7 @@ public class PaymentController {
                 .ok(ApiResponse.success(HttpStatus.OK.value(), "결제가 확인되었습니다", response));
     }
 
+    // 로그인한 사용자의 결제 내역 목록 조회
     @GetMapping
     public ResponseEntity<ApiResponse<List<PaymentHistoryResponse>>> history(@AuthenticationPrincipal Long userId) {
         List<PaymentHistoryResponse> response = paymentService.getHistory(userId);

@@ -31,6 +31,7 @@ public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
 
+    // 내 현재 구독 상태 조회 API
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<SubscriptionMeResponse>> me(@AuthenticationPrincipal Long userId) {
         SubscriptionMeResponse response = subscriptionService.getMySubscription(userId);
@@ -39,6 +40,7 @@ public class SubscriptionController {
                 .ok(ApiResponse.success(HttpStatus.OK.value(), "구독 상태 조회 성공", response));
     }
 
+    // 빌링키 기반 정기 구독 신규 신청 API
     @PostMapping
     public ResponseEntity<ApiResponse<SubscriptionCompleteResponse>> create(
             @AuthenticationPrincipal Long userId,
@@ -50,7 +52,7 @@ public class SubscriptionController {
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "구독이 시작되었습니다", response));
     }
 
-    // 자동 갱신 없는 1개월 이용권. 빌링키 없이 결제창을 바로 염.
+    // 1개월 이용권(단건 결제) 결제 준비 API
     @PostMapping("/one-time/prepare")
     public ResponseEntity<ApiResponse<PaymentPrepareResponse>> prepareOneTime(@AuthenticationPrincipal Long userId) {
         PaymentPrepareResponse response = subscriptionService.prepareOneTime(userId);
@@ -60,6 +62,7 @@ public class SubscriptionController {
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "결제 준비 완료", response));
     }
 
+    // 1개월 이용권(단건 결제) 승인 완료 및 이용권 등록 API
     @PostMapping("/one-time/complete")
     public ResponseEntity<ApiResponse<SubscriptionCompleteResponse>> completeOneTime(
             @AuthenticationPrincipal Long userId,
@@ -71,7 +74,7 @@ public class SubscriptionController {
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "1개월 이용권이 시작되었습니다", response));
     }
 
-    // F-23: 정기결제 해지 예약(다음 결제만 막음, 이미 승인된 회차는 유지)
+    // 정기구독 해지 예약 API
     @PatchMapping("/{subscriptionId}/cancel")
     public ResponseEntity<ApiResponse<SubscriptionMeResponse>> cancel(
             @AuthenticationPrincipal Long userId,
@@ -82,7 +85,7 @@ public class SubscriptionController {
                 .ok(ApiResponse.success(HttpStatus.OK.value(), "구독 해지가 예약되었습니다", response));
     }
 
-    // F-23: 해지 예약 취소(재개)
+    // 정기구독 해지 예약 취소 (구독 재개) API
     @PatchMapping("/{subscriptionId}/resume")
     public ResponseEntity<ApiResponse<SubscriptionMeResponse>> resume(
             @AuthenticationPrincipal Long userId,
@@ -93,7 +96,7 @@ public class SubscriptionController {
                 .ok(ApiResponse.success(HttpStatus.OK.value(), "구독이 재개되었습니다", response));
     }
 
-    // F-22: 결제 실패 배너의 [다시 결제]. 다음 자동 재청구 배치를 기다리지 않고 즉시 재시도.
+    // 결제 실패 구독의 수동 재결제 시도 API
     @PostMapping("/{subscriptionId}/retry-payment")
     public ResponseEntity<ApiResponse<SubscriptionMeResponse>> retryPayment(
             @AuthenticationPrincipal Long userId,

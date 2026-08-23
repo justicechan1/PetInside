@@ -11,7 +11,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
-// 사용자가 시작한 구매 의도(서버 확정 금액 포함) 하나. 결제 시도(Payment)와 분리해서,
+// 사용자가 시작한 구매 의도(서버 확정 금액 포함). 결제 시도와 분리해서,
 // 한 주문에 결제 재시도가 여러 번 있었던 이력을 남길 수 있게 함.
 @Entity
 @Table(name = "orders")
@@ -32,6 +32,7 @@ public class Order {
     @Column(nullable = false)
     private OrderStatus status;
 
+    // 프론트가 보낸 금액이 아니라 서버가 요금제 기준으로 직접 계산해서 확정한 금액.
     @Column(nullable = false)
     private int amount;
 
