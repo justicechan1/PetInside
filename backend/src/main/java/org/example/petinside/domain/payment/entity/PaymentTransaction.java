@@ -44,6 +44,8 @@ public class PaymentTransaction {
         this.status = status;
     }
 
+    // 성공/실패 결과와 무관하게 승인을 시도했다는 사실 자체를 기록. 실패한 시도도 남겨야
+    // 재시도 이력을 추적할 수 있으므로, 호출부에서 결과가 확정된 뒤 이 메서드로 저장.
     public static PaymentTransaction record(Payment payment, String transactionId, PaymentStatus status) {
         return PaymentTransaction.builder()
                 .payment(payment)

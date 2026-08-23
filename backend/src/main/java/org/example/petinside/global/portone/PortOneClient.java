@@ -16,34 +16,40 @@ import org.springframework.web.client.RestClientException;
 import java.util.Optional;
 import java.util.Set;
 
+// PortOne V2 REST API 연동 클라이언트.
 @Component
 @RequiredArgsConstructor
 public class PortOneClient {
 
     private static final String BASE_URL = "https://api.portone.io";
+    // PG 처리 결과 지연에 대응하기 위한 재시도 및 대기 설정
     private static final int SETTLE_RETRY_COUNT = 5;
     private static final long SETTLE_RETRY_DELAY_MS = 1500;
+    // 상태
     private static final Set<String> TERMINAL_PAYMENT_STATUSES = Set.of("PAID", "FAILED", "CANCELLED");
     private static final Set<String> TERMINAL_BILLING_KEY_STATUSES = Set.of("ISSUED", "FAILED", "DELETED");
 
     private final PortOneProperties portOneProperties;
 
-    // PortOne 결제 단건 조회. 프론트/웹훅의 결과를 그대로 믿지 않고 이 응답으로 최종 확정.
+    // PortOne 결제 상세 정보 조회
     public PortOnePaymentDetail getPaymentDetail(String paymentId) {
         PortOnePaymentDetail last = null;
         for (int attempt = 1; attempt <= SETTLE_RETRY_COUNT; attempt++) {
             last = fetchPaymentDetail(paymentId).orElse(null);
+            // 최종 상태가 확인되면 즉시 결과 반환
             if (last != null && TERMINAL_PAYMENT_STATUSES.contains(last.status())) {
                 return last;
             }
             sleepUnlessLastAttempt(attempt);
         }
+        // 최대 재시도 횟수를 초과하더라도 수신된 마지막 상태가 존재하면 반환하여 판단
         if (last != null) {
-            return last; // 끝내 최종 상태가 아니어도 마지막으로 받은 값을 넘겨 finalizeByDetail이 판단하게 함
+            return last;
         }
         throw new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 결제 정보를 조회할 수 없습니다.");
     }
 
+    // 단건 조회 및 폴백 목록 조회 조합 메서드
     private Optional<PortOnePaymentDetail> fetchPaymentDetail(String paymentId) {
         try {
             return Optional.ofNullable(client().get()
@@ -51,10 +57,12 @@ public class PortOneClient {
                     .retrieve()
                     .body(PortOnePaymentDetail.class));
         } catch (RestClientException e) {
+            // 단건 조회 API 404/실패 시 목록 조회
             return findInPaymentList(paymentId);
         }
     }
 
+    // PortOne 전체 결제 목록 API를 조회하여 paymentId 매칭
     private Optional<PortOnePaymentDetail> findInPaymentList(String paymentId) {
         try {
             PortOnePaymentListResponse response = client().get()
@@ -69,14 +77,12 @@ public class PortOneClient {
         }
     }
 
-    // requestIssueBillingKeyAndPay(휴대폰 인증)처럼 프론트 단계에서 이미 1회차 결제까지 끝난 경우를 구분하기 위한 조회.
-    // 아직 결제가 실행되지 않은 paymentId(PortOne이 모르는 값)면 Optional.empty()로 구분한다.
+    // 결제 건 존재 여부 확인용 단건 조회
     public Optional<PortOnePaymentDetail> findPaymentDetail(String paymentId) {
         return findInPaymentList(paymentId);
     }
 
-    // 프론트에서 발급된 빌링키를 그대로 신뢰하지 않고, 발급 상태(ISSUED)와 소속 Store를 재확인한다.
-    // 결제 조회와 같은 이유로 최종 상태가 아니면 재시도한다.
+    // PortOne 빌링키 상세 정보 조회
     public PortOneBillingKeyDetail getBillingKeyDetail(String billingKey) {
         PortOneBillingKeyDetail last = null;
         for (int attempt = 1; attempt <= SETTLE_RETRY_COUNT; attempt++) {
@@ -92,6 +98,7 @@ public class PortOneClient {
         throw new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 빌링키 정보를 조회할 수 없습니다.");
     }
 
+    // 빌링키 단건 조회 및 폴백 목록 조회 조합 메서드
     private Optional<PortOneBillingKeyDetail> fetchBillingKeyDetail(String billingKey) {
         try {
             return Optional.ofNullable(client().get()
@@ -99,10 +106,12 @@ public class PortOneClient {
                     .retrieve()
                     .body(PortOneBillingKeyDetail.class));
         } catch (RestClientException e) {
+            // 단건 조회 실패시 목록 조회
             return findInBillingKeyList(billingKey);
         }
     }
 
+    // PortOne 전체 빌링키 목록 API를 조회하여 billingKey 매칭
     private Optional<PortOneBillingKeyDetail> findInBillingKeyList(String billingKey) {
         try {
             PortOneBillingKeyListResponse response = client().get()
@@ -117,6 +126,7 @@ public class PortOneClient {
         }
     }
 
+    // 재시도 간격(1.5초) 동안 스레드 대기 처리
     private void sleepUnlessLastAttempt(int attempt) {
         if (attempt == SETTLE_RETRY_COUNT) {
             return;
@@ -128,7 +138,7 @@ public class PortOneClient {
         }
     }
 
-    // 빌링키로 1회차 결제를 실행(서버→PortOne 직접 호출이라 프론트 결제창을 거치지 않는다)
+    // 프론트엔드 결제창 호출 없이, 정기 결제 주기마다 서버 단독으로 카드사에 결제 승인을 요청
     public PortOnePaymentDetail payWithBillingKey(String paymentId, PortOneBillingKeyPaymentRequest request) {
         try {
             PortOnePayWithBillingKeyResponse response = client().post()
@@ -142,6 +152,7 @@ public class PortOneClient {
         }
     }
 
+    // PortOne V2 API 인증 규격에 맞는 인스턴스 생성
     private RestClient client() {
         // V2 API Secret은 별도 토큰 교환 없이 "PortOne {API_SECRET}" 형식으로 바로 사용
         return RestClient.create(BASE_URL).mutate()

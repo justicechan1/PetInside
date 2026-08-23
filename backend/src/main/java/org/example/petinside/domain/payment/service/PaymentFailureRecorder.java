@@ -12,8 +12,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-// PaymentService.finalizeByDetail()의 검증 실패 경로 전용. 별도 빈으로 분리해야
-// REQUIRES_NEW가 프록시를 거쳐 실제로 적용된다(같은 클래스 내부 self-invocation은 AOP가 안 먹음).
+// 결제 검증 실패 발생 시, 상위 트랜잭션의 롤백 여부와 무관하게 실패 상태를 독립 커밋 기록.
+// AOP가 적용되지 않아 별도 구현..
 @Component
 @RequiredArgsConstructor
 public class PaymentFailureRecorder {
@@ -21,14 +21,15 @@ public class PaymentFailureRecorder {
     private final PaymentRepository paymentRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
 
-    // 호출부(웹훅 핸들러 등)의 트랜잭션이 이후 던지는 예외로 롤백되더라도, 검증 실패 기록만은
-    // 별도 트랜잭션으로 즉시 커밋해 남긴다. 안 그러면 FAILED 마킹이 통째로 사라지고
-    // 결제/주문이 영영 READY로 남아 PaymentExpirationScheduler에만 의존하게 된다.
+    // 결제 검증 실패 기록 및 상태 변환 (FAILED) 독립 커밋
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordVerificationFailure(Long paymentId, String transactionId) {
+        // 대상 결제 건 조회
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "결제 내역을 찾을 수 없습니다."));
+        // FAILED 상태의 결제 트랜잭션 내역 기록
         paymentTransactionRepository.save(PaymentTransaction.record(payment, transactionId, PaymentStatus.FAILED));
+        // Payment 및 연관된 Order 엔티티의 상태를 FAILED로 변경
         payment.markFailed();
         payment.getOrder().markFailed();
     }

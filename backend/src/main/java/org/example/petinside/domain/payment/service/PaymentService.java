@@ -28,11 +28,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+// 결제(단건/구독 공통) 준비·검증·조회를 담당하는 서비스.
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
 
-    // 요금제는 아직 고정 요금 하나뿐 (구독 요금제 다양화는 범위 밖). 정기구독/1개월 이용권 공통.
+    // 요금제는 아직 고정 요금 하나. 정기구독/1개월 이용권 공통.
     static final int PLAN_AMOUNT = 1900;
     static final String CURRENCY = "KRW";
     private static final String PAID_STATUS = "PAID";
@@ -46,19 +47,22 @@ public class PaymentService {
     private final PortOneProperties portOneProperties;
     private final PaymentFailureRecorder paymentFailureRecorder;
 
+    // 빌링키 없는 단건결제
+    // 1단계: 결제 시도를 READY로 만들고 프론트가 결제창을 띄우는 데 필요한 정보(paymentId, storeId, channelKey, 금액)를 줌.
     @Transactional
     public PaymentPrepareResponse prepare(Long userId) {
         Payment payment = createReadyPayment(userId);
         return new PaymentPrepareResponse(payment.getPaymentId(), portOneProperties.storeId(), portOneProperties.channelKey(), PLAN_AMOUNT, CURRENCY);
     }
 
+    // 단건결제 2단계: 프론트가 결제창에서 결제를 마쳤다고 알려오면, PortOne을 재조회해서 실제로 확정됐는지 검증하고 결과를 응답으로 내려줌.
     @Transactional
     public PaymentCompleteResponse complete(Long userId, String paymentId) {
         Payment payment = verifyAndMarkPaid(userId, paymentId);
         return new PaymentCompleteResponse(payment.getPaymentId(), payment.getStatus(), payment.getAmount(), payment.getCurrency(), payment.getPaidAt());
     }
 
-    // F-24: 결제 내역 조회. 최신순. 이탈/미완료로 영영 READY로 남은 시도는 노출하지 않음.
+    // 사용자의 결제 내역 목록 조회 (무효 결제 시도는 제외)
     public List<PaymentHistoryResponse> getHistory(Long userId) {
         return paymentRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .filter(payment -> !payment.isReady())
@@ -66,29 +70,27 @@ public class PaymentService {
                 .toList();
     }
 
-    // 구독 준비(F-21)에서도 재사용: 결제 준비 자체는 빌링키 유무와 무관하게 동일.
-    // 주문(Order)과 결제 시도(Payment)를 분리해서, 같은 주문에 결제 재시도가 여러 번 있었던 이력을 남길 수 있게 함.
-    // REQUIRES_NEW: 호출부(SubscriptionService.create() 등)가 이후 PortOne 검증 단계에서 실패해도
-    // "결제를 시도했다"는 기록 자체는 남아있어야 하므로, 호출부의 트랜잭션과 별개로 즉시 커밋한다.
+    // 최초 결제 시도(Order,Payment) 준비 레코드 생성
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Payment createReadyPayment(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
 
+        // 주문 객체 생성
         Order order = orderRepository.save(Order.ready(user, PLAN_AMOUNT, CURRENCY));
 
-        //파라미터 제한(1~40자)에 맞춰 UUID는 하이픈 없이 사용
+        // PortOne 결제 ID 규격에 맞춘 고유 paymentId 생성 (파라미터 40자 제한 준수)
         String paymentId = portOneProperties.paymentIdPrefix() + "-SUB-" + UUID.randomUUID().toString().replace("-", "");
+        // 회차 명시 및 payment 엔티티 저장
         Payment payment = Payment.createReady(user, order, paymentId, 1, PLAN_AMOUNT, CURRENCY);
         return paymentRepository.save(payment);
     }
 
-    // F-22: 정기결제 다음 회차 결제 준비. 이미 존재하는 구독에 대한 재청구라 생성 시점에 바로 연결.
-    // REQUIRES_NEW: SubscriptionService.retryPayment()가 구독 row에 락을 건 트랜잭션 안에서 이 메서드를
-    // 호출해도, 결제 시도 기록은 그 트랜잭션의 성패와 무관하게 독립적으로 커밋되게 함.
+    // 정기 결제(구독) 다음 회차 결제 준비 레코드 생성
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Payment createNextRoundPayment(Subscription subscription) {
         User user = subscription.getUser();
+        // 이전 최고 회차를 조회하여 다음 회차 번호 계산
         int nextRound = paymentRepository.findFirstBySubscriptionIdOrderByRoundDesc(subscription.getId())
                 .map(Payment::getRound)
                 .orElse(0) + 1;
@@ -96,11 +98,11 @@ public class PaymentService {
         Order order = orderRepository.save(Order.ready(user, PLAN_AMOUNT, CURRENCY));
         String paymentId = portOneProperties.paymentIdPrefix() + "-SUB-" + UUID.randomUUID().toString().replace("-", "");
         Payment payment = Payment.createReady(user, order, paymentId, nextRound, PLAN_AMOUNT, CURRENCY);
-        payment.linkSubscription(subscription);
+        payment.linkSubscription(subscription); // 생성 시점에 이미 존재하는 구독 객체 연동
         return paymentRepository.save(payment);
     }
 
-    // 구독 완료검증(F-21)에서도 재사용: 이 유저의 READY 결제인지 확인
+    // 검증 대상이 될 READY 상태의 결제건 조회 및 본인 확인
     @Transactional
     public Payment findReadyPayment(Long userId, String paymentId) {
         Payment payment = paymentRepository.findByPaymentId(paymentId)
@@ -113,41 +115,40 @@ public class PaymentService {
         return payment;
     }
 
-    // 빌링키 없는 결제(단건조회 검증)용. 프론트가 결제창을 직접 호출했을 때 PortOne 재조회로 최종 확정.
-    // REQUIRES_NEW: 호출부(SubscriptionService.create()/chargeNextRound() 등)의 트랜잭션이 이후 단계에서
-    // 실패해도, 실제 카드 승인이 끝난 결과(PAID든 FAILED든)는 그와 무관하게 즉시 커밋되어 남아야 한다.
+    // PortOne 결제 결과 조회 및 최종 확정 처리
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Payment verifyAndMarkPaid(Long userId, String paymentId) {
         Payment payment = findReadyPayment(userId, paymentId);
+        // PortOne API 호출하여 실제 PG 결제 내역 조회
         PortOnePaymentDetail detail = portOneClient.getPaymentDetail(paymentId);
+        // 대조 및 상태 마킹
         finalizeByDetail(payment, detail);
         return payment;
     }
 
-    // 완료 API(F-21) 웹훅이든 같은 동기화 로직을 타야 한다는 원칙에 따라 검증 기준을 한 곳에 둠.
+    // PortOne 결제 데이터와 DB 주문 데이터 교차 대조 (무결성)
     public void finalizeByDetail(Payment payment, PortOnePaymentDetail detail) {
-        boolean verified = PAID_STATUS.equalsIgnoreCase(detail.status())
-                && detail.amount() != null && detail.amount().total() == payment.getAmount()
-                && CURRENCY.equalsIgnoreCase(detail.currency())
-                && portOneProperties.storeId().equals(detail.storeId())
-                && isOurChannel(detail.channel())
+        // 위변조 검증
+        boolean verified = PAID_STATUS.equalsIgnoreCase(detail.status())  // 상태
+                && detail.amount() != null && detail.amount().total() == payment.getAmount()  // 결제금액
+                && CURRENCY.equalsIgnoreCase(detail.currency())  // 통화
+                && portOneProperties.storeId().equals(detail.storeId())  // 상점ID
+                && isOurChannel(detail.channel())  // 채널 일치 여부
                 && isTestChannel(detail.channel());
 
+        // 검증 실패 시 예외 처리 및 실패 기록 독립 기록
         if (!verified) {
-            // 이 메서드를 호출한 쪽(예: PaymentWebhookService.handle())의 트랜잭션이 뒤이어 던지는
-            // 예외로 롤백되더라도, "검증에 실패했다"는 기록만은 별도 트랜잭션으로 즉시 커밋해 남긴다.
-            // 그렇지 않으면 FAILED 마킹이 통째로 사라지고 결제/주문이 영영 READY로 남는다.
             paymentFailureRecorder.recordVerificationFailure(payment.getId(), detail.transactionId());
             throw new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 결제 정보가 주문과 일치하지 않습니다.");
         }
 
+        // 검증 성공 시 결제 트랜잭션 승인 기록 생성 및 Payment/Order 상태 완료(PAID) 처리
         paymentTransactionRepository.save(PaymentTransaction.record(payment, detail.transactionId(), PaymentStatus.PAID));
         payment.markPaid(LocalDateTime.now());
         payment.getOrder().markCompleted();
     }
 
-    // create()처럼 구독이 결제 시점엔 아직 없어 나중에 연결해야 하는 경우용.
-    // payment가 (REQUIRES_NEW로) 이미 다른 트랜잭션에서 커밋된 detached 상태일 수 있어 id로 다시 조회한다.
+    // Detached 상태의 Payment 엔티티에 구독 정보 연결
     @Transactional
     public void linkSubscription(String paymentId, Subscription subscription) {
         Payment payment = paymentRepository.findByPaymentId(paymentId)
@@ -155,8 +156,7 @@ public class PaymentService {
         payment.linkSubscription(subscription);
     }
 
-    // 테스트 상점은 여러 팀이 공용으로 써서, storeId만으로는 다른 팀 채널로 발생한 결제를 걸러내지 못함.
-    // 단건결제 채널(channelKey)과 정기결제 채널(channelKeySubscription) 둘 중 하나와 일치해야 우리 결제로 인정.
+    // 발급된 결제 채널 키가 당사의 단건/정기결제 채널 키와 일치하는지 검증
     private boolean isOurChannel(PortOnePaymentDetail.Channel channel) {
         if (channel == null || channel.key() == null) {
             return false;

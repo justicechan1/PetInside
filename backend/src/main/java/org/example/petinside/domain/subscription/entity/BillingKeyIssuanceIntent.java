@@ -11,7 +11,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
-// 프론트가 빌링키 발급 SDK 호출 후 이탈해도(브라우저 종료, 네트워크 끊김) BillingKey.Issued 웹훅과
+// 프론트가 빌링키 발급 SDK 호출 후 이탈해도 BillingKey.Issued 웹훅과
 // issueId로 어떤 사용자가 발급을 시도했는지 복구할 수 있도록, SDK 호출 전에 미리 서버에 남겨두는 기록.
 @Entity
 @Table(name = "billing_key_issuance_intent")

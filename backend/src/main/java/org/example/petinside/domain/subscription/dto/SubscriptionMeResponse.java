@@ -5,6 +5,7 @@ import org.example.petinside.domain.subscription.entity.SubscriptionStatus;
 
 import java.time.LocalDateTime;
 
+// billingKey 유무로 정기결제(RECURRING)/ 1개월 이용권(ONE_TIME)을 구분. 구독이 없으면 none()으로 hasSubscription=false만 채워 반환.
 public record SubscriptionMeResponse(
         boolean hasSubscription,
         Long subscriptionId,

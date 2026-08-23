@@ -26,20 +26,22 @@ public class BillingKeyController {
 
     private final BillingKeyService billingKeyService;
 
+    // 빌링키 발급 준비 API
     @PostMapping("/prepare")
     public ResponseEntity<ApiResponse<BillingKeyPrepareResponse>> prepare(@AuthenticationPrincipal Long userId) {
-        BillingKeyPrepareResponse response = billingKeyService.prepare(userId);
+        BillingKeyPrepareResponse response = billingKeyService.prepare(userId);  // SDK 호출전 실행
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "빌링키 발급 준비 완료", response));
     }
 
+    // 빌링키 발급 완료(등록) API
     @PostMapping
     public ResponseEntity<ApiResponse<BillingKeyCreateResponse>> create(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody BillingKeyCreateRequest request) {
-        BillingKeyCreateResponse response = billingKeyService.create(userId, request);
+        BillingKeyCreateResponse response = billingKeyService.create(userId, request); // 검증·암호화 저장
 
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "카드가 등록되었습니다", response));
     }
