@@ -21,6 +21,7 @@ import org.example.petinside.global.portone.PortOneProperties;
 import org.example.petinside.global.portone.dto.PortOnePaymentDetail;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -43,6 +44,7 @@ public class PaymentService {
     private final UserRepository userRepository;
     private final PortOneClient portOneClient;
     private final PortOneProperties portOneProperties;
+    private final PaymentFailureRecorder paymentFailureRecorder;
 
     @Transactional
     public PaymentPrepareResponse prepare(Long userId) {
@@ -66,7 +68,9 @@ public class PaymentService {
 
     // 구독 준비(F-21)에서도 재사용: 결제 준비 자체는 빌링키 유무와 무관하게 동일.
     // 주문(Order)과 결제 시도(Payment)를 분리해서, 같은 주문에 결제 재시도가 여러 번 있었던 이력을 남길 수 있게 함.
-    @Transactional
+    // REQUIRES_NEW: 호출부(SubscriptionService.create() 등)가 이후 PortOne 검증 단계에서 실패해도
+    // "결제를 시도했다"는 기록 자체는 남아있어야 하므로, 호출부의 트랜잭션과 별개로 즉시 커밋한다.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Payment createReadyPayment(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
@@ -80,7 +84,9 @@ public class PaymentService {
     }
 
     // F-22: 정기결제 다음 회차 결제 준비. 이미 존재하는 구독에 대한 재청구라 생성 시점에 바로 연결.
-    @Transactional
+    // REQUIRES_NEW: SubscriptionService.retryPayment()가 구독 row에 락을 건 트랜잭션 안에서 이 메서드를
+    // 호출해도, 결제 시도 기록은 그 트랜잭션의 성패와 무관하게 독립적으로 커밋되게 함.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Payment createNextRoundPayment(Subscription subscription) {
         User user = subscription.getUser();
         int nextRound = paymentRepository.findFirstBySubscriptionIdOrderByRoundDesc(subscription.getId())
@@ -108,7 +114,9 @@ public class PaymentService {
     }
 
     // 빌링키 없는 결제(단건조회 검증)용. 프론트가 결제창을 직접 호출했을 때 PortOne 재조회로 최종 확정.
-    @Transactional
+    // REQUIRES_NEW: 호출부(SubscriptionService.create()/chargeNextRound() 등)의 트랜잭션이 이후 단계에서
+    // 실패해도, 실제 카드 승인이 끝난 결과(PAID든 FAILED든)는 그와 무관하게 즉시 커밋되어 남아야 한다.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Payment verifyAndMarkPaid(Long userId, String paymentId) {
         Payment payment = findReadyPayment(userId, paymentId);
         PortOnePaymentDetail detail = portOneClient.getPaymentDetail(paymentId);
@@ -125,18 +133,26 @@ public class PaymentService {
                 && isOurChannel(detail.channel())
                 && isTestChannel(detail.channel());
 
-        // PortOne이 부여한 승인 시도(transactionId)를 결과와 무관하게 기록.
-        paymentTransactionRepository.save(PaymentTransaction.record(
-                payment, detail.transactionId(), verified ? PaymentStatus.PAID : PaymentStatus.FAILED));
-
         if (!verified) {
-            payment.markFailed();
-            payment.getOrder().markFailed();
+            // 이 메서드를 호출한 쪽(예: PaymentWebhookService.handle())의 트랜잭션이 뒤이어 던지는
+            // 예외로 롤백되더라도, "검증에 실패했다"는 기록만은 별도 트랜잭션으로 즉시 커밋해 남긴다.
+            // 그렇지 않으면 FAILED 마킹이 통째로 사라지고 결제/주문이 영영 READY로 남는다.
+            paymentFailureRecorder.recordVerificationFailure(payment.getId(), detail.transactionId());
             throw new CustomException(HttpStatus.UNPROCESSABLE_ENTITY.value(), "PortOne 결제 정보가 주문과 일치하지 않습니다.");
         }
 
+        paymentTransactionRepository.save(PaymentTransaction.record(payment, detail.transactionId(), PaymentStatus.PAID));
         payment.markPaid(LocalDateTime.now());
         payment.getOrder().markCompleted();
+    }
+
+    // create()처럼 구독이 결제 시점엔 아직 없어 나중에 연결해야 하는 경우용.
+    // payment가 (REQUIRES_NEW로) 이미 다른 트랜잭션에서 커밋된 detached 상태일 수 있어 id로 다시 조회한다.
+    @Transactional
+    public void linkSubscription(String paymentId, Subscription subscription) {
+        Payment payment = paymentRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "결제 내역을 찾을 수 없습니다."));
+        payment.linkSubscription(subscription);
     }
 
     // 테스트 상점은 여러 팀이 공용으로 써서, storeId만으로는 다른 팀 채널로 발생한 결제를 걸러내지 못함.

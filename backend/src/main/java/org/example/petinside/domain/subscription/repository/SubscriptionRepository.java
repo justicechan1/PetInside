@@ -6,8 +6,11 @@ import org.example.petinside.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import jakarta.persistence.LockModeType;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -51,6 +54,12 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     // 해지/재개/재시도(F-23, F-22) 처리용. 트랜잭션 밖에서도 user를 안전하게 쓸 수 있도록 즉시 로딩.
     @Query("SELECT s FROM Subscription s JOIN FETCH s.user LEFT JOIN FETCH s.billingKey WHERE s.id = :id")
     Optional<Subscription> findByIdWithUser(@Param("id") Long id);
+
+    // [다시 결제](retryPayment) 전용: 같은 구독에 대해 동시에 두 번 눌러도 한 번만 청구되도록
+    // row 락을 잡고 조회. create()가 user row에 findByIdForUpdate로 락을 거는 것과 같은 목적.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM Subscription s JOIN FETCH s.user LEFT JOIN FETCH s.billingKey WHERE s.id = :id")
+    Optional<Subscription> findByIdForUpdateWithUser(@Param("id") Long id);
 
     // 구독 상태/가입일 필터링 용
     Page<Subscription> findByStatus(SubscriptionStatus status, Pageable pageable);
