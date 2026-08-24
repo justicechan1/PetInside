@@ -2,6 +2,7 @@ package org.example.petinside.domain.payment.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.petinside.domain.payment.entity.Payment;
 import org.example.petinside.domain.payment.entity.PaymentStatus;
 import org.example.petinside.domain.payment.repository.PaymentRepository;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 // PortOne이 결제/빌링키 관련 이벤트가 생겼을 때 보내는 웹훅을 처리하는 서비스.
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentWebhookService {
@@ -37,8 +39,11 @@ public class PaymentWebhookService {
     // PortOne 웹훅 이벤트 통합 처리
     @Transactional
     public void handle(String rawBody, String webhookId, String webhookSignature, String webhookTimestamp) {
+        boolean hasSignatureHeaders = webhookId != null && webhookSignature != null && webhookTimestamp != null;
+        log.info("웹훅 수신: 서명헤더존재={}", hasSignatureHeaders);
+
         // 웹훅 서명 헤더 검증 (헤더가 없는 경우는 생략
-        if (webhookId != null && webhookSignature != null && webhookTimestamp != null) {
+        if (hasSignatureHeaders) {
             webhookVerifier.verify(rawBody, webhookId, webhookSignature, webhookTimestamp);
         }
 
@@ -47,6 +52,7 @@ public class PaymentWebhookService {
         if (payload.type() == null || payload.data() == null) {
             return;
         }
+        log.info("웹훅 이벤트 처리: type={}, paymentId={}", payload.type(), payload.data().paymentId());
 
         // 빌링크 발급 완료 이벤트 분기 처리
         if (BILLING_KEY_ISSUED_EVENT.equals(payload.type())) {
