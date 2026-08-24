@@ -132,7 +132,7 @@ export default function MainPage() {
 
                 {/* 인기 게시글 */}
                 <div style={{ display: 'flex', gap: 20 }}>
-                    <PopularList title="오늘의 인기 Q&A" category="QNA" navigate={navigate} />
+                    <PopularList title="인기 Q&A" category="QNA" navigate={navigate} />
                     <PopularList title="화제의 자랑글" category="BOAST" navigate={navigate} />
                 </div>
             </div>
