@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 // 만료 대상 구독 상태를 자동 정리하는 스케줄러
+@Component
 @RequiredArgsConstructor
 public class SubscriptionExpirationScheduler {
 
