@@ -20,8 +20,8 @@ public class SubscriptionExpirationScheduler {
 
     private final SubscriptionRepository subscriptionRepository;
 
-    // TODO: 배포 환경 스케줄러 테스트용 임시 변경 — 테스트 끝나면 "0 0 0 * * *"로 되돌릴 것
-    @Scheduled(cron = "0 * * * * *")
+    // 매일 자정 만료 대상 구독 상태 일괄 변경
+    @Scheduled(cron = "0 0 0 * * *")
     @Transactional
     public void expireLapsedSubscriptions() {
         // 해지 예약을 신청하고 이용 만료일이 끝난 구독 만료 처리

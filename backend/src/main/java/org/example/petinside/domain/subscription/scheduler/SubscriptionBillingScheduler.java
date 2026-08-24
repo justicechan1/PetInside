@@ -20,8 +20,8 @@ public class SubscriptionBillingScheduler {
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionService subscriptionService;
 
-    // TODO: 배포 환경 스케줄러 테스트용 임시 변경 — 테스트 끝나면 "0 0 1 * * *"로 되돌릴 것
-    @Scheduled(cron = "0 * * * * *")
+    // 매일 새벽 1시 청구 대상 구독 건 자동 재청구 실행
+    @Scheduled(cron = "0 0 1 * * *")
     public void chargeDueSubscriptions() {
         // 현재 시각 기준, 결제 예정일이 도래한 ACTIVE 상태 정기 구독 목록 조회
         for (Subscription subscription : subscriptionRepository.findDueForRecurringCharge(SubscriptionStatus.ACTIVE, LocalDateTime.now())) {
