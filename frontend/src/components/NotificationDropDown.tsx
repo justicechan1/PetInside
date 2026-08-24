@@ -36,7 +36,7 @@ export default function NotificationDropdown() {
 
     return (
         <div style={{ position: 'relative' }}>
-            <div onClick={() => setOpen(!open)} style={{ cursor: 'pointer', position: 'relative' }}>
+            <div onClick={() => setOpen(!open)} style={{ cursor: 'pointer', position: 'relative', marginTop: 4 }}>
                 <svg width="22" height="22" viewBox="0 0 100 100">
                     <path
                         d="M55 0 C34 0 22 15 22 34 C22 62 10 72 10 82 L100 82 C100 72 88 62 88 34 C88 15 76 0 55 0 Z"
