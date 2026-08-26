@@ -13,6 +13,8 @@ public record PortOneProperties(
         String paymentIdPrefix,
         String billingKeyEncryptionSecret,
         // PortOne 결제 요청 시 noticeUrls로 실어 보낼 웹훅 수신 주소
-        String webhookNoticeUrl
+        String webhookNoticeUrl,
+        // true면 결제 검증 시 채널이 TEST 타입인지까지 확인(로컬/개발 전용, 배포는 false)
+        boolean requireTestChannel
 ) {
 }

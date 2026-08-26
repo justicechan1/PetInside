@@ -56,6 +56,9 @@ portone:
   payment-id-prefix: PI
   billing-key-encryption-secret: ${BILLING_KEY_ENCRYPTION_SECRET}
   webhook-notice-url: ${PORTONE_WEBHOOK_NOTICE_URL:}
+  # true면 결제 검증 시 PortOne 채널이 TEST 타입인지까지 확인(공용 테스트 상점에서 실결제 오확정 방지용, 로컬/개발 전용).
+  # 배포 환경은 실제 결제를 처리해야 하므로 기본값 false 유지.
+  require-test-channel: ${PORTONE_REQUIRE_TEST_CHANNEL:false}
 
 app:
   oauth2:
