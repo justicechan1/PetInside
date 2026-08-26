@@ -148,12 +148,15 @@ public class PaymentService {
         payment.getOrder().markCompleted();
     }
 
-    // Detached 상태의 Payment 엔티티에 구독 정보 연결
+    // Payment에 구독 정보 연결. subscription_id 컬럼만 갱신하는 벌크 업데이트라
+    // (엔티티를 로드해서 저장하는 방식과 달리) verifyAndMarkPaid가 방금 커밋한 PAID 상태를
+    // 이 트랜잭션의 오래된 스냅샷으로 덮어쓸 위험이 없다.
     @Transactional
     public void linkSubscription(String paymentId, Subscription subscription) {
-        Payment payment = paymentRepository.findByPaymentId(paymentId)
-                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "결제 내역을 찾을 수 없습니다."));
-        payment.linkSubscription(subscription);
+        int updated = paymentRepository.linkSubscription(paymentId, subscription);
+        if (updated == 0) {
+            throw new CustomException(HttpStatus.NOT_FOUND.value(), "결제 내역을 찾을 수 없습니다.");
+        }
     }
 
     // 발급된 결제 채널 키가 당사의 단건/정기결제 채널 키와 일치하는지 검증
