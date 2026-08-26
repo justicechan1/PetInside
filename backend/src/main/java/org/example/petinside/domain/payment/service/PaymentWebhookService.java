@@ -80,7 +80,9 @@ public class PaymentWebhookService {
         // 결제 완료 승인 처리(웹훅 본문을 그대로 믿지 않고 PortOne을 재조회해서 동기화.)
         if (payment.getStatus() == PaymentStatus.READY) {
             PortOnePaymentDetail detail = portOneClient.getPaymentDetail(payment.getPaymentId());
-            paymentService.finalizeByDetail(payment, detail);
+            if (PaymentService.PAID_STATUS.equalsIgnoreCase(detail.status())) {
+                paymentService.finalizeByDetail(payment, detail);
+            }
         }
         // 이미 PAID/FAILED로 처리된 결제에 대한 중복 웹훅은 별도 처리 없이 무처리(멱등)
     }

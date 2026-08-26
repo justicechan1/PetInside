@@ -36,7 +36,7 @@ public class PaymentService {
     // 요금제는 아직 고정 요금 하나. 정기구독/1개월 이용권 공통.
     static final int PLAN_AMOUNT = 1900;
     static final String CURRENCY = "KRW";
-    private static final String PAID_STATUS = "PAID";
+    static final String PAID_STATUS = "PAID";
     private static final String TEST_CHANNEL_TYPE = "TEST";
 
     private final OrderRepository orderRepository;
