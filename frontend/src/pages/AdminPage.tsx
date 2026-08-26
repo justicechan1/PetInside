@@ -16,11 +16,15 @@ export default function AdminPage() {
 
     // 콘텐츠 삭제 (게시글 목록)
     const [posts, setPosts] = useState<AdminPost[]>([]);
+    const [postTotalPages, setPostTotalPages] = useState(0);
+    const [postPage, setPostPage] = useState(0);
 
     const loadPosts = (p: number) => {
-        getAllPosts(p).then(data => {
-            setPosts(data.content);
-        });
+        setIsLoading(true);
+        getAllPosts(p)
+            .then(data => { setPosts(data.content); setPostTotalPages(data.totalPages); setPostPage(p); })
+            .catch(() => alert('게시글 목록 조회 실패'))
+            .finally(() => setIsLoading(false));
     };
 
     // 대시보드
@@ -199,20 +203,31 @@ export default function AdminPage() {
                 )}
 
                 {/* 콘텐츠 삭제 */}
-                {tab === 'content' && (
+                {!isLoading && tab === 'content' && (
                     <div>
-                        <h3>게시글 목록</h3>
-                        <table>
+                        <h3 style={{ marginBottom: 16 }}>게시글 목록</h3>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                            <tr style={{ background: '#f8f8f8' }}>
+                                {['ID', '제목', '작성일', '관리'].map(h => (
+                                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#666', borderBottom: '1px solid #eee' }}>{h}</th>
+                                ))}
+                            </tr>
+                            </thead>
                             <tbody>
                             {posts.map(post => (
-                                <tr key={post.id} onClick={() => navigate(`/posts/${post.id}`)} style={{ cursor: 'pointer' }}>
-                                    <td>{post.title}</td>
-                                    <td>{post.author}</td>
-                                    <td>{new Date(post.createdAt).toLocaleDateString()}</td>
+                                <tr key={post.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                                    <td style={{ padding: '12px 16px', fontSize: 13, color: '#999' }}>{post.id}</td>
+                                    <td style={{ padding: '12px 16px', fontSize: 14, cursor: 'pointer' }} onClick={() => navigate(`/posts/${post.id}`)}>{post.title}</td>
+                                    <td style={{ padding: '12px 16px', fontSize: 13, color: '#999' }}>{new Date(post.createdAt).toLocaleDateString()}</td>
+                                    <td style={{ padding: '12px 16px', display: 'flex', gap: 6 }}>
+                                        <button onClick={() => navigate(`/posts/${post.id}`)} style={{ padding: '5px 12px', fontSize: 12, border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer', background: '#fff' }}>보기</button>
+                                    </td>
                                 </tr>
                             ))}
                             </tbody>
                         </table>
+                        {pagination(postTotalPages, postPage, loadPosts)}
                     </div>
                 )}
 

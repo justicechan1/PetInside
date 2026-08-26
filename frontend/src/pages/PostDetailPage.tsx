@@ -92,10 +92,6 @@ export default function PostDetailPage() {
                     <EmojiText text={post.content} emojis={post.emojis} size={180} />
                 </div>
 
-                {role === 'ADMIN' && (
-                    <button onClick={() => handleAdminDeletePost(post.id)}>관리자 삭제</button>
-                )}
-
                 {/* 이미지 */}
                 {post.imageUrls?.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
@@ -112,16 +108,26 @@ export default function PostDetailPage() {
                 )}
 
                 {/* 작성자 버튼 */}
-                {isAuthor && (
+                {(isAuthor || role === 'ADMIN') && (
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 32 }}>
-                        <button onClick={() => navigate(`/posts/${postId}/edit`)} style={{
-                            padding: '8px 20px', borderRadius: 8, border: '1px solid #ddd',
-                            background: '#fff', cursor: 'pointer',
-                        }}>수정</button>
-                        <button onClick={handleDelete} style={{
-                            padding: '8px 20px', borderRadius: 8, border: 'none',
-                            background: '#ff4d4f', color: '#fff', cursor: 'pointer',
-                        }}>삭제</button>
+                        {isAuthor && (
+                            <>
+                                <button onClick={() => navigate(`/posts/${postId}/edit`)} style={{
+                                    padding: '8px 20px', borderRadius: 8, border: '1px solid #ddd',
+                                    background: '#fff', cursor: 'pointer',
+                                }}>수정</button>
+                                <button onClick={handleDelete} style={{
+                                    padding: '8px 20px', borderRadius: 8, border: 'none',
+                                    background: '#ff4d4f', color: '#fff', cursor: 'pointer',
+                                }}>삭제</button>
+                            </>
+                        )}
+                        {role === 'ADMIN' && (
+                            <button onClick={() => handleAdminDeletePost(post.id)} style={{
+                                padding: '8px 20px', borderRadius: 8, border: 'none',
+                                background: '#ff4d4f', color: '#fff', cursor: 'pointer',
+                            }}>관리자 삭제</button>
+                        )}
                     </div>
                 )}
 
