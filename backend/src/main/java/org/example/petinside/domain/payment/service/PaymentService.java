@@ -98,7 +98,10 @@ public class PaymentService {
         Order order = orderRepository.save(Order.ready(user, PLAN_AMOUNT, CURRENCY));
         String paymentId = portOneProperties.paymentIdPrefix() + "-SUB-" + UUID.randomUUID().toString().replace("-", "");
         Payment payment = Payment.createReady(user, order, paymentId, nextRound, PLAN_AMOUNT, CURRENCY);
-        payment.linkSubscription(subscription); // 생성 시점에 이미 존재하는 구독 객체 연동
+        // 여기서 subscription_id까지 같이 INSERT하면, 재시도 결제(retryPayment)처럼 호출자가 이미
+        // 그 subscription row에 비관적 락을 쥐고 있는 경우 REQUIRES_NEW(별도 커넥션)의 FK 확인이
+        // 자기 자신의 락을 기다리다 타임아웃난다(2026-08-26). 구독 연결은 호출자가 이미 락을 쥔
+        // 트랜잭션에서 linkSubscription으로 따로 하도록 여기서는 하지 않는다.
         return paymentRepository.save(payment);
     }
 
