@@ -9,6 +9,8 @@ import CommentSection from '../components/CommentSection';
 import LikeButton from '../components/LikeButton';
 import { getPost, deletePost } from '../api/postApi';
 import type { PostDetail } from '../api/postApi';
+import { adminDeletePost } from '../api/adminApi';
+import { getRoleFromToken } from '../utils/auth';
 
 export default function PostDetailPage() {
     const { postId } = useParams<{ postId: string }>();
@@ -18,6 +20,7 @@ export default function PostDetailPage() {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     const nickname = localStorage.getItem('nickname');
+    const role = getRoleFromToken();
 
     useEffect(() => {
         getPost(Number(postId))
@@ -37,6 +40,12 @@ export default function PostDetailPage() {
     const handleDelete = async () => {
         if (!confirm('게시글을 삭제할까요?')) return;
         await deletePost(Number(postId));
+        navigate('/posts');
+    };
+
+    const handleAdminDeletePost = async (id: number) => {
+        if (!confirm('관리자 권한으로 게시글을 삭제할까요?')) return;
+        await adminDeletePost(id);
         navigate('/posts');
     };
 
@@ -82,6 +91,10 @@ export default function PostDetailPage() {
                 <div style={{ lineHeight: 1.8, fontSize: 16, marginBottom: 24, whiteSpace: 'pre-wrap' }}>
                     <EmojiText text={post.content} emojis={post.emojis} size={180} />
                 </div>
+
+                {role === 'ADMIN' && (
+                    <button onClick={() => handleAdminDeletePost(post.id)}>관리자 삭제</button>
+                )}
 
                 {/* 이미지 */}
                 {post.imageUrls?.length > 0 && (
