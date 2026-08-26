@@ -6,9 +6,17 @@ import org.example.petinside.domain.comment.dto.CommentResponse;
 import org.example.petinside.domain.comment.dto.CommentUpdateRequest;
 import org.example.petinside.domain.comment.entity.Comment;
 import org.example.petinside.domain.comment.repository.CommentRepository;
+import org.example.petinside.domain.emoji.dto.EmojiResponse;
+import org.example.petinside.domain.emoji.entity.CommentEmoji;
+import org.example.petinside.domain.emoji.entity.Emoji;
+import org.example.petinside.domain.emoji.service.EmojiService;
+import org.example.petinside.domain.notification.entity.NotificationType;
+import org.example.petinside.domain.notification.service.NotificationService;
 import org.example.petinside.domain.post.dto.IdResponse;
 import org.example.petinside.domain.post.entity.Post;
 import org.example.petinside.domain.post.repository.PostRepository;
+import org.example.petinside.domain.subscription.entity.SubscriptionStatus;
+import org.example.petinside.domain.subscription.repository.SubscriptionRepository;
 import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.global.exception.CommentNotFoundException;
@@ -18,8 +26,11 @@ import org.example.petinside.global.exception.UserNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +40,9 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
+    private final EmojiService emojiService;
+    private final SubscriptionRepository subscriptionRepository;
 
     /**
      * 댓글 및 대댓글 작성
@@ -64,7 +78,40 @@ public class CommentService {
                 .parent(parentComment)
                 .build();
 
+        List<Emoji> emojis = emojiService.resolveEmojisForAttach(userId, request.getEmojiIds());
+        for (int i = 0; i < emojis.size(); i++) {
+            comment.addEmoji(CommentEmoji.builder().emoji(emojis.get(i)).sortOrder(i).build());
+        }
+
         Comment savedComment = commentRepository.save(comment);
+
+        // ===== 알림 생성 로직 추가 =====
+        if (parentComment != null) {
+            // 대댓글인 경우 → 부모 댓글 작성자에게 알림
+            Long parentAuthorId = parentComment.getUser().getId();
+            if (!parentAuthorId.equals(userId)) {  // 본인 댓글에 본인이 답글 단 경우 제외
+                notificationService.createNotification(
+                        parentAuthorId,
+                        NotificationType.REPLY,
+                        "회원님의 댓글에 답글이 달렸습니다.",
+                        post.getId(),
+                        "/posts/" + post.getId()
+                );
+            }
+        } else {
+            // 일반 댓글인 경우 → 게시글 작성자에게 알림
+            Long postAuthorId = post.getAuthor().getId();
+            if (!postAuthorId.equals(userId)) {  // 본인 글에 본인이 댓글 단 경우 제외
+                notificationService.createNotification(
+                        postAuthorId,
+                        NotificationType.COMMENT,
+                        "회원님의 게시글에 댓글이 달렸습니다.",
+                        post.getId(),
+                        "/posts/" + post.getId()
+                );
+            }
+        }
+        // ===== 알림 생성 로직 끝 =====
 
         return new IdResponse(savedComment.getId());
     }
@@ -80,11 +127,29 @@ public class CommentService {
 
         List<Comment> parentComments = commentRepository.findAllByPostIdAndParentIsNullAndIsDeletedFalseOrderByIdAsc(postId);
 
+        // 인증 뱃지: 이 글의 댓글/대댓글 작성자들의 활성 구독 여부를 한 번에 조회(N+1 방지).
+        List<Long> authorIds = parentComments.stream()
+                .flatMap(comment -> Stream.concat(
+                        Stream.of(comment.getUser().getId()),
+                        comment.getChildren().stream()
+                                .filter(child -> !child.isDeleted())
+                                .map(child -> child.getUser().getId())
+                ))
+                .distinct()
+                .collect(Collectors.toList());
+        Set<Long> verifiedAuthorIds = authorIds.isEmpty()
+                ? Set.of()
+                : subscriptionRepository.findUserIdsByUserIdInAndStatus(authorIds, SubscriptionStatus.ACTIVE);
+
         return parentComments.stream()
                 .map(comment -> new CommentResponse(
                         comment.getId(),
                         comment.getContent(),
+                        comment.getUser().getId(),
                         comment.getUser().getNickname(),
+                        comment.getUser().getProfileImageUrl(),
+                        verifiedAuthorIds.contains(comment.getUser().getId()),
+                        toEmojiResponses(comment),
                         comment.getCreatedAt(),
                         // 대댓글 목록 매핑
                         comment.getChildren().stream()
@@ -92,12 +157,25 @@ public class CommentService {
                                 .map(child -> new CommentResponse(
                                         child.getId(),
                                         child.getContent(),
+                                        child.getUser().getId(),
                                         child.getUser().getNickname(),
+                                        child.getUser().getProfileImageUrl(),
+                                        verifiedAuthorIds.contains(child.getUser().getId()),
+                                        toEmojiResponses(child),
                                         child.getCreatedAt(),
                                         null
                                 ))
                                 .collect(Collectors.toList())
                 ))
+                .collect(Collectors.toList());
+    }
+
+    private List<EmojiResponse> toEmojiResponses(Comment comment) {
+        return comment.getEmojis().stream()
+                .map(commentEmoji -> new EmojiResponse(
+                        commentEmoji.getEmoji().getId(),
+                        commentEmoji.getEmoji().getImageUrl(),
+                        commentEmoji.getEmoji().getName()))
                 .collect(Collectors.toList());
     }
 
@@ -116,6 +194,13 @@ public class CommentService {
         }
 
         comment.update(request.getContent());
+
+        List<Emoji> emojis = emojiService.resolveEmojisForAttach(userId, request.getEmojiIds());
+        List<CommentEmoji> newEmojis = new ArrayList<>();
+        for (int i = 0; i < emojis.size(); i++) {
+            newEmojis.add(CommentEmoji.builder().emoji(emojis.get(i)).sortOrder(i).build());
+        }
+        comment.updateEmojis(newEmojis);
 
         return new IdResponse(comment.getId());
     }

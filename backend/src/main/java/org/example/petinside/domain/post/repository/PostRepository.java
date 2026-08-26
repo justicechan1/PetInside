@@ -15,6 +15,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> findAllByIsDeletedFalseOrderByIdDesc();
     Page<Post> findByAuthorIdAndIsDeletedFalse(Long authorId, Pageable pageable);
     long countByCreatedAtAfter(LocalDateTime startOfDay);
+    long countByAuthorIdAndIsDeletedFalse(Long authorId);
 
     @Query("SELECT p FROM Post p WHERE p.author.id = :authorId AND p.isDeleted = false " +
            "AND (:keyword IS NULL OR p.title LIKE %:keyword%) " +

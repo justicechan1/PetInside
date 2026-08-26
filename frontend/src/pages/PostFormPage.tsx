@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import GNB from '../components/GNB';
+import EmojiPicker from '../components/EmojiPicker';
 import { createPost, updatePost, getPost } from '../api/postApi';
 import { uploadImage } from '../api/imageApi';
+import { isAuthenticated } from '../utils/auth';
+import { extractEmojiIds, withLegacyEmojiTokens } from '../utils/emojiText';
 
 const MAX_IMAGES = 5;
 
@@ -11,6 +14,14 @@ export default function PostFormPage() {
     const navigate = useNavigate();
     const isEdit = !!postId;
 
+    // URL을 직접 입력해서 들어오는 경우까지 막기 위한 방어(글쓰기 버튼 자체는 목록 페이지에서 이미 막음)
+    useEffect(() => {
+        if (!isAuthenticated()) {
+            alert('로그인 후 이용할 수 있습니다.');
+            navigate('/login');
+        }
+    }, [navigate]);
+
     const [category, setCategory] = useState('QNA');
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
@@ -18,13 +29,14 @@ export default function PostFormPage() {
     const [uploading, setUploading] = useState(false);
     const [loading, setLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const contentRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
         if (!isEdit) return;
         getPost(Number(postId)).then(post => {
             setCategory(post.category);
             setTitle(post.title);
-            setContent(post.content);
+            setContent(withLegacyEmojiTokens(post.content, post.emojis ?? []));
             setImageUrls(post.imageUrls ?? []);
         });
     }, [postId]);
@@ -61,11 +73,12 @@ export default function PostFormPage() {
         }
         setLoading(true);
         try {
+            const emojiIds = extractEmojiIds(content);
             if (isEdit) {
-                await updatePost(Number(postId), { category, title, content, imageUrls });
+                await updatePost(Number(postId), { category, title, content, imageUrls, emojiIds });
                 navigate(`/posts/${postId}`);
             } else {
-                const res = await createPost({ category, title, content, imageUrls });
+                const res = await createPost({ category, title, content, imageUrls, emojiIds });
                 navigate(`/posts/${res.data.id}`);
             }
         } finally {
@@ -102,12 +115,16 @@ export default function PostFormPage() {
 
                 {/* 내용 */}
                 <textarea
+                    ref={contentRef}
                     value={content}
                     onChange={e => setContent(e.target.value)}
                     placeholder="내용을 입력하세요"
                     rows={15}
                     style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid #ddd', fontSize: 15, resize: 'vertical', boxSizing: 'border-box' }}
                 />
+                <div style={{ marginTop: 8 }}>
+                    <EmojiPicker textareaRef={contentRef} value={content} onChange={setContent} />
+                </div>
 
                 {/* 이미지 */}
                 <div style={{ marginTop: 16 }}>

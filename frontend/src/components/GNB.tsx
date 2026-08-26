@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 import { getRoleFromToken } from '../utils/auth';
+import Avatar from './Avatar';
+import NotificationDropdown from "./NotificationDropDown";
+import { subscribePush } from '../api/notificationApi';
+import { urlBase64ToUint8Array } from '../utils/push';
 
 export default function GNB() {
     const navigate = useNavigate();
@@ -9,16 +13,44 @@ export default function GNB() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [role, setRole] = useState<string | null>(null);
     const [nickname, setNickname] = useState<string | null>(() => localStorage.getItem('nickname'));
+    const [profileImageUrl, setProfileImageUrl] = useState<string | null>(() => localStorage.getItem('profileImageUrl') || null);
 
     useEffect(() => {
         setRole(getRoleFromToken());
     }, []);
 
     useEffect(() => {
-        const onStorage = () => setNickname(localStorage.getItem('nickname'));
+        const onStorage = () => {
+            setNickname(localStorage.getItem('nickname'));
+            setProfileImageUrl(localStorage.getItem('profileImageUrl') || null);
+        };
         window.addEventListener('storage', onStorage);
         return () => window.removeEventListener('storage', onStorage);
     }, []);
+
+    useEffect(() => {
+        if (!isLoggedIn) return;
+
+        const setupPush = async () => {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+            const registration = await navigator.serviceWorker.register('/sw.js');
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') return;
+
+            const existing = await registration.pushManager.getSubscription();
+            if (existing) return;
+
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC_KEY),
+            });
+
+            await subscribePush(subscription.toJSON());
+        };
+
+        setupPush();
+    }, [isLoggedIn]);
 
 
     const handleLogout = async () => {
@@ -28,8 +60,8 @@ export default function GNB() {
             // accessToken이 이미 만료됐어도 클라이언트 쪽 로그아웃은 계속 진행
         }
         localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
         localStorage.removeItem('nickname');
+        localStorage.removeItem('profileImageUrl');
         setDropdownOpen(false);
         navigate('/');
         window.location.reload();
@@ -59,33 +91,13 @@ export default function GNB() {
                             글쓰기
                         </button>
 
-                        {role === 'ADMIN' && (
-                            <button onClick={() => navigate('/admin')}
-                                    style={{
-                                        padding: '8px 16px',
-                                        border: '1px solid var(--primary)',
-                                        borderRadius: 8,
-                                        background: 'white',
-                                        color: 'var(--primary)',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer'
-                                    }}>
-                                관리자 페이지
-                            </button>
-                        )}
+                        <NotificationDropdown />
 
                         {/* 프로필 동그라미 */}
                         <div style={{ position: 'relative' }}>
-                            <div onClick={() => setDropdownOpen(!dropdownOpen)}
-                                 style={{
-                                     width: 40, height: 40, borderRadius: '50%',
-                                     background: 'var(--primary)', color: 'white',
-                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                     cursor: 'pointer', fontWeight: 'bold', fontSize: 16
-                                 }}>
-                                {nickname ? nickname[0].toUpperCase() : '👤'}
+                            <div onClick={() => setDropdownOpen(!dropdownOpen)} style={{ cursor: 'pointer' }}>
+                                <Avatar imageUrl={profileImageUrl} nickname={nickname ?? ''} size={40} />
                             </div>
-
 
                             {/* 드롭다운 */}
                             {dropdownOpen && (
@@ -99,8 +111,21 @@ export default function GNB() {
                                          style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
                                         마이페이지
                                     </div>
+                                    <div onClick={() => { navigate('/subscription'); setDropdownOpen(false); }}
+                                         style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
+                                        구독
+                                    </div>
+
+                                    {/* ✅ 관리자일 때만 드롭다운 안쪽에 '관리자 페이지'가 나타나도록 배치 */}
+                                    {role === 'ADMIN' && (
+                                        <div onClick={() => { navigate('/admin'); setDropdownOpen(false); }}
+                                             style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontWeight: 'bold'}}>
+                                            관리자 페이지
+                                        </div>
+                                    )}
+
                                     <div onClick={handleLogout}
-                                         style={{ padding: '12px 16px', cursor: 'pointer', color: '#E03131' }}>
+                                         style={{ padding: '12px 16px', cursor: 'pointer'}}>
                                         로그아웃
                                     </div>
                                 </div>

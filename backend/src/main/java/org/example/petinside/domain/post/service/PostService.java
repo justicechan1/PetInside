@@ -2,12 +2,18 @@ package org.example.petinside.domain.post.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.domain.comment.repository.CommentRepository;
+import org.example.petinside.domain.emoji.dto.EmojiResponse;
+import org.example.petinside.domain.emoji.entity.Emoji;
+import org.example.petinside.domain.emoji.entity.PostEmoji;
+import org.example.petinside.domain.emoji.service.EmojiService;
 import org.example.petinside.domain.post.dto.*;
 import org.example.petinside.domain.post.entity.Category;
 import org.example.petinside.domain.post.entity.Post;
 import org.example.petinside.domain.post.entity.PostImage;
 import org.example.petinside.domain.post.repository.PostImageRepository;
 import org.example.petinside.domain.post.repository.PostRepository;
+import org.example.petinside.domain.subscription.entity.SubscriptionStatus;
+import org.example.petinside.domain.subscription.repository.SubscriptionRepository;
 import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.global.exception.CustomException;
@@ -21,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +39,8 @@ public class PostService {
     private final PostImageRepository postImageRepository;
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
+    private final EmojiService emojiService;
+    private final SubscriptionRepository subscriptionRepository;
 
     /**
      * 게시글 생성
@@ -61,6 +70,8 @@ public class PostService {
             }
         }
 
+        attachEmojis(post, userId, request.getEmojiIds());
+
         Post savedPost = postRepository.save(post);
 
         return new IdResponse(savedPost.getId());
@@ -76,6 +87,15 @@ public class PostService {
 
         Page<Post> posts = postRepository.search(categoryFilter, keyword, pageable);
 
+        // 인증 뱃지: 페이지에 등장하는 작성자들의 활성 구독 여부를 한 번에 조회(N+1 방지).
+        List<Long> authorIds = posts.getContent().stream()
+                .map(post -> post.getAuthor().getId())
+                .distinct()
+                .collect(Collectors.toList());
+        Set<Long> verifiedAuthorIds = authorIds.isEmpty()
+                ? Set.of()
+                : subscriptionRepository.findUserIdsByUserIdInAndStatus(authorIds, SubscriptionStatus.ACTIVE);
+
         Page<PostListResponse> responsePage = posts.map(post -> {
             String thumbnailUrl = (post.getImages() != null && !post.getImages().isEmpty())
                     ? post.getImages().get(0).getImageUrl()
@@ -89,7 +109,10 @@ public class PostService {
                     post.getId(),
                     post.getTitle(),
                     post.getCategory().name(),
+                    post.getAuthor().getId(),
                     post.getAuthor().getNickname(),
+                    post.getAuthor().getProfileImageUrl(),
+                    verifiedAuthorIds.contains(post.getAuthor().getId()),
                     post.getViewCount(),
                     commentCount,
                     thumbnailUrl,
@@ -115,14 +138,25 @@ public class PostService {
                 .map(PostImage::getImageUrl)
                 .collect(Collectors.toList());
 
+        List<EmojiResponse> emojis = post.getEmojis().stream()
+                .map(postEmoji -> new EmojiResponse(
+                        postEmoji.getEmoji().getId(),
+                        postEmoji.getEmoji().getImageUrl(),
+                        postEmoji.getEmoji().getName()))
+                .collect(Collectors.toList());
+
         return PostDetailResponse.builder()
                 .id(post.getId())
                 .title(post.getTitle())
                 .content(post.getContent())
                 .category(post.getCategory().name())
                 .viewCount(post.getViewCount())
+                .authorId(post.getAuthor().getId())
                 .authorNickname(post.getAuthor().getNickname())
+                .authorProfileImageUrl(post.getAuthor().getProfileImageUrl())
+                .authorVerified(subscriptionRepository.existsByUser_IdAndStatus(post.getAuthor().getId(), SubscriptionStatus.ACTIVE))
                 .imageUrls(imageUrls)
+                .emojis(emojis)
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();
@@ -157,7 +191,22 @@ public class PostService {
         }
         post.updateImages(newImages);
 
+        List<Emoji> emojis = emojiService.resolveEmojisForAttach(userId, request.getEmojiIds());
+        List<PostEmoji> newEmojis = new ArrayList<>();
+        for (int i = 0; i < emojis.size(); i++) {
+            newEmojis.add(PostEmoji.builder().emoji(emojis.get(i)).sortOrder(i).build());
+        }
+        post.updateEmojis(newEmojis);
+
         return new IdResponse(post.getId());
+    }
+
+    // 요청받은 emojiIds를 구독 상태 검증 후 게시글에 첨부(sortOrder는 요청 순서를 따름)
+    private void attachEmojis(Post post, Long userId, List<Long> emojiIds) {
+        List<Emoji> emojis = emojiService.resolveEmojisForAttach(userId, emojiIds);
+        for (int i = 0; i < emojis.size(); i++) {
+            post.addEmoji(PostEmoji.builder().emoji(emojis.get(i)).sortOrder(i).build());
+        }
     }
 
     /**

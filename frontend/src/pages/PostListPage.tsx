@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GNB from '../components/GNB';
+import Avatar from '../components/Avatar';
+import VerifiedBadge from '../components/VerifiedBadge';
+import { profilePath } from '../utils/profileNav';
 import { getPosts } from '../api/postApi';
 import type { PostListItem } from '../api/postApi';
+import { isAuthenticated } from '../utils/auth';
 
 export default function PostListPage() {
     const navigate = useNavigate();
@@ -31,6 +35,15 @@ export default function PostListPage() {
     const handleSearch = () => setSearchParams({ category, keyword: searchInput, page: '0' });
     const setPage = (p: number) => setSearchParams({ category, keyword, page: String(p) });
 
+    const handleWriteClick = () => {
+        if (!isAuthenticated()) {
+            alert('로그인 후 이용할 수 있습니다.');
+            navigate('/login');
+            return;
+        }
+        navigate('/posts/new');
+    };
+
     return (
         <div>
             <GNB />
@@ -47,7 +60,7 @@ export default function PostListPage() {
                             {cat === '' ? '전체' : cat === 'QNA' ? 'Q&A' : '자랑'}
                         </button>
                     ))}
-                    <button onClick={() => navigate('/posts/new')} style={{
+                    <button onClick={handleWriteClick} style={{
                         marginLeft: 'auto', padding: '8px 20px', borderRadius: 20,
                         border: 'none', background: 'var(--primary, #FF8C00)', color: '#fff',
                         cursor: 'pointer', fontWeight: 600,
@@ -82,9 +95,22 @@ export default function PostListPage() {
                             <div key={post.id} onClick={() => navigate(`/posts/${post.id}`)} style={{
                                 padding: '16px 20px', borderRadius: 10, border: '1px solid #eee',
                                 cursor: 'pointer', background: '#fff',
-                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16,
                             }}>
-                                <div>
+                                {post.thumbnailUrl ? (
+                                    <img
+                                        src={post.thumbnailUrl}
+                                        alt=""
+                                        style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }}
+                                    />
+                                ) : (
+                                    <div style={{
+                                        width: 64, height: 64, borderRadius: 8, flexShrink: 0,
+                                        background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        color: '#ccc', fontSize: 22,
+                                    }}>🐾</div>
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
                                     <span style={{
                                         fontSize: 12, padding: '2px 8px', borderRadius: 10, marginRight: 8,
                                         background: post.category === 'QNA' ? '#E3F2FD' : '#FFF3E0',
@@ -93,11 +119,19 @@ export default function PostListPage() {
                                         {post.category === 'QNA' ? 'Q&A' : '자랑'}
                                     </span>
                                     <span style={{ fontWeight: 600 }}>{post.title}</span>
-                                    <div style={{ fontSize: 13, color: '#999', marginTop: 4 }}>
-                                        {post.authorNickname} · {new Date(post.createdAt).toLocaleDateString()}
+                                    <div style={{ fontSize: 13, color: '#999', marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <span
+                                            onClick={e => { e.stopPropagation(); navigate(profilePath(post.authorId, post.authorNickname)); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+                                        >
+                                            <Avatar imageUrl={post.authorProfileImageUrl} nickname={post.authorNickname} size={18} />
+                                            {post.authorNickname}
+                                            {post.authorVerified && <VerifiedBadge />}
+                                        </span>
+                                        · {new Date(post.createdAt).toLocaleDateString()}
                                     </div>
                                 </div>
-                                <div style={{ fontSize: 13, color: '#999', textAlign: 'right' }}>
+                                <div style={{ fontSize: 13, color: '#999', textAlign: 'right', flexShrink: 0 }}>
                                     <div>조회 {post.viewCount}</div>
                                     <div>댓글 {post.commentCount}</div>
                                 </div>

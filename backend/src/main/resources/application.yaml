@@ -47,12 +47,28 @@ jwt:
   access-token-expiration: 3600000      # 1시간 (ms)
   refresh-token-expiration: 604800000   # 1주일 (ms)
 
+portone:
+  store-id: ${PORTONE_STORE_ID}
+  channel-key: ${PORTONE_CHANNEL_KEY}
+  channel-key-subscription: ${PORTONE_CHANNEL_KEY_SUBSCRIPTION}
+  api-secret: ${PORTONE_API_SECRET}
+  webhook-secret: ${PORTONE_WEBHOOK_SECRET}
+  payment-id-prefix: PI
+  billing-key-encryption-secret: ${BILLING_KEY_ENCRYPTION_SECRET}
+  webhook-notice-url: ${PORTONE_WEBHOOK_NOTICE_URL:}
+
 app:
   oauth2:
     redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:3000/oauth/callback}
   # 로컬 디스크 이미지 업로드 - EC2 재배포(scp)는 app.jar만 교체하므로 이 폴더는 그대로 보존됨
   upload:
     dir: ${UPLOAD_DIR:./uploads}
+
+webpush:
+  vapid:
+    public-key: ${VAPID_PUBLIC_KEY:}
+    private-key: ${VAPID_PRIVATE_KEY:}
+    subject: ${VAPID_SUBJECT:mailto:test@example.com}
 
 # --- H2 로컬 테스트로 되돌릴 때 아래 주석 해제, MySQL datasource 주석 처리 ---
 # spring:

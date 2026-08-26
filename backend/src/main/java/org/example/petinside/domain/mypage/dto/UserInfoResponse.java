@@ -14,5 +14,6 @@ public class UserInfoResponse {
     private String profileImageUrl;
     private String role;
     private LocalDateTime createdAt;
-    private String provider; // 소셜 로그인이면 "GOOGLE" 등, 일반 로그인이면 null
+    private String provider;      // 소셜 로그인이면 "GOOGLE" 등, 일반 로그인이면 null
+    private String profileLayout; // "GRID" 또는 "LIST", 기본값 "LIST"
 }

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.petinside.global.security.RestAuthenticationEntryPoint;
 import org.example.petinside.global.security.jwt.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
+import org.example.petinside.global.security.oauth2.CustomAuthorizationRequestResolver;
 import org.example.petinside.global.security.oauth2.CustomOidcUserService;
 import org.example.petinside.global.security.oauth2.OAuth2SuccessHandler;
 import org.springframework.context.annotation.Bean;
@@ -15,6 +16,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 
 import java.util.Arrays;
@@ -33,6 +35,7 @@ public class SecurityConfig {
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final CustomOidcUserService customOidcUserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final CustomAuthorizationRequestResolver customAuthorizationRequestResolver;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -58,6 +61,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/reissue", // accessToken을 새로 재발급
                                 "/api/v1/auth/oauth2/exchange", // 소셜 로그인 콜백 code를 토큰으로 교환
+                                "/api/v1/payments/webhook", // PortOne 서버가 호출 - JWT 대신 웹훅 서명으로 검증
                                 "/oauth2/**",
                                 "/login/oauth2/**",
                                 "/swagger-ui/**",
@@ -66,11 +70,27 @@ public class SecurityConfig {
                                 "/error",
                                 "/images/**" // 로컬 디스크에 업로드된 이미지 정적 서빙 - 비회원도 조회 가능해야 함
                         ).permitAll()
-                        // 게시글 목록/상세, 댓글 목록 조회는 비회원도 가능
+                        // 게시글 목록/상세, 댓글 목록, 좋아요 상태(개수) 조회는 비회원도 가능
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/posts",
                                 "/api/v1/posts/*",
-                                "/api/v1/posts/*/comments"
+                                "/api/v1/posts/*/comments",
+                                "/api/v1/posts/*/likes/me",
+                                "/api/v1/comments/*/likes/me",
+                                "/api/v1/pets/photos/popular"
+                        ).permitAll()
+                        // 공개 프로필 — me/* 는 인증 필요, 나머지 숫자 userId 경로는 비회원 공개
+                        // me/posts 를 먼저 선언해야 */posts 보다 우선 매칭됨
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/users/me",
+                                "/api/v1/users/me/posts",
+                                "/api/v1/users/me/pets"
+                        ).authenticated()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/users/*",
+                                "/api/v1/users/*/posts",
+                                "/api/v1/users/*/pets",
+                                "/api/v1/pets/*/photos"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -78,6 +98,8 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e.authenticationEntryPoint(restAuthenticationEntryPoint))
                 // 구글 OAuth2 로그인: 유저 정보 조회/자동가입은 CustomOidcUserService, 성공 후 JWT 발급은 OAuth2SuccessHandler
                 .oauth2Login(oauth2 -> oauth2
+                        // 로그아웃 후 재로그인 시 구글 세션으로 자동 로그인되지 않도록 매번 계정 선택 화면을 강제
+                        .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(customAuthorizationRequestResolver))
                         .userInfoEndpoint(userInfo -> userInfo.oidcUserService(customOidcUserService))
                         .successHandler(oAuth2SuccessHandler)
                 )

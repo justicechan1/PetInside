@@ -2,6 +2,9 @@ package org.example.petinside.domain.post.service;
 
 import org.example.petinside.domain.comment.entity.Comment;
 import org.example.petinside.domain.comment.repository.CommentRepository;
+import org.example.petinside.domain.emoji.entity.Emoji;
+import org.example.petinside.domain.emoji.entity.PostEmoji;
+import org.example.petinside.domain.emoji.service.EmojiService;
 import org.example.petinside.domain.post.dto.IdResponse;
 import org.example.petinside.domain.post.dto.PostCreateRequest;
 import org.example.petinside.domain.post.dto.PostDetailResponse;
@@ -12,6 +15,7 @@ import org.example.petinside.domain.post.entity.Post;
 import org.example.petinside.domain.post.entity.PostImage;
 import org.example.petinside.domain.post.repository.PostImageRepository;
 import org.example.petinside.domain.post.repository.PostRepository;
+import org.example.petinside.domain.subscription.repository.SubscriptionRepository;
 import org.example.petinside.domain.user.entity.User;
 import org.example.petinside.domain.user.repository.UserRepository;
 import org.example.petinside.global.exception.CustomException;
@@ -40,6 +44,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -55,6 +60,10 @@ class PostServiceTest {
     private CommentRepository commentRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private EmojiService emojiService;
+    @Mock
+    private SubscriptionRepository subscriptionRepository;
 
     private PostService postService;
 
@@ -62,7 +71,9 @@ class PostServiceTest {
 
     @BeforeEach
     void setUp() {
-        postService = new PostService(postRepository, postImageRepository, commentRepository, userRepository);
+        postService = new PostService(postRepository, postImageRepository, commentRepository, userRepository, emojiService, subscriptionRepository);
+
+        lenient().when(subscriptionRepository.findUserIdsByUserIdInAndStatus(any(), any())).thenReturn(java.util.Set.of());
 
         author = User.builder()
                 .username("author")
@@ -71,14 +82,23 @@ class PostServiceTest {
                 .role("USER")
                 .build();
         ReflectionTestUtils.setField(author, "id", 1L);
+        author.updateProfileImageUrl("http://profile/author.png");
+
+        lenient().when(emojiService.resolveEmojisForAttach(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of());
     }
 
     private PostCreateRequest createRequest(String category, String title, String content, List<String> imageUrls) {
+        return createRequest(category, title, content, imageUrls, null);
+    }
+
+    private PostCreateRequest createRequest(String category, String title, String content, List<String> imageUrls, List<Long> emojiIds) {
         PostCreateRequest request = new PostCreateRequest();
         ReflectionTestUtils.setField(request, "category", category);
         ReflectionTestUtils.setField(request, "title", title);
         ReflectionTestUtils.setField(request, "content", content);
         ReflectionTestUtils.setField(request, "imageUrls", imageUrls);
+        ReflectionTestUtils.setField(request, "emojiIds", emojiIds);
         return request;
     }
 
@@ -162,6 +182,29 @@ class PostServiceTest {
 
             verify(postRepository, never()).save(any());
         }
+
+        @Test
+        @DisplayName("emojiIds가 있으면 EmojiService로 검증된 이모지를 요청 순서대로 게시글에 첨부한다")
+        void createPost_withEmojiIds_addsEmojis() {
+            Emoji smile = Emoji.builder().name("웃음").imageUrl("http://emoji/smile").build();
+            Emoji heart = Emoji.builder().name("하트").imageUrl("http://emoji/heart").build();
+            ReflectionTestUtils.setField(smile, "id", 1L);
+            ReflectionTestUtils.setField(heart, "id", 2L);
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(author));
+            when(emojiService.resolveEmojisForAttach(1L, List.of(1L, 2L))).thenReturn(List.of(smile, heart));
+            when(postRepository.save(any(Post.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            PostCreateRequest request = createRequest("qna", "제목", "내용", null, List.of(1L, 2L));
+
+            postService.createPost(1L, request);
+
+            ArgumentCaptor<Post> captor = ArgumentCaptor.forClass(Post.class);
+            verify(postRepository).save(captor.capture());
+            List<PostEmoji> emojis = captor.getValue().getEmojis();
+            assertThat(emojis).hasSize(2);
+            assertThat(emojis).extracting(e -> e.getEmoji().getId()).containsExactly(1L, 2L);
+        }
     }
 
     @Nested
@@ -202,7 +245,25 @@ class PostServiceTest {
             PostListResponse dto = result.content().get(0);
             assertThat(dto.getThumbnailUrl()).isEqualTo("http://thumb");
             assertThat(dto.getCommentCount()).isEqualTo(1);
+            assertThat(dto.getAuthorId()).isEqualTo(1L);
             assertThat(dto.getAuthorNickname()).isEqualTo("author-nick");
+            assertThat(dto.getAuthorProfileImageUrl()).isEqualTo("http://profile/author.png");
+            assertThat(dto.isAuthorVerified()).isFalse();
+        }
+
+        @Test
+        @DisplayName("작성자가 활성 구독자면 인증 뱃지가 true다")
+        void getPostList_verifiedAuthor_setsAuthorVerifiedTrue() {
+            Post post = buildPost(1L, author, Category.QNA, false);
+            Pageable pageable = PageRequest.of(0, 10);
+            when(postRepository.search(any(), any(), eq(pageable)))
+                    .thenReturn(new PageImpl<>(List.of(post)));
+            when(subscriptionRepository.findUserIdsByUserIdInAndStatus(List.of(1L), org.example.petinside.domain.subscription.entity.SubscriptionStatus.ACTIVE))
+                    .thenReturn(java.util.Set.of(1L));
+
+            PageResponse<PostListResponse> result = postService.getPostList(null, null, pageable);
+
+            assertThat(result.content().get(0).isAuthorVerified()).isTrue();
         }
 
         @Test
@@ -234,7 +295,23 @@ class PostServiceTest {
 
             assertThat(post.getViewCount()).isEqualTo(1);
             assertThat(response.getId()).isEqualTo(1L);
+            assertThat(response.getAuthorId()).isEqualTo(1L);
             assertThat(response.getAuthorNickname()).isEqualTo("author-nick");
+            assertThat(response.getAuthorProfileImageUrl()).isEqualTo("http://profile/author.png");
+            assertThat(response.isAuthorVerified()).isFalse();
+        }
+
+        @Test
+        @DisplayName("작성자가 활성 구독자면 인증 뱃지가 true다")
+        void getPostDetail_verifiedAuthor_setsAuthorVerifiedTrue() {
+            Post post = buildPost(1L, author, Category.QNA, false);
+            when(postRepository.findById(1L)).thenReturn(Optional.of(post));
+            when(subscriptionRepository.existsByUser_IdAndStatus(1L, org.example.petinside.domain.subscription.entity.SubscriptionStatus.ACTIVE))
+                    .thenReturn(true);
+
+            PostDetailResponse response = postService.getPostDetail(1L);
+
+            assertThat(response.isAuthorVerified()).isTrue();
         }
 
         @Test
@@ -273,6 +350,29 @@ class PostServiceTest {
             assertThat(post.getCategory()).isEqualTo(Category.BOAST);
             assertThat(post.getTitle()).isEqualTo("수정제목");
             assertThat(post.getContent()).isEqualTo("수정내용");
+        }
+
+        @Test
+        @DisplayName("emojiIds를 전달하면 기존 이모지를 전부 교체한다")
+        void updatePost_withEmojiIds_replacesEmojis() {
+            Post post = buildPost(1L, author, Category.QNA, false);
+            Emoji oldEmoji = Emoji.builder().name("old").imageUrl("http://emoji/old").build();
+            ReflectionTestUtils.setField(oldEmoji, "id", 9L);
+            post.addEmoji(PostEmoji.builder().emoji(oldEmoji).sortOrder(0).build());
+
+            Emoji newEmoji = Emoji.builder().name("new").imageUrl("http://emoji/new").build();
+            ReflectionTestUtils.setField(newEmoji, "id", 3L);
+
+            when(postRepository.findById(1L)).thenReturn(Optional.of(post));
+            when(emojiService.resolveEmojisForAttach(1L, List.of(3L))).thenReturn(List.of(newEmoji));
+
+            PostUpdateRequest request = updateRequest("qna", "t", "c");
+            ReflectionTestUtils.setField(request, "emojiIds", List.of(3L));
+
+            postService.updatePost(1L, 1L, request);
+
+            assertThat(post.getEmojis()).hasSize(1);
+            assertThat(post.getEmojis().get(0).getEmoji().getId()).isEqualTo(3L);
         }
 
         @Test

@@ -22,10 +22,10 @@ export default function OAuthCallbackPage() {
             try {
                 const res = await axiosInstance.post('/api/v1/auth/oauth2/exchange', { code });
                 localStorage.setItem('accessToken', res.data.data.accessToken);
-                localStorage.setItem('refreshToken', res.data.data.refreshToken);
 
                 const me = await axiosInstance.get('/api/v1/users/me');
                 localStorage.setItem('nickname', me.data.data.nickname);
+                localStorage.setItem('profileImageUrl', me.data.data.profileImageUrl ?? '');
 
                 navigate('/');
             } catch {

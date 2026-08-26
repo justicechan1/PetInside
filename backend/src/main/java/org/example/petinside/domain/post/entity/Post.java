@@ -1,6 +1,7 @@
 package org.example.petinside.domain.post.entity;
 
 import org.example.petinside.domain.comment.entity.Comment;
+import org.example.petinside.domain.emoji.entity.PostEmoji;
 import org.example.petinside.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -43,6 +44,9 @@ public class Post {
     @Column(name = "view_count", nullable = false)
     private int viewCount = 0;
 
+    @Column(name = "like_count", nullable = false)
+    private long likeCount = 0;
+
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
 
@@ -55,10 +59,15 @@ public class Post {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
     private List<PostImage> images = new ArrayList<>();
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL)
     private List<Comment> comments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    private List<PostEmoji> emojis = new ArrayList<>();
 
     @Builder
     public Post(User author, Category category, String title, String content) {
@@ -84,6 +93,16 @@ public class Post {
         this.viewCount++;
     }
 
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
+
     public void addImage(PostImage image) {
         this.images.add(image);
         image.setPost(this);
@@ -93,6 +112,18 @@ public class Post {
         this.images.clear();
         for (PostImage image : newImages) {
             addImage(image);
+        }
+    }
+
+    public void addEmoji(PostEmoji emoji) {
+        this.emojis.add(emoji);
+        emoji.setPost(this);
+    }
+
+    public void updateEmojis(List<PostEmoji> newEmojis) {
+        this.emojis.clear();
+        for (PostEmoji emoji : newEmojis) {
+            addEmoji(emoji);
         }
     }
 }

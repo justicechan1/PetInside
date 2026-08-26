@@ -45,12 +45,20 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted = false;
+
+    // 내 게시글 탭 레이아웃 설정 (GRID / LIST). 공개 프로필에도 반영되므로 DB에 저장
+    @Column(name = "profile_layout", nullable = false)
+    private String profileLayout = "LIST";
+
     @Builder
     private User(String username, String password, String nickname, String role) {
         this.username = username;
         this.password = password;
         this.nickname = nickname;
         this.role = role;
+        this.isDeleted = false;
     }
 
     // 로컬 로그인 유저
@@ -84,4 +92,13 @@ public class User {
     public void updateProfileImageUrl(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
     }
+
+    public void updateProfileLayout(String profileLayout) {
+        this.profileLayout = profileLayout;
+    }
+
+    public void delete() {
+        this.isDeleted = true;
+    }
+
 }

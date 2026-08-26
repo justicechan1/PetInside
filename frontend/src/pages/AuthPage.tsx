@@ -12,9 +12,9 @@ export default function AuthPage() {
         try {
             const res = await axiosInstance.post('/api/v1/auth/login', loginForm);
             localStorage.setItem('accessToken', res.data.data.accessToken);
-            localStorage.setItem('refreshToken', res.data.data.refreshToken);
             const me = await axiosInstance.get('/api/v1/users/me');
             localStorage.setItem('nickname', me.data.data.nickname);
+            localStorage.setItem('profileImageUrl', me.data.data.profileImageUrl ?? '');
             navigate('/');
         } catch (e: any) {
             alert(e.response?.data?.message ?? '로그인에 실패했습니다.');
@@ -41,7 +41,15 @@ export default function AuthPage() {
     };
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ minHeight: '100vh', background: 'var(--bg-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <button onClick={() => navigate('/posts')} style={{
+                position: 'absolute', top: 24, left: 24,
+                padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)',
+                background: 'var(--white)', color: 'var(--text-dark)', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+            }}>
+                ← 게시판 둘러보기
+            </button>
+
             <div style={{ width: 400, background: 'var(--white)', borderRadius: 16, padding: 40, boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
 
                 <div onClick={() => navigate('/')}
