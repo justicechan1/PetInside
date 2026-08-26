@@ -11,7 +11,7 @@ public record NotificationResponse(
         Long targetId,
         boolean isRead,
         String linkUrl,
-        LocalDateTime createAt
+        LocalDateTime createdAt
 
 ) {
     public static NotificationResponse from(Notification notification) {
