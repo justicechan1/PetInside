@@ -9,6 +9,7 @@ import org.example.petinside.global.portone.dto.PortOnePayWithBillingKeyResponse
 import org.example.petinside.global.portone.dto.PortOnePaymentDetail;
 import org.example.petinside.global.portone.dto.PortOnePaymentListResponse;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -154,8 +155,13 @@ public class PortOneClient {
 
     // PortOne V2 API 인증 규격에 맞는 인스턴스 생성
     private RestClient client() {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(5000);
+        requestFactory.setReadTimeout(15000);
+
         // V2 API Secret은 별도 토큰 교환 없이 "PortOne {API_SECRET}" 형식으로 바로 사용
         return RestClient.create(BASE_URL).mutate()
+                .requestFactory(requestFactory)
                 .defaultHeader("Authorization", "PortOne " + portOneProperties.apiSecret())
                 .build();
     }

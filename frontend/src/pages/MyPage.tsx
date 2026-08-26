@@ -53,6 +53,8 @@ export default function MyPage() {
     // ─── 결제 내역 ───────────────────────────────────────────────────
     const [payments, setPayments] = useState<PaymentHistoryItem[]>([]);
     const [payLoading, setPayLoading] = useState(false);
+    const [payPage, setPayPage] = useState(0);
+    const [payTotalPages, setPayTotalPages] = useState(0);
 
     // ─── 반려동물 ─────────────────────────────────────────────────────
     const [pets, setPets] = useState<Pet[]>([]);
@@ -116,8 +118,11 @@ export default function MyPage() {
     useEffect(() => {
         if (tab !== 'payment') return;
         setPayLoading(true);
-        getPaymentHistory().then(setPayments).catch(() => {}).finally(() => setPayLoading(false));
-    }, [tab]);
+        getPaymentHistory(payPage)
+            .then(result => { setPayments(result.content); setPayTotalPages(result.totalPages); })
+            .catch(() => {})
+            .finally(() => setPayLoading(false));
+    }, [tab, payPage]);
 
     // ─── 프로필 이미지 ────────────────────────────────────────────────
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -759,6 +764,25 @@ export default function MyPage() {
                                             </span>
                                         </div>
                                     ))}
+                                </div>
+                            )}
+                            {payTotalPages > 1 && (
+                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 16 }}>
+                                    <button onClick={() => setPayPage(p => p - 1)} disabled={payPage === 0} style={{
+                                        padding: '8px 14px', border: '1px solid #e0e0e0', borderRadius: 8,
+                                        background: '#fff', color: payPage === 0 ? '#ccc' : '#666', fontWeight: 700, fontSize: 14,
+                                        cursor: payPage === 0 ? 'default' : 'pointer',
+                                    }}>
+                                        이전
+                                    </button>
+                                    <span style={{ fontSize: 14, color: '#666' }}>{payPage + 1} / {payTotalPages}</span>
+                                    <button onClick={() => setPayPage(p => p + 1)} disabled={payPage >= payTotalPages - 1} style={{
+                                        padding: '8px 14px', border: '1px solid #e0e0e0', borderRadius: 8,
+                                        background: '#fff', color: payPage >= payTotalPages - 1 ? '#ccc' : '#666', fontWeight: 700, fontSize: 14,
+                                        cursor: payPage >= payTotalPages - 1 ? 'default' : 'pointer',
+                                    }}>
+                                        다음
+                                    </button>
                                 </div>
                             )}
                         </div>

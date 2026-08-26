@@ -19,6 +19,8 @@ import org.example.petinside.global.exception.UserNotFoundException;
 import org.example.petinside.global.portone.PortOneClient;
 import org.example.petinside.global.portone.PortOneProperties;
 import org.example.petinside.global.portone.dto.PortOnePaymentDetail;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -62,12 +64,10 @@ public class PaymentService {
         return new PaymentCompleteResponse(payment.getPaymentId(), payment.getStatus(), payment.getAmount(), payment.getCurrency(), payment.getPaidAt());
     }
 
-    // 사용자의 결제 내역 목록 조회 (무효 결제 시도는 제외)
-    public List<PaymentHistoryResponse> getHistory(Long userId) {
-        return paymentRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
-                .filter(payment -> !payment.isReady())
-                .map(PaymentHistoryResponse::from)
-                .toList();
+    // 사용자의 결제 내역 페이징 조회 (결제창 이탈로 미완료된 READY 시도는 제외)
+    public Page<PaymentHistoryResponse> getHistory(Long userId, Pageable pageable) {
+        return paymentRepository.findByUserIdAndStatusNotOrderByCreatedAtDesc(userId, PaymentStatus.READY, pageable)
+                .map(PaymentHistoryResponse::from);
     }
 
     // 최초 결제 시도(Order,Payment) 준비 레코드 생성

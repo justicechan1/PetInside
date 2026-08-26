@@ -18,20 +18,24 @@ export default function PaymentHistoryPage() {
 
     const [history, setHistory] = useState<PaymentHistoryItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
 
     useEffect(() => {
         if (!isAuthenticated()) return;
         (async () => {
             setLoading(true);
             try {
-                setHistory(await getPaymentHistory());
+                const result = await getPaymentHistory(page);
+                setHistory(result.content);
+                setTotalPages(result.totalPages);
             } catch {
                 // 조회 실패는 조용히 무시하고 빈 목록을 보여준다
             } finally {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, [page]);
 
     const cardStyle: React.CSSProperties = {
         background: '#fff', borderRadius: 16, border: '1px solid #f0f0f0',
@@ -76,6 +80,26 @@ export default function PaymentHistoryPage() {
                         </div>
                     )}
                 </div>
+
+                {totalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 20 }}>
+                        <button onClick={() => setPage(p => p - 1)} disabled={page === 0} style={{
+                            padding: '8px 14px', border: '1px solid #e0e0e0', borderRadius: 8,
+                            background: '#fff', color: page === 0 ? '#ccc' : '#666', fontWeight: 700, fontSize: 14,
+                            cursor: page === 0 ? 'default' : 'pointer',
+                        }}>
+                            이전
+                        </button>
+                        <span style={{ fontSize: 14, color: '#666' }}>{page + 1} / {totalPages}</span>
+                        <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1} style={{
+                            padding: '8px 14px', border: '1px solid #e0e0e0', borderRadius: 8,
+                            background: '#fff', color: page >= totalPages - 1 ? '#ccc' : '#666', fontWeight: 700, fontSize: 14,
+                            cursor: page >= totalPages - 1 ? 'default' : 'pointer',
+                        }}>
+                            다음
+                        </button>
+                    </div>
+                )}
 
                 <button onClick={() => navigate('/subscription')} style={{
                     width: '100%', marginTop: 16, padding: '14px', border: '1px solid #e0e0e0',

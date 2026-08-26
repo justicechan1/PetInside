@@ -19,17 +19,15 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findByPaymentId(String paymentId);
 
     // subscription_id 컬럼만 직접 갱신하는 벌크 업데이트.
-    // 엔티티를 로드해서 저장하면, REPEATABLE READ에서 이 트랜잭션이 verifyAndMarkPaid(REQUIRES_NEW)의
-    // PAID 커밋 이전 스냅샷을 그대로 갖고 있다가 그 오래된 필드값 전체로 덮어써서
-    // 방금 커밋된 PAID/paid_at을 되돌려버리는 문제가 있어(subscription_id만 콕 집어 갱신).
-    @Modifying(clearAutomatically = true)
+    @Modifying
     @Query("UPDATE Payment p SET p.subscription = :subscription WHERE p.paymentId = :paymentId")
     int linkSubscription(@Param("paymentId") String paymentId, @Param("subscription") Subscription subscription);
 
     Page<Payment> findByStatus(PaymentStatus status, Pageable pageable);
     Page<Payment> findByUserId(Long userId, Pageable pageable);
 
-    List<Payment> findByUserIdOrderByCreatedAtDesc(Long userId);
+    // 결제 내역 페이징 조회 (결제창 이탈로 미완료된 READY 시도는 제외)
+    Page<Payment> findByUserIdAndStatusNotOrderByCreatedAtDesc(Long userId, PaymentStatus status, Pageable pageable);
 
     // 결제창을 열어놓고 이탈해서 영영 READY로 남는 시도를 자동 만료 처리할 때 사용
     List<Payment> findByStatusAndCreatedAtBefore(PaymentStatus status, LocalDateTime threshold);

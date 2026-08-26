@@ -65,7 +65,9 @@ public class SubscriptionService {
                 new PortOneBillingKeyPaymentRequest.Customer(userId.toString()),
                 new PortOneBillingKeyPaymentRequest.Amount(payment.getAmount()),
                 payment.getCurrency(),
-                noticeUrls()
+                // 빌링키 결제는 이 호출 직후 verifyAndMarkPaid로 동기 확정하므로 웹훅이 굳이 필요 없고,
+                // 오히려 웹훅과 동시에 같은 결제를 확정하려다 DB 락 경합만 일으켰다(2026-08-26).
+                null
         ));
 
         // PortOne API 승인 상태 쟂회 및 PAID 확정 검증
@@ -75,20 +77,11 @@ public class SubscriptionService {
         return creationSteps.activateSubscription(userId, billingKey, payment.getPaymentId());
     }
 
-    // PortOne, 요청 건별로 noticeUrls를 실어 보내 웹훅을 받음.
-    private List<String> noticeUrls() {
-        String webhookNoticeUrl = portOneProperties.webhookNoticeUrl();
-        return webhookNoticeUrl == null || webhookNoticeUrl.isBlank() ? null : List.of(webhookNoticeUrl);
-    }
-
     // 정기 구독 자동 재청구
     public void chargeNextRound(Subscription subscription) {
         try {
             // 결제 준비 엔티티 생성
             Payment payment = paymentService.createNextRoundPayment(subscription);
-            // 구독 연결은 이 트랜잭션(이미 subscription row 락을 쥔 트랜잭션)에서 처리 -
-            // createNextRoundPayment(REQUIRES_NEW)에서 바로 연결하면 자기 자신의 락과 충돌한다.
-            paymentService.linkSubscription(payment.getPaymentId(), subscription);
             BillingKey billingKey = subscription.getBillingKey();
             Long userId = subscription.getUser().getId();
             String rawBillingKey = billingKeyEncryptor.decrypt(billingKey.getBillingKeyEncrypted());
@@ -102,11 +95,18 @@ public class SubscriptionService {
                     new PortOneBillingKeyPaymentRequest.Customer(userId.toString()),
                     new PortOneBillingKeyPaymentRequest.Amount(payment.getAmount()),
                     payment.getCurrency(),
-                    noticeUrls()
+                    // 이 호출 직후 verifyAndMarkPaid로 동기 확정하므로 웹훅이 굳이 필요 없고,
+                    // 오히려 웹훅과 동시에 같은 결제를 확정하려다 DB 락 경합만 일으켰다(2026-08-26).
+                    null
             ));
 
             // 결제 승인 검증 및 성공 상태 업데이트
             Payment paid = paymentService.verifyAndMarkPaid(userId, payment.getPaymentId());
+            // 구독 연결은 verifyAndMarkPaid(REQUIRES_NEW) 이후에 한다 - 먼저 하면 이 트랜잭션이
+            // payment row에 건 락을 verifyAndMarkPaid의 별도 커넥션이 기다리게 돼 자기잠금이 생긴다
+            // (2026-08-26, payment_transaction INSERT에서 반복 재현됨). verifyAndMarkPaid가 끝나
+            // 락이 없는 상태에서 연결하면 안전하다.
+            paymentService.linkSubscription(payment.getPaymentId(), subscription);
             // 구독 연장 처리
             subscription.chargeSucceeded(paid.getPaidAt());
         } catch (RuntimeException e) {
@@ -212,9 +212,6 @@ public class SubscriptionService {
     }
 
     // 내 정기 구독 조회(Pessimistic Lock 적용).
-    // subscription row만 잠그므로, 이후 REQUIRES_NEW로 넘어가기 전에 user를 여기서 미리
-    // (위 filter의 getUser() 호출로) 초기화해둔다 - 그래야 REQUIRES_NEW 트랜잭션에서
-    // LazyInitializationException 없이 이미 로드된 값을 그대로 쓸 수 있다.
     private Subscription findMyRecurringForUpdate(Long userId, Long subscriptionId, Set<SubscriptionStatus> allowedStatuses) {
         Subscription subscription = subscriptionRepository.findByIdForUpdate(subscriptionId)
                 .filter(s -> s.getUser().getId().equals(userId))
