@@ -115,11 +115,11 @@ export default function PostDetailPage() {
                                 <button onClick={() => navigate(`/posts/${postId}/edit`)} style={{
                                     padding: '8px 20px', borderRadius: 8, border: '1px solid #ddd',
                                     background: '#fff', cursor: 'pointer',
-                                }}>수정</button>
+                                }}>{role === 'ADMIN' ? '관리자 수정' : '수정'}</button>
                                 <button onClick={handleDelete} style={{
                                     padding: '8px 20px', borderRadius: 8, border: 'none',
                                     background: '#ff4d4f', color: '#fff', cursor: 'pointer',
-                                }}>삭제</button>
+                                }}>{role === 'ADMIN' ? '관리자 삭제' : '삭제'}</button>
                             </>
                         )}
                         {role === 'ADMIN' && !isAuthor && (
