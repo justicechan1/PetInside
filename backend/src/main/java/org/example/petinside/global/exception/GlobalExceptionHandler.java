@@ -1,5 +1,6 @@
 package org.example.petinside.global.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.example.petinside.global.response.ApiResponse;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -33,9 +35,6 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.<Void>of(HttpStatus.BAD_REQUEST.value(), e.getMessage(), null));
     }
 
-    // 동시 요청으로 중복 체크(existsBy...)를 둘 다 통과한 뒤,
-    // DB의 UNIQUE 제약(username, nickname)에서 걸리는 경우를 대비한 안전장치입니다.
-    // 이 예외를 안 잡으면 500으로 나가는데, 실제로는 "중복 가입" 상황이므로 400으로 맞춰줍니다.
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException e) {
         return ResponseEntity
@@ -84,6 +83,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException e) {
+        log.error("처리되지 않은 서버 오류", e);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.<Void>of(HttpStatus.INTERNAL_SERVER_ERROR.value(), "서버 오류", null));

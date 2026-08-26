@@ -1,6 +1,7 @@
 package org.example.petinside.domain.subscription.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.petinside.domain.payment.dto.PaymentPrepareResponse;
 import org.example.petinside.domain.payment.entity.Payment;
 import org.example.petinside.domain.payment.service.PaymentService;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Set;
 
 // 구독 생성/해지/재개/재시도 등 구독 도메인의 핵심 로직을 담당하는 서비스.
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SubscriptionService {
@@ -105,7 +107,8 @@ public class SubscriptionService {
             // 구독 연장 처리
             subscription.chargeSucceeded(paid.getPaidAt());
         } catch (RuntimeException e) {
-            // 결제 실패
+            // 결제 실패(카드사 거절뿐 아니라 코드 내부 예외도 여기서 전부 삼켜지므로, 원인 진단을 위해 반드시 기록)
+            log.error("정기결제 재청구 실패: subscriptionId={}", subscription.getId(), e);
             subscription.markPaymentFailed();
         } finally {
             // 구독 변경 상태 DB 반영
