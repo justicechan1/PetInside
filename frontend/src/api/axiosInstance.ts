@@ -35,8 +35,11 @@ axiosInstance.interceptors.response.use(
     async (error) => {
         const { config, response } = error;
         const isAuthEndpoint = config?.url?.includes('/api/v1/auth/');
+        // 원래 로그인 상태가 아니었으면(토큰 없음) 세션이 "만료"된 게 아니므로 재발급/리다이렉트 대상이 아님.
+        // 비회원이 보는 공개 페이지에서 부가 API 하나가 401나도 전체 화면을 로그인으로 날리지 않기 위함.
+        const wasLoggedIn = !!localStorage.getItem('accessToken');
 
-        if (response?.status !== 401 || isAuthEndpoint || config._retry) {
+        if (response?.status !== 401 || isAuthEndpoint || config._retry || !wasLoggedIn) {
             return Promise.reject(error);
         }
         config._retry = true;

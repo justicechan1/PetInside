@@ -134,7 +134,7 @@ public class PaymentService {
                 && CURRENCY.equalsIgnoreCase(detail.currency())  // 통화
                 && portOneProperties.storeId().equals(detail.storeId())  // 상점ID
                 && isOurChannel(detail.channel())  // 채널 일치 여부
-                && isTestChannel(detail.channel());
+                && (!portOneProperties.requireTestChannel() || isTestChannel(detail.channel()));  // 로컬/개발 전용 테스트 채널 강제
 
         // 검증 실패 시 예외 처리 및 실패 기록 독립 기록
         if (!verified) {
