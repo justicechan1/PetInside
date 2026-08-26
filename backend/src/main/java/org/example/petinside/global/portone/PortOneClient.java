@@ -155,8 +155,6 @@ public class PortOneClient {
 
     // PortOne V2 API 인증 규격에 맞는 인스턴스 생성
     private RestClient client() {
-        // 기본 RestClient는 연결/응답 타임아웃이 없어서, PortOne 응답이 안 오면 요청이 영영
-        // 멈춰버린다(예외도 안 나고 로그도 안 남아 결제가 READY로 계속 남는 것처럼 보임, 2026-08-26).
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(5000);
         requestFactory.setReadTimeout(15000);

@@ -19,12 +19,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findByPaymentId(String paymentId);
 
     // subscription_id 컬럼만 직접 갱신하는 벌크 업데이트.
-    // 엔티티를 로드해서 저장하면, REPEATABLE READ에서 이 트랜잭션이 verifyAndMarkPaid(REQUIRES_NEW)의
-    // PAID 커밋 이전 스냅샷을 그대로 갖고 있다가 그 오래된 필드값 전체로 덮어써서
-    // 방금 커밋된 PAID/paid_at을 되돌려버리는 문제가 있어(subscription_id만 콕 집어 갱신).
-    // clearAutomatically는 일부러 안 씀 - 영속성 컨텍스트 전체를 비우면 호출부가 들고 있던
-    // subscription(의 billingKey 등 아직 초기화 안 된 연관 엔티티)까지 detach돼서
-    // LazyInitializationException이 났었음(2026-08-26, chargeNextRound에서 재현).
     @Modifying
     @Query("UPDATE Payment p SET p.subscription = :subscription WHERE p.paymentId = :paymentId")
     int linkSubscription(@Param("paymentId") String paymentId, @Param("subscription") Subscription subscription);

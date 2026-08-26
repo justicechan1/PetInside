@@ -53,11 +53,6 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     Optional<Subscription> findByIdWithUser(@Param("id") Long id);
 
     // 비관적 쓰기 락을 적용하여 조회 (이중결제 방지).
-    // subscription 테이블만 잠가야 함 - JOIN FETCH로 user/billingKey까지 같이 조회하면 MySQL이
-    // FOR UPDATE 범위를 JOIN된 테이블까지 넓혀서 user row까지 잠근다. 이 락이 걸린 채로
-    // chargeNextRound가 REQUIRES_NEW(별도 커넥션/트랜잭션)로 user_id를 참조하는 order를 INSERT하면,
-    // 같은 요청 안에서 자기 자신의 락을 기다리다 락 대기시간 초과로 실패하는 자기잠금 문제가 있었다
-    // (2026-08-26). user/billingKey는 여기서 안 잠그고, 호출부에서 필요할 때 별도로(락 없이) 조회한다.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM Subscription s WHERE s.id = :id")
     Optional<Subscription> findByIdForUpdate(@Param("id") Long id);
