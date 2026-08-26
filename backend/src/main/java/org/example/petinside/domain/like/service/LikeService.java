@@ -1,6 +1,7 @@
 package org.example.petinside.domain.like.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.petinside.domain.comment.entity.Comment;
 import org.example.petinside.domain.comment.repository.CommentRepository;
 import org.example.petinside.domain.like.dto.LikeResponse;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -71,7 +73,9 @@ public class LikeService {
                 notificationService.createNotification(authorId, NotificationType.POST_LIKE,
                         "회원님의 게시글에 좋아요가 달렸습니다.", postId, "/posts/" + postId);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("게시글 좋아요 알림 생성 실패: postId={}", postId, e);
+        }
 
         return new LikeResponse(true, post.getLikeCount());
     }
@@ -124,7 +128,9 @@ public class LikeService {
                 notificationService.createNotification(authorId, NotificationType.COMMENT_LIKE,
                         "회원님의 댓글에 좋아요가 달렸습니다.", postId, "/posts/" + postId);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("댓글 좋아요 알림 생성 실패: commentId={}", commentId, e);
+        }
 
         return new LikeResponse(true, comment.getLikeCount());
     }
