@@ -45,6 +45,13 @@ export interface PaymentHistoryItem {
     createdAt: string;
 }
 
+export interface PaymentHistoryPage {
+    content: PaymentHistoryItem[];
+    totalPages: number;
+    totalElements: number;
+    number: number;
+}
+
 export const prepareBillingKey = () =>
     axiosInstance.post<{ data: BillingKeyPrepareResult }>('/api/v1/billing-keys/prepare').then(r => r.data.data);
 
@@ -72,5 +79,5 @@ export const resumeSubscription = (subscriptionId: number) =>
 export const retrySubscriptionPayment = (subscriptionId: number) =>
     axiosInstance.post<{ data: SubscriptionMeResult }>(`/api/v1/subscriptions/${subscriptionId}/retry-payment`).then(r => r.data.data);
 
-export const getPaymentHistory = () =>
-    axiosInstance.get<{ data: PaymentHistoryItem[] }>('/api/v1/payments').then(r => r.data.data);
+export const getPaymentHistory = (page = 0, size = 10) =>
+    axiosInstance.get<{ data: PaymentHistoryPage }>('/api/v1/payments', { params: { page, size } }).then(r => r.data.data);

@@ -32,7 +32,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Page<Payment> findByStatus(PaymentStatus status, Pageable pageable);
     Page<Payment> findByUserId(Long userId, Pageable pageable);
 
-    List<Payment> findByUserIdOrderByCreatedAtDesc(Long userId);
+    // 결제 내역 페이징 조회 (결제창 이탈로 미완료된 READY 시도는 제외)
+    Page<Payment> findByUserIdAndStatusNotOrderByCreatedAtDesc(Long userId, PaymentStatus status, Pageable pageable);
 
     // 결제창을 열어놓고 이탈해서 영영 READY로 남는 시도를 자동 만료 처리할 때 사용
     List<Payment> findByStatusAndCreatedAtBefore(PaymentStatus status, LocalDateTime threshold);
