@@ -9,6 +9,7 @@ import org.example.petinside.global.portone.dto.PortOnePayWithBillingKeyResponse
 import org.example.petinside.global.portone.dto.PortOnePaymentDetail;
 import org.example.petinside.global.portone.dto.PortOnePaymentListResponse;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -154,8 +155,15 @@ public class PortOneClient {
 
     // PortOne V2 API 인증 규격에 맞는 인스턴스 생성
     private RestClient client() {
+        // 기본 RestClient는 연결/응답 타임아웃이 없어서, PortOne 응답이 안 오면 요청이 영영
+        // 멈춰버린다(예외도 안 나고 로그도 안 남아 결제가 READY로 계속 남는 것처럼 보임, 2026-08-26).
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(5000);
+        requestFactory.setReadTimeout(15000);
+
         // V2 API Secret은 별도 토큰 교환 없이 "PortOne {API_SECRET}" 형식으로 바로 사용
         return RestClient.create(BASE_URL).mutate()
+                .requestFactory(requestFactory)
                 .defaultHeader("Authorization", "PortOne " + portOneProperties.apiSecret())
                 .build();
     }

@@ -82,9 +82,6 @@ public class SubscriptionService {
         try {
             // 결제 준비 엔티티 생성
             Payment payment = paymentService.createNextRoundPayment(subscription);
-            // 구독 연결은 이 트랜잭션(이미 subscription row 락을 쥔 트랜잭션)에서 처리 -
-            // createNextRoundPayment(REQUIRES_NEW)에서 바로 연결하면 자기 자신의 락과 충돌한다.
-            paymentService.linkSubscription(payment.getPaymentId(), subscription);
             BillingKey billingKey = subscription.getBillingKey();
             Long userId = subscription.getUser().getId();
             String rawBillingKey = billingKeyEncryptor.decrypt(billingKey.getBillingKeyEncrypted());
@@ -105,6 +102,11 @@ public class SubscriptionService {
 
             // 결제 승인 검증 및 성공 상태 업데이트
             Payment paid = paymentService.verifyAndMarkPaid(userId, payment.getPaymentId());
+            // 구독 연결은 verifyAndMarkPaid(REQUIRES_NEW) 이후에 한다 - 먼저 하면 이 트랜잭션이
+            // payment row에 건 락을 verifyAndMarkPaid의 별도 커넥션이 기다리게 돼 자기잠금이 생긴다
+            // (2026-08-26, payment_transaction INSERT에서 반복 재현됨). verifyAndMarkPaid가 끝나
+            // 락이 없는 상태에서 연결하면 안전하다.
+            paymentService.linkSubscription(payment.getPaymentId(), subscription);
             // 구독 연장 처리
             subscription.chargeSucceeded(paid.getPaidAt());
         } catch (RuntimeException e) {
