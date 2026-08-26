@@ -81,7 +81,14 @@ public class PaymentWebhookService {
         if (payment.getStatus() == PaymentStatus.READY) {
             PortOnePaymentDetail detail = portOneClient.getPaymentDetail(payment.getPaymentId());
             if (PaymentService.PAID_STATUS.equalsIgnoreCase(detail.status())) {
-                paymentService.finalizeByDetail(payment, detail);
+                // 완료 API(verifyAndMarkPaid)와 동시에 같은 결제를 확정하려는 경합을 막기 위해
+                // 락을 걸고 재조회 - 락 획득 후 다시 READY인지 확인해서, 그 사이 API 경로가
+                // 이미 확정했다면 중복 처리하지 않는다(2026-08-26, payment_transaction INSERT
+                // 락 대기시간 초과로 재현됨).
+                Payment locked = paymentRepository.findByPaymentIdForUpdate(payment.getPaymentId()).orElse(null);
+                if (locked != null && locked.getStatus() == PaymentStatus.READY) {
+                    paymentService.finalizeByDetail(locked, detail);
+                }
             }
         }
         // 이미 PAID/FAILED로 처리된 결제에 대한 중복 웹훅은 별도 처리 없이 무처리(멱등)

@@ -105,7 +105,11 @@ public class PaymentService {
         return paymentRepository.save(payment);
     }
 
-    // 검증 대상이 될 READY 상태의 결제건 조회 및 본인 확인
+    // 검증 대상이 될 READY 상태의 결제건 조회 및 본인 확인.
+    // 여기서는 락을 걸지 않는다 - 정기결제 흐름에서는 이 호출 전에 linkSubscription이 같은
+    // payment row를 이미(커밋 전까지) 잡고 있는 트랜잭션 안에서 호출되므로, 여기서 또 락을 걸면
+    // 자기 자신의 락을 기다리는 문제가 생긴다(2026-08-26). 웹훅 경로에서만 락을 걸어
+    // API 경로가 끝나길 기다리게 한다(findByPaymentIdForUpdate).
     @Transactional
     public Payment findReadyPayment(Long userId, String paymentId) {
         Payment payment = paymentRepository.findByPaymentId(paymentId)
