@@ -1,5 +1,6 @@
 package org.example.petinside.global.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.example.petinside.global.response.ApiResponse;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -84,6 +86,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException e) {
+        // 위 핸들러들이 못 잡는 예외는 원인이 로그에 안 남으면 재현 없이는 진단이 불가능하므로 반드시 기록.
+        log.error("처리되지 않은 서버 오류", e);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.<Void>of(HttpStatus.INTERNAL_SERVER_ERROR.value(), "서버 오류", null));
