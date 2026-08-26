@@ -208,9 +208,12 @@ public class SubscriptionService {
         return validateRecurring(subscription, allowedStatuses);
     }
 
-    // 내 정기 구독 조회(Pessimistic Lock 적용)
+    // 내 정기 구독 조회(Pessimistic Lock 적용).
+    // subscription row만 잠그므로, 이후 REQUIRES_NEW로 넘어가기 전에 user를 여기서 미리
+    // (위 filter의 getUser() 호출로) 초기화해둔다 - 그래야 REQUIRES_NEW 트랜잭션에서
+    // LazyInitializationException 없이 이미 로드된 값을 그대로 쓸 수 있다.
     private Subscription findMyRecurringForUpdate(Long userId, Long subscriptionId, Set<SubscriptionStatus> allowedStatuses) {
-        Subscription subscription = subscriptionRepository.findByIdForUpdateWithUser(subscriptionId)
+        Subscription subscription = subscriptionRepository.findByIdForUpdate(subscriptionId)
                 .filter(s -> s.getUser().getId().equals(userId))
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "구독을 찾을 수 없습니다."));
 
