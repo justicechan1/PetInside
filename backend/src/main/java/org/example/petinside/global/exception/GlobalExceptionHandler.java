@@ -35,9 +35,6 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.<Void>of(HttpStatus.BAD_REQUEST.value(), e.getMessage(), null));
     }
 
-    // 동시 요청으로 중복 체크(existsBy...)를 둘 다 통과한 뒤,
-    // DB의 UNIQUE 제약(username, nickname)에서 걸리는 경우를 대비한 안전장치입니다.
-    // 이 예외를 안 잡으면 500으로 나가는데, 실제로는 "중복 가입" 상황이므로 400으로 맞춰줍니다.
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException e) {
         return ResponseEntity
@@ -86,7 +83,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException e) {
-        // 위 핸들러들이 못 잡는 예외는 원인이 로그에 안 남으면 재현 없이는 진단이 불가능하므로 반드시 기록.
         log.error("처리되지 않은 서버 오류", e);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
