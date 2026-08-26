@@ -122,7 +122,7 @@ export default function PostDetailPage() {
                                 }}>삭제</button>
                             </>
                         )}
-                        {role === 'ADMIN' && (
+                        {role === 'ADMIN' && !isAuthor && (
                             <button onClick={() => handleAdminDeletePost(post.id)} style={{
                                 padding: '8px 20px', borderRadius: 8, border: 'none',
                                 background: '#ff4d4f', color: '#fff', cursor: 'pointer',
