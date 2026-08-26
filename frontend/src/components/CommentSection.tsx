@@ -139,8 +139,10 @@ export default function CommentSection({ postId }: { postId: number }) {
                         <div style={{ display: 'flex', gap: 10 }}>
                             {isAuthor && (
                                 <>
-                                    <button style={linkButtonStyle} onClick={() => { setEditTargetId(comment.id); setEditContent(withLegacyEmojiTokens(comment.content, comment.emojis ?? [])); }}>수정</button>
-                                    <button style={linkButtonStyle} onClick={() => handleDelete(comment.id)}>삭제</button>
+                                    <button style={linkButtonStyle} onClick={() => { setEditTargetId(comment.id); setEditContent(withLegacyEmojiTokens(comment.content, comment.emojis ?? [])); }}>{isAdmin ? '관리자 수정' : '수정'}</button>
+                                    {!isAdmin && (
+                                        <button style={linkButtonStyle} onClick={() => handleDelete(comment.id)}>삭제</button>
+                                    )}
                                 </>
                             )}
                             {isAdmin && (
