@@ -29,11 +29,7 @@ jobs:
           VITE_VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
         run: |
           npm ci
-          echo "VITE_API_URL length: ${#VITE_API_URL}"
-          echo "VITE_VAPID_PUBLIC_KEY length: ${#VITE_VAPID_PUBLIC_KEY}"
           npm run build
-          grep -c "localhost:8080" dist/assets/*.js || true
-          grep -o 'baseURL:[a-zA-Z0-9_]*' dist/assets/*.js || true
 
       - name: Deploy to EC2
         env:
