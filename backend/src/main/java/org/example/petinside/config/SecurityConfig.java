@@ -79,13 +79,18 @@ public class SecurityConfig {
                                 "/api/v1/comments/*/likes/me",
                                 "/api/v1/pets/photos/popular"
                         ).permitAll()
-                        // F-33 공개 프로필/작성글 조회는 비회원도 가능 - "/api/v1/users/me"(내 정보, 인증 필요)와
-                        // 겹치지 않도록 숫자 userId만 매칭하는 정규식 사용(Ant 패턴의 *는 "me"도 매칭해버림)
-                        .requestMatchers(
-                                new RegexRequestMatcher("^/api/v1/users/\\d+$", "GET"),
-                                new RegexRequestMatcher("^/api/v1/users/\\d+/posts$", "GET"),
-                                new RegexRequestMatcher("^/api/v1/users/\\d+/pets$", "GET"),
-                                new RegexRequestMatcher("^/api/v1/pets/\\d+/photos$", "GET")
+                        // 공개 프로필 — me/* 는 인증 필요, 나머지 숫자 userId 경로는 비회원 공개
+                        // me/posts 를 먼저 선언해야 */posts 보다 우선 매칭됨
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/users/me",
+                                "/api/v1/users/me/posts",
+                                "/api/v1/users/me/pets"
+                        ).authenticated()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/users/*",
+                                "/api/v1/users/*/posts",
+                                "/api/v1/users/*/pets",
+                                "/api/v1/pets/*/photos"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
