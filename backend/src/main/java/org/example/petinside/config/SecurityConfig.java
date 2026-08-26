@@ -83,7 +83,9 @@ public class SecurityConfig {
                         // 겹치지 않도록 숫자 userId만 매칭하는 정규식 사용(Ant 패턴의 *는 "me"도 매칭해버림)
                         .requestMatchers(
                                 new RegexRequestMatcher("^/api/v1/users/\\d+$", "GET"),
-                                new RegexRequestMatcher("^/api/v1/users/\\d+/posts$", "GET")
+                                new RegexRequestMatcher("^/api/v1/users/\\d+/posts$", "GET"),
+                                new RegexRequestMatcher("^/api/v1/users/\\d+/pets$", "GET"),
+                                new RegexRequestMatcher("^/api/v1/pets/\\d+/photos$", "GET")
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
