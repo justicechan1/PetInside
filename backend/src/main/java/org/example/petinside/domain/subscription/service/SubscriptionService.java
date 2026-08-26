@@ -109,13 +109,17 @@ public class SubscriptionService {
             Payment paid = paymentService.verifyAndMarkPaid(userId, payment.getPaymentId());
             // 구독 연장 처리
             subscription.chargeSucceeded(paid.getPaidAt());
+            log.info("정기결제 재청구 성공(저장 전): subscriptionId={}, status={}, nextBillingAt={}, paymentFailedAt={}",
+                    subscription.getId(), subscription.getStatus(), subscription.getNextBillingAt(), subscription.getPaymentFailedAt());
         } catch (RuntimeException e) {
             // 결제 실패(카드사 거절뿐 아니라 코드 내부 예외도 여기서 전부 삼켜지므로, 원인 진단을 위해 반드시 기록)
             log.error("정기결제 재청구 실패: subscriptionId={}", subscription.getId(), e);
             subscription.markPaymentFailed();
         } finally {
             // 구독 변경 상태 DB 반영
-            subscriptionRepository.save(subscription);
+            Subscription saved = subscriptionRepository.save(subscription);
+            log.info("정기결제 재청구 저장 완료: subscriptionId={}, status={}, nextBillingAt={}, paymentFailedAt={}",
+                    saved.getId(), saved.getStatus(), saved.getNextBillingAt(), saved.getPaymentFailedAt());
         }
     }
 
