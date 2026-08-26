@@ -8,6 +8,8 @@ import org.example.petinside.domain.like.entity.CommentLike;
 import org.example.petinside.domain.like.entity.PostLike;
 import org.example.petinside.domain.like.repository.CommentLikeRepository;
 import org.example.petinside.domain.like.repository.PostLikeRepository;
+import org.example.petinside.domain.notification.entity.NotificationType;
+import org.example.petinside.domain.notification.service.NotificationService;
 import org.example.petinside.domain.post.entity.Post;
 import org.example.petinside.domain.post.repository.PostRepository;
 import org.example.petinside.domain.user.entity.User;
@@ -32,6 +34,7 @@ public class LikeService {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     /**
      * 게시글 좋아요 토글 - 이미 눌렀으면 취소(-1), 안 눌렀으면 등록(+1). 작성자 본인도 가능.
@@ -60,6 +63,16 @@ public class LikeService {
         }
 
         post.increaseLikeCount();
+
+        // 좋아요 추가 시에만 알림 (자신의 글에 자신이 좋아요를 누른 경우 제외)
+        try {
+            Long authorId = post.getAuthor().getId();
+            if (!authorId.equals(userId)) {
+                notificationService.createNotification(authorId, NotificationType.POST_LIKE,
+                        "회원님의 게시글에 좋아요가 달렸습니다.", postId, "/posts/" + postId);
+            }
+        } catch (Exception ignored) {}
+
         return new LikeResponse(true, post.getLikeCount());
     }
 
@@ -102,6 +115,17 @@ public class LikeService {
         }
 
         comment.increaseLikeCount();
+
+        // 좋아요 추가 시에만 알림 (자신의 댓글에 자신이 좋아요를 누른 경우 제외)
+        try {
+            Long authorId = comment.getUser().getId();
+            if (!authorId.equals(userId)) {
+                Long postId = comment.getPost().getId();
+                notificationService.createNotification(authorId, NotificationType.COMMENT_LIKE,
+                        "회원님의 댓글에 좋아요가 달렸습니다.", postId, "/posts/" + postId);
+            }
+        } catch (Exception ignored) {}
+
         return new LikeResponse(true, comment.getLikeCount());
     }
 
