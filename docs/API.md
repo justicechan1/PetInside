@@ -37,21 +37,32 @@ Base URL: `/api/v1`
 | | DELETE | `/comments/{id}` | Bearer | 댓글 삭제 |
 | **Like** | POST | `/posts/{id}/likes` | Bearer | 게시글 좋아요 토글 |
 | | POST | `/comments/{id}/likes` | Bearer | 댓글 좋아요 토글 |
-| | POST | `/pets/{petId}/photos/{photoId}/likes` | Bearer | 펫 사진 좋아요 |
+| | POST | `/pets/{petId}/photos/{photoId}/like` | Bearer | 펫 사진 좋아요 |
 | **Pet** | GET | `/pets/photos/popular` | ✕ | 인기 펫 사진 |
 | | POST | `/pets` | Bearer(구독) | 반려동물 등록 |
 | | GET | `/pets/{id}/photos` | ✕ | 펫 사진 목록 |
 | | POST | `/pets/{id}/photos` | Bearer | 펫 사진 업로드 |
-| **Subscription** | GET | `/subscription` | Bearer | 구독 상태 |
-| | POST | `/subscription/recurring` | Bearer | 정기결제 |
-| | POST | `/subscription/onetime` | Bearer | 단건 결제 |
-| | DELETE | `/subscription` | Bearer | 구독 취소 |
-| **Payment** | GET | `/payments/history` | Bearer | 결제 내역 |
+| **BillingKey** | POST | `/billing-keys/prepare` | Bearer | 빌링키 발급 준비 |
+| | POST | `/billing-keys` | Bearer | 빌링키 등록 (검증·암호화 저장) |
+| **Subscription** | GET | `/subscriptions/me` | Bearer | 내 구독 상태 조회 |
+| | POST | `/subscriptions` | Bearer | 정기결제 구독 신청 |
+| | POST | `/subscriptions/one-time/prepare` | Bearer | 단건 결제 준비 |
+| | POST | `/subscriptions/one-time/complete` | Bearer | 단건 결제 완료 |
+| | PATCH | `/subscriptions/{id}/cancel` | Bearer | 구독 해지 예약 |
+| | PATCH | `/subscriptions/{id}/resume` | Bearer | 구독 해지 예약 취소 |
+| | POST | `/subscriptions/{id}/retry-payment` | Bearer | 결제 실패 재시도 |
+| **Payment** | GET | `/payments` | Bearer | 결제 내역 |
 | | POST | `/payments/webhook` | ✕ | PortOne 웹훅 |
 | **Notification** | GET | `/notifications` | Bearer | 알림 목록 |
-| | POST | `/notifications/subscribe` | Bearer | Push 구독 |
+| | PATCH | `/notifications/{id}/read` | Bearer | 알림 읽음 처리 |
+| | POST | `/notifications/subscribe` | Bearer | Push 구독 등록 |
+| **Emoji** | GET | `/emojis/me` | Bearer(구독) | 이모지 목록 조회 |
 | **Image** | POST | `/images/upload` | Bearer | 이미지 업로드 |
 | **Admin** | GET | `/admin/users` | ADMIN | 회원 목록 |
-| | PATCH | `/admin/users/{id}/role` | ADMIN | 권한 변경 |
+| | PUT | `/admin/users/{id}/role` | ADMIN | 권한 변경 |
+| | DELETE | `/admin/users/{id}` | ADMIN | 회원 삭제 |
 | | DELETE | `/admin/posts/{id}` | ADMIN | 게시글 강제 삭제 |
+| | DELETE | `/admin/comments/{id}` | ADMIN | 댓글 강제 삭제 |
 | | GET | `/admin/statistics/daily` | ADMIN | 일일 통계 |
+| | GET | `/admin/subscriptions` | ADMIN | 구독 회원 목록 |
+| | GET | `/admin/payments` | ADMIN | 구독 결제 목록 |
