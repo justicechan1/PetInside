@@ -86,6 +86,9 @@ public class SubscriptionService {
         try {
             // 결제 준비 엔티티 생성
             Payment payment = paymentService.createNextRoundPayment(subscription);
+            // 구독 연결은 이 트랜잭션(이미 subscription row 락을 쥔 트랜잭션)에서 처리 -
+            // createNextRoundPayment(REQUIRES_NEW)에서 바로 연결하면 자기 자신의 락과 충돌한다.
+            paymentService.linkSubscription(payment.getPaymentId(), subscription);
             BillingKey billingKey = subscription.getBillingKey();
             Long userId = subscription.getUser().getId();
             String rawBillingKey = billingKeyEncryptor.decrypt(billingKey.getBillingKeyEncrypted());
