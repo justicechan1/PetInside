@@ -330,6 +330,26 @@ release/* → 평가용 스냅샷 브랜치
 
 ---
 
+## 📁 프로젝트 문서
+
+| 문서 | 설명 |
+|------|------|
+| [요구사항](docs/요구사항.md) | MVP1 · MVP2 기능 범위 및 미구현 항목 |
+| [사용자흐름](docs/사용자흐름.md) | 로그인 · 게시글 · 구독 플로우차트 |
+| [기능명세](docs/기능명세.md) | F-01 ~ F-71 기능 명세 (전제조건 · 처리 · 예외) |
+| [ERD](docs/ERD.md) | 엔티티 관계도 및 주요 컬럼 설명 |
+| [API 명세](docs/API.md) | API 요약 + Swagger UI 링크 |
+| [화면설계](docs/화면설계.md) | 화면 목록 및 화면↔API 매핑 |
+| [패키지구조](docs/패키지구조.md) | Backend · Frontend 폴더 트리 |
+| [권한매트릭스](docs/권한매트릭스.md) | GUEST / USER / SUBSCRIBER / ADMIN 권한 분리 |
+| [구독상태전이](docs/구독상태전이.md) | ACTIVE → PAST_DUE → EXPIRED 상태 머신 |
+| [외부API연동](docs/외부API연동.md) | PortOne V2 결제 · VAPID Web Push · Google OAuth2 |
+| [배포가이드](docs/배포가이드.md) | GitHub Actions CI/CD · EC2 구성 · Secrets 목록 |
+| [시퀀스](docs/시퀀스.md) | OAuth2 로그인 · 정기결제 · 게시글 작성 시퀀스 |
+| [테스트체크리스트](docs/테스트체크리스트.md) | MVP1 · MVP2 테스트 시트 링크 및 핵심 시나리오 |
+
+---
+
 ## 👥 팀
 
 멋쟁이사자처럼 백엔드 24기 — 3팀 (PetInside)
