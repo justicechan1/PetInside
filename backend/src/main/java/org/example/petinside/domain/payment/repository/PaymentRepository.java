@@ -6,12 +6,9 @@ import org.example.petinside.domain.subscription.entity.Subscription;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
-import jakarta.persistence.LockModeType;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,13 +17,6 @@ import java.util.Optional;
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
     // paymentId는 unique 제약이 걸려있어 멱등성의 핵심 키 역할을 함(같은 결제 재조회/재검증 시 사용)
     Optional<Payment> findByPaymentId(String paymentId);
-
-    // 결제 완료 확정 시 사용 - 완료 API 경로(verifyAndMarkPaid)와 웹훅 경로가 같은 paymentId를
-    // 동시에 확정하려는 경우(정기결제는 noticeUrls로 웹훅도 같이 받음)가 있어, 비관적 락으로
-    // 한쪽이 끝날 때까지 다른 쪽을 대기시켜 동시 INSERT 경합(락 대기시간 초과)을 막는다(2026-08-26).
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT p FROM Payment p WHERE p.paymentId = :paymentId")
-    Optional<Payment> findByPaymentIdForUpdate(@Param("paymentId") String paymentId);
 
     // subscription_id 컬럼만 직접 갱신하는 벌크 업데이트.
     // 엔티티를 로드해서 저장하면, REPEATABLE READ에서 이 트랜잭션이 verifyAndMarkPaid(REQUIRES_NEW)의

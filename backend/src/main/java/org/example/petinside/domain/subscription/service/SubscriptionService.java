@@ -65,7 +65,9 @@ public class SubscriptionService {
                 new PortOneBillingKeyPaymentRequest.Customer(userId.toString()),
                 new PortOneBillingKeyPaymentRequest.Amount(payment.getAmount()),
                 payment.getCurrency(),
-                noticeUrls()
+                // 빌링키 결제는 이 호출 직후 verifyAndMarkPaid로 동기 확정하므로 웹훅이 굳이 필요 없고,
+                // 오히려 웹훅과 동시에 같은 결제를 확정하려다 DB 락 경합만 일으켰다(2026-08-26).
+                null
         ));
 
         // PortOne API 승인 상태 쟂회 및 PAID 확정 검증
@@ -73,12 +75,6 @@ public class SubscriptionService {
 
         // 구독 엔티티 생성 및 결제 이력 연결
         return creationSteps.activateSubscription(userId, billingKey, payment.getPaymentId());
-    }
-
-    // PortOne, 요청 건별로 noticeUrls를 실어 보내 웹훅을 받음.
-    private List<String> noticeUrls() {
-        String webhookNoticeUrl = portOneProperties.webhookNoticeUrl();
-        return webhookNoticeUrl == null || webhookNoticeUrl.isBlank() ? null : List.of(webhookNoticeUrl);
     }
 
     // 정기 구독 자동 재청구
@@ -102,7 +98,9 @@ public class SubscriptionService {
                     new PortOneBillingKeyPaymentRequest.Customer(userId.toString()),
                     new PortOneBillingKeyPaymentRequest.Amount(payment.getAmount()),
                     payment.getCurrency(),
-                    noticeUrls()
+                    // 이 호출 직후 verifyAndMarkPaid로 동기 확정하므로 웹훅이 굳이 필요 없고,
+                    // 오히려 웹훅과 동시에 같은 결제를 확정하려다 DB 락 경합만 일으켰다(2026-08-26).
+                    null
             ));
 
             // 결제 승인 검증 및 성공 상태 업데이트
