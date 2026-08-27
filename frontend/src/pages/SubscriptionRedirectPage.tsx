@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GNB from '../components/GNB';
 import { createBillingKey, createSubscription, completeOneTimePurchase } from '../api/subscriptionApi';
@@ -10,8 +10,15 @@ export default function SubscriptionRedirectPage() {
     const navigate = useNavigate();
     const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
     const [message, setMessage] = useState('결제 결과를 확인하는 중...');
+    // useSearchParams()는 렌더마다 새 객체를 반환해서 effect의 searchParams 의존성이 매 렌더 "변경"으로
+    // 잡힌다. run() 안에서 setStatus/setMessage로 리렌더가 일어나면 effect가 재실행돼 complete API가
+    // 중복 호출(-> 이미 처리된 결제입니다 409)되므로, 최초 1회만 실행되도록 가드.
+    const hasRun = useRef(false);
 
     useEffect(() => {
+        if (hasRun.current) return;
+        hasRun.current = true;
+
         const run = async () => {
             const mode = searchParams.get('mode');
             const code = searchParams.get('code');

@@ -1,6 +1,7 @@
 package org.example.petinside.domain.subscription.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.petinside.domain.payment.dto.PaymentPrepareResponse;
 import org.example.petinside.domain.payment.entity.Payment;
 import org.example.petinside.domain.payment.service.PaymentService;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Set;
 
 // 구독 생성/해지/재개/재시도 등 구독 도메인의 핵심 로직을 담당하는 서비스.
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SubscriptionService {
@@ -63,7 +65,9 @@ public class SubscriptionService {
                 new PortOneBillingKeyPaymentRequest.Customer(userId.toString()),
                 new PortOneBillingKeyPaymentRequest.Amount(payment.getAmount()),
                 payment.getCurrency(),
-                noticeUrls()
+                // 빌링키 결제는 이 호출 직후 verifyAndMarkPaid로 동기 확정하므로 웹훅이 굳이 필요 없고,
+                // 오히려 웹훅과 동시에 같은 결제를 확정하려다 DB 락 경합만 일으켰다(2026-08-26).
+                null
         ));
 
         // PortOne API 승인 상태 쟂회 및 PAID 확정 검증
@@ -71,12 +75,6 @@ public class SubscriptionService {
 
         // 구독 엔티티 생성 및 결제 이력 연결
         return creationSteps.activateSubscription(userId, billingKey, payment.getPaymentId());
-    }
-
-    // PortOne, 요청 건별로 noticeUrls를 실어 보내 웹훅을 받음.
-    private List<String> noticeUrls() {
-        String webhookNoticeUrl = portOneProperties.webhookNoticeUrl();
-        return webhookNoticeUrl == null || webhookNoticeUrl.isBlank() ? null : List.of(webhookNoticeUrl);
     }
 
     // 정기 구독 자동 재청구
@@ -97,15 +95,23 @@ public class SubscriptionService {
                     new PortOneBillingKeyPaymentRequest.Customer(userId.toString()),
                     new PortOneBillingKeyPaymentRequest.Amount(payment.getAmount()),
                     payment.getCurrency(),
-                    noticeUrls()
+                    // 이 호출 직후 verifyAndMarkPaid로 동기 확정하므로 웹훅이 굳이 필요 없고,
+                    // 오히려 웹훅과 동시에 같은 결제를 확정하려다 DB 락 경합만 일으켰다(2026-08-26).
+                    null
             ));
 
             // 결제 승인 검증 및 성공 상태 업데이트
             Payment paid = paymentService.verifyAndMarkPaid(userId, payment.getPaymentId());
+            // 구독 연결은 verifyAndMarkPaid(REQUIRES_NEW) 이후에 한다 - 먼저 하면 이 트랜잭션이
+            // payment row에 건 락을 verifyAndMarkPaid의 별도 커넥션이 기다리게 돼 자기잠금이 생긴다
+            // (2026-08-26, payment_transaction INSERT에서 반복 재현됨). verifyAndMarkPaid가 끝나
+            // 락이 없는 상태에서 연결하면 안전하다.
+            paymentService.linkSubscription(payment.getPaymentId(), subscription);
             // 구독 연장 처리
             subscription.chargeSucceeded(paid.getPaidAt());
         } catch (RuntimeException e) {
-            // 결제 실패
+            // 결제 실패(카드사 거절뿐 아니라 코드 내부 예외도 여기서 전부 삼켜지므로, 원인 진단을 위해 반드시 기록)
+            log.error("정기결제 재청구 실패: subscriptionId={}", subscription.getId(), e);
             subscription.markPaymentFailed();
         } finally {
             // 구독 변경 상태 DB 반영
@@ -205,9 +211,9 @@ public class SubscriptionService {
         return validateRecurring(subscription, allowedStatuses);
     }
 
-    // 내 정기 구독 조회(Pessimistic Lock 적용)
+    // 내 정기 구독 조회(Pessimistic Lock 적용).
     private Subscription findMyRecurringForUpdate(Long userId, Long subscriptionId, Set<SubscriptionStatus> allowedStatuses) {
-        Subscription subscription = subscriptionRepository.findByIdForUpdateWithUser(subscriptionId)
+        Subscription subscription = subscriptionRepository.findByIdForUpdate(subscriptionId)
                 .filter(s -> s.getUser().getId().equals(userId))
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "구독을 찾을 수 없습니다."));
 

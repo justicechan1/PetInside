@@ -34,6 +34,12 @@ export default function GNB() {
         const setupPush = async () => {
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
+            const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+            if (!vapidPublicKey) {
+                console.warn('VITE_VAPID_PUBLIC_KEY가 설정되지 않아 웹푸시 구독을 건너뜁니다.');
+                return;
+            }
+
             const registration = await navigator.serviceWorker.register('/sw.js');
             const permission = await Notification.requestPermission();
             if (permission !== 'granted') return;
@@ -43,13 +49,13 @@ export default function GNB() {
 
             const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC_KEY),
+                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
             });
 
             await subscribePush(subscription.toJSON());
         };
 
-        setupPush();
+        setupPush().catch((e) => console.warn('웹푸시 구독 설정 실패:', e));
     }, [isLoggedIn]);
 
 

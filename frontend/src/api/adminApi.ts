@@ -49,6 +49,21 @@ export interface Payment {
     paidAt: string | null;
 }
 
+// 추가
+export interface AdminPost {
+    id: number;
+    title: string;
+    author: string;
+    category: string;
+    createdAt: string;
+}
+
+export const getAllPosts = (page = 0) =>
+    axiosInstance.get<{ data: PageResult<AdminPost> }>('/api/v1/posts', {
+        params: { page, size: 10 }
+    }).then(r => r.data.data);
+
+
 // API 함수 정의
 export const getDailyStats = () =>
     axiosInstance.get<{ data: DailyStats }>('/api/v1/admin/statistics/daily').then(r => r.data.data);

@@ -52,10 +52,10 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     @Query("SELECT s FROM Subscription s JOIN FETCH s.user LEFT JOIN FETCH s.billingKey WHERE s.id = :id")
     Optional<Subscription> findByIdWithUser(@Param("id") Long id);
 
-    // 비관적 쓰기 락을 적용하여 조회 (이중결제 방지)
+    // 비관적 쓰기 락을 적용하여 조회 (이중결제 방지).
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT s FROM Subscription s JOIN FETCH s.user LEFT JOIN FETCH s.billingKey WHERE s.id = :id")
-    Optional<Subscription> findByIdForUpdateWithUser(@Param("id") Long id);
+    @Query("SELECT s FROM Subscription s WHERE s.id = :id")
+    Optional<Subscription> findByIdForUpdate(@Param("id") Long id);
 
     // 특정 상태의 구독 페이징 조회
     Page<Subscription> findByStatus(SubscriptionStatus status, Pageable pageable);

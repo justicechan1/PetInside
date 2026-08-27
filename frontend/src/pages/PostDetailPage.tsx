@@ -9,6 +9,8 @@ import CommentSection from '../components/CommentSection';
 import LikeButton from '../components/LikeButton';
 import { getPost, deletePost } from '../api/postApi';
 import type { PostDetail } from '../api/postApi';
+import { adminDeletePost } from '../api/adminApi';
+import { getRoleFromToken } from '../utils/auth';
 
 export default function PostDetailPage() {
     const { postId } = useParams<{ postId: string }>();
@@ -18,6 +20,7 @@ export default function PostDetailPage() {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     const nickname = localStorage.getItem('nickname');
+    const role = getRoleFromToken();
 
     useEffect(() => {
         getPost(Number(postId))
@@ -37,6 +40,12 @@ export default function PostDetailPage() {
     const handleDelete = async () => {
         if (!confirm('게시글을 삭제할까요?')) return;
         await deletePost(Number(postId));
+        navigate('/posts');
+    };
+
+    const handleAdminDeletePost = async (id: number) => {
+        if (!confirm('관리자 권한으로 게시글을 삭제할까요?')) return;
+        await adminDeletePost(id);
         navigate('/posts');
     };
 
@@ -99,16 +108,26 @@ export default function PostDetailPage() {
                 )}
 
                 {/* 작성자 버튼 */}
-                {isAuthor && (
+                {(isAuthor || role === 'ADMIN') && (
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 32 }}>
-                        <button onClick={() => navigate(`/posts/${postId}/edit`)} style={{
-                            padding: '8px 20px', borderRadius: 8, border: '1px solid #ddd',
-                            background: '#fff', cursor: 'pointer',
-                        }}>수정</button>
-                        <button onClick={handleDelete} style={{
-                            padding: '8px 20px', borderRadius: 8, border: 'none',
-                            background: '#ff4d4f', color: '#fff', cursor: 'pointer',
-                        }}>삭제</button>
+                        {isAuthor && (
+                            <>
+                                <button onClick={() => navigate(`/posts/${postId}/edit`)} style={{
+                                    padding: '8px 20px', borderRadius: 8, border: '1px solid #ddd',
+                                    background: '#fff', cursor: 'pointer',
+                                }}>{role === 'ADMIN' ? '관리자 수정' : '수정'}</button>
+                                <button onClick={handleDelete} style={{
+                                    padding: '8px 20px', borderRadius: 8, border: 'none',
+                                    background: '#ff4d4f', color: '#fff', cursor: 'pointer',
+                                }}>{role === 'ADMIN' ? '관리자 삭제' : '삭제'}</button>
+                            </>
+                        )}
+                        {role === 'ADMIN' && !isAuthor && (
+                            <button onClick={() => handleAdminDeletePost(post.id)} style={{
+                                padding: '8px 20px', borderRadius: 8, border: 'none',
+                                background: '#ff4d4f', color: '#fff', cursor: 'pointer',
+                            }}>관리자 삭제</button>
+                        )}
                     </div>
                 )}
 

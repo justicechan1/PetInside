@@ -19,6 +19,8 @@ import org.example.petinside.global.exception.UserNotFoundException;
 import org.example.petinside.global.portone.PortOneClient;
 import org.example.petinside.global.portone.PortOneProperties;
 import org.example.petinside.global.portone.dto.PortOnePaymentDetail;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -36,7 +38,7 @@ public class PaymentService {
     // 요금제는 아직 고정 요금 하나. 정기구독/1개월 이용권 공통.
     static final int PLAN_AMOUNT = 1900;
     static final String CURRENCY = "KRW";
-    private static final String PAID_STATUS = "PAID";
+    static final String PAID_STATUS = "PAID";
     private static final String TEST_CHANNEL_TYPE = "TEST";
 
     private final OrderRepository orderRepository;
@@ -62,12 +64,10 @@ public class PaymentService {
         return new PaymentCompleteResponse(payment.getPaymentId(), payment.getStatus(), payment.getAmount(), payment.getCurrency(), payment.getPaidAt());
     }
 
-    // 사용자의 결제 내역 목록 조회 (무효 결제 시도는 제외)
-    public List<PaymentHistoryResponse> getHistory(Long userId) {
-        return paymentRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
-                .filter(payment -> !payment.isReady())
-                .map(PaymentHistoryResponse::from)
-                .toList();
+    // 사용자의 결제 내역 페이징 조회 (결제창 이탈로 미완료된 READY 시도는 제외)
+    public Page<PaymentHistoryResponse> getHistory(Long userId, Pageable pageable) {
+        return paymentRepository.findByUserIdAndStatusNotOrderByCreatedAtDesc(userId, PaymentStatus.READY, pageable)
+                .map(PaymentHistoryResponse::from);
     }
 
     // 최초 결제 시도(Order,Payment) 준비 레코드 생성
@@ -98,7 +98,10 @@ public class PaymentService {
         Order order = orderRepository.save(Order.ready(user, PLAN_AMOUNT, CURRENCY));
         String paymentId = portOneProperties.paymentIdPrefix() + "-SUB-" + UUID.randomUUID().toString().replace("-", "");
         Payment payment = Payment.createReady(user, order, paymentId, nextRound, PLAN_AMOUNT, CURRENCY);
-        payment.linkSubscription(subscription); // 생성 시점에 이미 존재하는 구독 객체 연동
+        // 여기서 subscription_id까지 같이 INSERT하면, 재시도 결제(retryPayment)처럼 호출자가 이미
+        // 그 subscription row에 비관적 락을 쥐고 있는 경우 REQUIRES_NEW(별도 커넥션)의 FK 확인이
+        // 자기 자신의 락을 기다리다 타임아웃난다(2026-08-26). 구독 연결은 호출자가 이미 락을 쥔
+        // 트랜잭션에서 linkSubscription으로 따로 하도록 여기서는 하지 않는다.
         return paymentRepository.save(payment);
     }
 
@@ -134,7 +137,7 @@ public class PaymentService {
                 && CURRENCY.equalsIgnoreCase(detail.currency())  // 통화
                 && portOneProperties.storeId().equals(detail.storeId())  // 상점ID
                 && isOurChannel(detail.channel())  // 채널 일치 여부
-                && isTestChannel(detail.channel());
+                && (!portOneProperties.requireTestChannel() || isTestChannel(detail.channel()));  // 로컬/개발 전용 테스트 채널 강제
 
         // 검증 실패 시 예외 처리 및 실패 기록 독립 기록
         if (!verified) {
@@ -148,12 +151,15 @@ public class PaymentService {
         payment.getOrder().markCompleted();
     }
 
-    // Detached 상태의 Payment 엔티티에 구독 정보 연결
+    // Payment에 구독 정보 연결. subscription_id 컬럼만 갱신하는 벌크 업데이트라
+    // (엔티티를 로드해서 저장하는 방식과 달리) verifyAndMarkPaid가 방금 커밋한 PAID 상태를
+    // 이 트랜잭션의 오래된 스냅샷으로 덮어쓸 위험이 없다.
     @Transactional
     public void linkSubscription(String paymentId, Subscription subscription) {
-        Payment payment = paymentRepository.findByPaymentId(paymentId)
-                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "결제 내역을 찾을 수 없습니다."));
-        payment.linkSubscription(subscription);
+        int updated = paymentRepository.linkSubscription(paymentId, subscription);
+        if (updated == 0) {
+            throw new CustomException(HttpStatus.NOT_FOUND.value(), "결제 내역을 찾을 수 없습니다.");
+        }
     }
 
     // 발급된 결제 채널 키가 당사의 단건/정기결제 채널 키와 일치하는지 검증

@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getComments, createComment, updateComment, deleteComment } from '../api/commentApi';
 import type { CommentItem } from '../api/commentApi';
+import { adminDeleteComment } from '../api/adminApi';
 import Avatar from './Avatar';
 import EmojiPicker from './EmojiPicker';
 import EmojiText from './EmojiText';
 import VerifiedBadge from './VerifiedBadge';
 import { profilePath } from '../utils/profileNav';
 import { extractEmojiIds, withLegacyEmojiTokens } from '../utils/emojiText';
+import { getRoleFromToken } from '../utils/auth';
 
 const inputStyle = {
     width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #ddd',
@@ -27,6 +29,8 @@ export default function CommentSection({ postId }: { postId: number }) {
     const navigate = useNavigate();
     const nickname = localStorage.getItem('nickname');
     const isLoggedIn = !!localStorage.getItem('accessToken');
+    const role = getRoleFromToken();
+    const isAdmin = role === 'ADMIN';
 
     const [comments, setComments] = useState<CommentItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -101,6 +105,16 @@ export default function CommentSection({ postId }: { postId: number }) {
         }
     };
 
+    const handleAdminDeleteComment = async (commentId: number) => {
+        if (!confirm('관리자 권한으로 댓글을 삭제할까요?')) return;
+        try {
+            await adminDeleteComment(commentId);
+            loadComments();
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '댓글 삭제에 실패했습니다.');
+        }
+    };
+
     const renderComment = (comment: CommentItem, isReply: boolean) => {
         const isAuthor = comment.authorNickname === nickname;
         const isEditing = editTargetId === comment.id;
@@ -121,10 +135,19 @@ export default function CommentSection({ postId }: { postId: number }) {
                         </span>
                         <span style={{ color: '#aaa', fontSize: 12 }}>{new Date(comment.createdAt).toLocaleString()}</span>
                     </div>
-                    {isAuthor && !isEditing && (
+                    {!isEditing && (isAuthor || isAdmin) && (
                         <div style={{ display: 'flex', gap: 10 }}>
-                            <button style={linkButtonStyle} onClick={() => { setEditTargetId(comment.id); setEditContent(withLegacyEmojiTokens(comment.content, comment.emojis ?? [])); }}>수정</button>
-                            <button style={linkButtonStyle} onClick={() => handleDelete(comment.id)}>삭제</button>
+                            {isAuthor && (
+                                <>
+                                    <button style={linkButtonStyle} onClick={() => { setEditTargetId(comment.id); setEditContent(withLegacyEmojiTokens(comment.content, comment.emojis ?? [])); }}>{isAdmin ? '관리자 수정' : '수정'}</button>
+                                    {!isAdmin && (
+                                        <button style={linkButtonStyle} onClick={() => handleDelete(comment.id)}>삭제</button>
+                                    )}
+                                </>
+                            )}
+                            {isAdmin && (
+                                <button style={linkButtonStyle} onClick={() => handleAdminDeleteComment(comment.id)}>관리자 삭제</button>
+                            )}
                         </div>
                     )}
                 </div>

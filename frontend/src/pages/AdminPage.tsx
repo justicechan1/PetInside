@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import GNB from '../components/GNB';
 import {
-    getDailyStats, getUsers, updateRole, adminDeletePost, adminDeleteComment,
-    deleteUser, getSubscriptions, getPayments
+    getDailyStats, getUsers, updateRole,
+    deleteUser, getSubscriptions, getPayments, getAllPosts
 } from '../api/adminApi';
-import type { DailyStats, AdminUser, Subscription, Payment, SubscriptionStatus, PaymentStatus } from '../api/adminApi';
+import type { DailyStats, AdminUser, Subscription, Payment, SubscriptionStatus, PaymentStatus, AdminPost } from '../api/adminApi';
 
 type Tab = 'dashboard' | 'users' | 'content' | 'subscription' | 'payment';
 
@@ -14,6 +14,19 @@ export default function AdminPage() {
     const [tab, setTab] = useState<Tab>('dashboard');
     const [isLoading, setIsLoading] = useState(false);
 
+    // 콘텐츠 삭제 (게시글 목록)
+    const [posts, setPosts] = useState<AdminPost[]>([]);
+    const [postTotalPages, setPostTotalPages] = useState(0);
+    const [postPage, setPostPage] = useState(0);
+
+    const loadPosts = (p: number) => {
+        setIsLoading(true);
+        getAllPosts(p)
+            .then(data => { setPosts(data.content); setPostTotalPages(data.totalPages); setPostPage(p); })
+            .catch(() => alert('게시글 목록 조회 실패'))
+            .finally(() => setIsLoading(false));
+    };
+
     // 대시보드
     const [stats, setStats] = useState<DailyStats | null>(null);
 
@@ -21,10 +34,6 @@ export default function AdminPage() {
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [totalPages, setTotalPages] = useState(0);
     const [page, setPage] = useState(0);
-
-    // 게시글/댓글 삭제
-    const [deletePostId, setDeletePostId] = useState('');
-    const [deleteCommentId, setDeleteCommentId] = useState('');
 
     // 구독 회원 관리 (F-41)
     const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -49,6 +58,7 @@ export default function AdminPage() {
             getDailyStats().then(setStats).catch(() => alert('통계 조회 실패. 관리자 권한을 확인하세요.'));
         }
         if (tab === 'users') loadUsers(0);
+        if (tab === 'content') loadPosts(0);
         if (tab === 'subscription') loadSubscriptions(0, subStatusFilter);
         if (tab === 'payment') loadPayments(0, payStatusFilter, payUserIdFilter ? Number(payUserIdFilter) : undefined);
     }, [tab]);
@@ -89,22 +99,6 @@ export default function AdminPage() {
         await deleteUser(user.id);
         alert('회원이 삭제되었습니다.');
         loadUsers(page);
-    };
-
-    const handleDeletePost = async () => {
-        if (!deletePostId) return;
-        if (!confirm(`게시글 ID ${deletePostId}를 삭제할까요?`)) return;
-        await adminDeletePost(Number(deletePostId));
-        alert('삭제되었습니다.');
-        setDeletePostId('');
-    };
-
-    const handleDeleteComment = async () => {
-        if (!deleteCommentId) return;
-        if (!confirm(`댓글 ID ${deleteCommentId}를 삭제할까요?`)) return;
-        await adminDeleteComment(Number(deleteCommentId));
-        alert('삭제되었습니다.');
-        setDeleteCommentId('');
     };
 
     const tabBtn = (t: Tab, label: string) => (
@@ -210,21 +204,30 @@ export default function AdminPage() {
 
                 {/* 콘텐츠 삭제 */}
                 {!isLoading && tab === 'content' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                        <section style={{ background: '#fafafa', borderRadius: 12, padding: 24 }}>
-                            <h3 style={{ marginBottom: 16 }}>게시글 강제 삭제</h3>
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                <input value={deletePostId} onChange={e => setDeletePostId(e.target.value)} placeholder="게시글 ID 입력" style={inputStyle} type="number" />
-                                <button onClick={handleDeletePost} style={{ padding: '10px 20px', border: 'none', borderRadius: 8, background: '#ff4d4f', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>삭제</button>
-                            </div>
-                        </section>
-                        <section style={{ background: '#fafafa', borderRadius: 12, padding: 24 }}>
-                            <h3 style={{ marginBottom: 16 }}>댓글 강제 삭제</h3>
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                <input value={deleteCommentId} onChange={e => setDeleteCommentId(e.target.value)} placeholder="댓글 ID 입력" style={inputStyle} type="number" />
-                                <button onClick={handleDeleteComment} style={{ padding: '10px 20px', border: 'none', borderRadius: 8, background: '#ff4d4f', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>삭제</button>
-                            </div>
-                        </section>
+                    <div>
+                        <h3 style={{ marginBottom: 16 }}>게시글 목록</h3>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                            <tr style={{ background: '#f8f8f8' }}>
+                                {['ID', '제목', '작성일', '관리'].map(h => (
+                                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#666', borderBottom: '1px solid #eee' }}>{h}</th>
+                                ))}
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {posts.map(post => (
+                                <tr key={post.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                                    <td style={{ padding: '12px 16px', fontSize: 13, color: '#999' }}>{post.id}</td>
+                                    <td style={{ padding: '12px 16px', fontSize: 14, cursor: 'pointer' }} onClick={() => navigate(`/posts/${post.id}`)}>{post.title}</td>
+                                    <td style={{ padding: '12px 16px', fontSize: 13, color: '#999' }}>{new Date(post.createdAt).toLocaleDateString()}</td>
+                                    <td style={{ padding: '12px 16px', display: 'flex', gap: 6 }}>
+                                        <button onClick={() => navigate(`/posts/${post.id}`)} style={{ padding: '5px 12px', fontSize: 12, border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer', background: '#fff' }}>보기</button>
+                                    </td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                        {pagination(postTotalPages, postPage, loadPosts)}
                     </div>
                 )}
 
