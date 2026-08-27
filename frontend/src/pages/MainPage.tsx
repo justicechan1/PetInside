@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import GNB from '../components/GNB';
-import VerifiedBadge from '../components/VerifiedBadge';
-import axiosInstance from '../api/axiosInstance';
+import GNB from '../shared/components/GNB';
+import VerifiedBadge from '../shared/components/VerifiedBadge';
+import axiosInstance from '../shared/api/axiosInstance';
 
 interface PopularPhoto {
     photoId: number;

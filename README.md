@@ -7,6 +7,20 @@
 
 ---
 
+## 👥 팀원 및 역할분담
+
+> 상세 역할분담: [MVP1](https://app.notion.com/p/mvp1-ab273873401a839997d68155e779937d) · [MVP2](https://app.notion.com/p/mvp2-3ad73873401a80779433e5b8c86dd8f0)
+
+| 이름 | 역할 | MVP1 담당 | MVP2 담당 |
+|------|------|-----------|-----------|
+| 김태엽 | 팀장 | 마이페이지 (F-05~F-09), Git 관리 | 마이페이지 커스텀 · 펫피드 (F-32, F-33, F-35, F-36) |
+| 정의찬 | 부팀장 | 인증 (F-01~F-04), 명세서 · ERD 설계 | 인증/보안 · 유료구독 (F-19~F-25) |
+| 차시환 | 팀원 | 게시판 (F-10~F-14) | 콘텐츠 개선 · 이모지 · 공개 프로필 (F-26~F-28, F-37, F-39) |
+| 정선우 | 팀원 | 회원/소셜 로그인 (F-04) | 좋아요 · 인증뱃지 (F-29~F-31, F-38) |
+| 정동욱 | 팀원 | 관리자 기능 (F-16~F-20) | 알림 · 관리자 확장 (F-34, F-40~F-42) |
+
+---
+
 ## 📌 주요 기능
 
 ### 인증 / 계정
@@ -48,7 +62,7 @@
 - PortOne SDK v2 연동
 - 정기결제 (빌링키 발급 → 자동 결제, 월 1,900원)
 - 1개월 이용권 (단건 결제)
-- 구독 취소 / 상태 조회 (ACTIVE / INACTIVE)
+- 구독 취소 / 재개 / 상태 조회 (ACTIVE / PAST_DUE / EXPIRED)
 - 결제 내역 조회 (PAID / FAILED 기록, FAILED는 별도 트랜잭션으로 독립 기록)
 - PortOne 웹훅 검증
 
@@ -113,191 +127,98 @@
 
 ## 📂 프로젝트 구조
 
+### Backend
+
 ```
-PetInside/
-├── backend/
-│   └── src/main/java/org/example/petinside/
-│       ├── domain/
-│       │   ├── admin/          # 관리자 (회원·게시글·구독·통계)
-│       │   ├── auth/           # 회원가입, 로그인, 토큰 관리
-│       │   ├── comment/        # 댓글 · 대댓글
-│       │   ├── emoji/          # 커스텀 이모지
-│       │   ├── like/           # 게시글 · 댓글 · 펫 사진 좋아요
-│       │   ├── mypage/         # 마이페이지 (프로필·내 게시글)
-│       │   ├── notification/   # Web Push 알림
-│       │   ├── payment/        # 결제 (PortOne, 결제 내역)
-│       │   ├── pet/            # 반려동물 프로필 · 사진
-│       │   ├── post/           # 게시글 (QNA/BOAST, 이미지)
-│       │   ├── subscription/   # 구독 (정기·단건)
-│       │   └── user/           # 유저 엔티티, 소셜 계정, 공개 프로필
-│       ├── global/
-│       │   ├── exception/      # 전역 예외 처리
-│       │   ├── response/       # 공통 응답 형식
-│       │   ├── security/       # JWT 필터, OAuth2 핸들러
-│       │   └── upload/         # 이미지 업로드
-│       └── config/             # Security, Swagger, JPA Auditing
-│
-└── frontend/
-    └── src/
-        ├── api/                # Axios API 모듈
-        │   ├── axiosInstance.ts      # 인터셉터, 토큰 자동 갱신
-        │   ├── authApi.ts / postApi.ts / commentApi.ts
-        │   ├── likeApi.ts / emojiApi.ts / imageApi.ts
-        │   ├── petApi.ts / mypageApi.ts
-        │   ├── subscriptionApi.ts / notificationApi.ts
-        │   └── adminApi.ts
-        ├── components/
-        │   ├── GNB.tsx               # 글로벌 네비게이션
-        │   ├── NotificationDropDown.tsx
-        │   ├── CommentSection.tsx / LikeButton.tsx
-        │   ├── PetStoryBubbles.tsx / PetProfileHeader.tsx / PetPhotoGrid.tsx
-        │   ├── PhotoLightbox.tsx / EmojiPicker.tsx / Avatar.tsx
-        │   └── VerifiedBadge.tsx / ProtectedAdminRoute.tsx
-        └── pages/
-            ├── MainPage.tsx          # 메인 (인기 펫 사진 + 인기 게시글)
-            ├── AuthPage.tsx          # 로그인 / 회원가입
-            ├── OAuthCallbackPage.tsx # 소셜 로그인 콜백
-            ├── PostListPage.tsx      # 게시글 목록
-            ├── PostDetailPage.tsx    # 게시글 상세 + 댓글
-            ├── PostFormPage.tsx      # 게시글 작성 / 수정
-            ├── MyPage.tsx            # 마이페이지 (4탭)
-            ├── PublicProfilePage.tsx # 공개 프로필
-            ├── SubscriptionPage.tsx  # 구독 · 결제
-            ├── SubscriptionRedirectPage.tsx  # 모바일 결제 리다이렉트
-            ├── PaymentHistoryPage.tsx
-            └── AdminPage.tsx         # 관리자
+backend/src/main/java/org/example/petinside/
+├── domain/
+│   ├── admin/          # 관리자 (회원·게시글·구독·통계)
+│   ├── auth/           # 회원가입, 로그인, 토큰 관리
+│   ├── comment/        # 댓글 · 대댓글
+│   ├── emoji/          # 커스텀 이모지
+│   ├── like/           # 게시글 · 댓글 · 펫 사진 좋아요
+│   ├── mypage/         # 마이페이지 · 공개 프로필
+│   ├── notification/   # Web Push 알림
+│   ├── payment/        # 결제 (PortOne, 결제 내역)
+│   ├── pet/            # 반려동물 프로필 · 사진
+│   ├── post/           # 게시글 (QNA/BOAST, 이미지)
+│   ├── subscription/   # 구독 (정기·단건, 빌링키, 스케줄러)
+│   └── user/           # 유저 엔티티, 소셜 계정
+├── global/
+│   ├── exception/      # 전역 예외 처리
+│   ├── portone/        # PortOne 클라이언트
+│   ├── response/       # 공통 응답 형식
+│   ├── security/       # JWT 필터, OAuth2 핸들러
+│   └── upload/         # 이미지 업로드
+└── config/             # Security, Swagger, JPA Auditing
 ```
 
----
+### Frontend
 
-## 🔌 API 개요
-
-Base URL: `/api/v1`
-
-### Auth (`/api/v1/auth`)
-
-| Method | Endpoint | 설명 | 인증 |
-|--------|----------|------|------|
-| POST | `/signup` | 회원가입 | ✕ |
-| POST | `/login` | 로그인 | ✕ |
-| POST | `/reissue` | Access Token 재발급 | 쿠키 |
-| POST | `/logout` | 로그아웃 | Bearer |
-| POST | `/oauth2/exchange` | OAuth2 코드 → JWT 교환 | ✕ |
-
-### 유저 · 공개 프로필 (`/api/v1/users`)
-
-| Method | Endpoint | 설명 | 인증 |
-|--------|----------|------|------|
-| GET | `/me` | 내 정보 조회 | Bearer |
-| PATCH | `/me/nickname` | 닉네임 변경 | Bearer |
-| PATCH | `/me/password` | 비밀번호 변경 | Bearer |
-| PATCH | `/me/profile-image` | 프로필 이미지 변경 | Bearer |
-| GET | `/{userId}` | 공개 프로필 조회 | ✕ |
-| GET | `/{userId}/posts` | 타 유저 게시글 조회 | ✕ |
-| GET | `/{userId}/pets` | 타 유저 반려동물 목록 | ✕ |
-
-### 게시글 (`/api/v1/posts`)
-
-| Method | Endpoint | 설명 | 인증 |
-|--------|----------|------|------|
-| GET | `/` | 목록 조회 / 검색 (category, keyword, sort, 페이징) | ✕ |
-| GET | `/{postId}` | 상세 조회 | ✕ |
-| POST | `/` | 게시글 작성 | Bearer |
-| PUT | `/{postId}` | 게시글 수정 | Bearer |
-| DELETE | `/{postId}` | 게시글 삭제 | Bearer |
-
-### 댓글 (`/api/v1/posts/{postId}/comments`)
-
-| Method | Endpoint | 설명 | 인증 |
-|--------|----------|------|------|
-| GET | `/` | 댓글 목록 | ✕ |
-| POST | `/` | 댓글 작성 | Bearer |
-| PUT | `/{commentId}` | 댓글 수정 | Bearer |
-| DELETE | `/{commentId}` | 댓글 삭제 | Bearer |
-
-### 좋아요 (`/api/v1`)
-
-| Method | Endpoint | 설명 | 인증 |
-|--------|----------|------|------|
-| POST | `/posts/{postId}/likes` | 게시글 좋아요 토글 | Bearer |
-| GET | `/posts/{postId}/likes/me` | 내 좋아요 여부 | ✕ |
-| POST | `/comments/{commentId}/likes` | 댓글 좋아요 토글 | Bearer |
-| POST | `/pets/{petId}/photos/{photoId}/likes` | 펫 사진 좋아요 토글 | Bearer |
-
-### 반려동물 (`/api/v1/pets`)
-
-| Method | Endpoint | 설명 | 인증 |
-|--------|----------|------|------|
-| GET | `/photos/popular` | 인기 펫 사진 (메인) | ✕ |
-| POST | `/` | 반려동물 등록 | Bearer (구독자) |
-| PUT | `/{petId}` | 반려동물 수정 | Bearer |
-| DELETE | `/{petId}` | 반려동물 삭제 | Bearer |
-| GET | `/{petId}/photos` | 펫 사진 목록 | ✕ |
-| POST | `/{petId}/photos` | 펫 사진 업로드 | Bearer |
-| DELETE | `/{petId}/photos/{photoId}` | 펫 사진 삭제 | Bearer |
-
-### 구독 · 결제 (`/api/v1`)
-
-| Method | Endpoint | 설명 | 인증 |
-|--------|----------|------|------|
-| GET | `/subscription` | 내 구독 상태 | Bearer |
-| POST | `/subscription/recurring` | 정기결제 빌링키 등록 | Bearer |
-| POST | `/subscription/onetime` | 단건 결제 | Bearer |
-| DELETE | `/subscription` | 구독 취소 | Bearer |
-| GET | `/payments/history` | 결제 내역 | Bearer |
-| POST | `/payments/webhook` | PortOne 웹훅 수신 | ✕ |
-
-### 알림 (`/api/v1/notifications`)
-
-| Method | Endpoint | 설명 | 인증 |
-|--------|----------|------|------|
-| GET | `/` | 알림 목록 | Bearer |
-| POST | `/subscribe` | Web Push 구독 | Bearer |
-| PATCH | `/{id}/read` | 알림 읽음 처리 | Bearer |
-
-### 이미지 (`/api/v1/images`)
-
-| Method | Endpoint | 설명 | 인증 |
-|--------|----------|------|------|
-| POST | `/upload` | 이미지 업로드 → URL 반환 | Bearer |
-
-### 관리자 (`/api/v1/admin`) — ADMIN 전용
-
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| GET | `/users` | 회원 목록 |
-| PATCH | `/users/{userId}/role` | 권한 변경 |
-| DELETE | `/posts/{postId}` | 게시글 강제 삭제 |
-| DELETE | `/comments/{commentId}` | 댓글 강제 삭제 |
-| GET | `/subscriptions` | 구독 목록 |
-| GET | `/payments` | 결제 목록 |
-| GET | `/statistics/daily` | 일일 통계 |
+```
+frontend/src/
+├── domains/
+│   ├── admin/
+│   │   ├── api/        # adminApi.ts
+│   │   ├── components/ # ProtectedAdminRoute.tsx
+│   │   └── pages/      # AdminPage.tsx
+│   ├── auth/
+│   │   └── pages/      # AuthPage.tsx, OAuthCallbackPage.tsx
+│   ├── mypage/
+│   │   ├── api/        # mypageApi.ts
+│   │   └── pages/      # MyPage.tsx
+│   ├── notification/
+│   │   ├── api/        # notificationApi.ts
+│   │   └── components/ # NotificationDropDown.tsx
+│   ├── pet/
+│   │   ├── api/        # petApi.ts
+│   │   └── components/ # PetPhotoGrid.tsx, PetProfileHeader.tsx, PetStoryBubbles.tsx, PhotoLightbox.tsx
+│   ├── post/
+│   │   ├── api/        # postApi.ts, commentApi.ts, emojiApi.ts
+│   │   ├── components/ # CommentSection.tsx, EmojiPicker.tsx, EmojiText.tsx
+│   │   └── pages/      # PostListPage.tsx, PostDetailPage.tsx, PostFormPage.tsx
+│   ├── subscription/
+│   │   ├── api/        # subscriptionApi.ts
+│   │   └── pages/      # SubscriptionPage.tsx, SubscriptionRedirectPage.tsx, PaymentHistoryPage.tsx
+│   └── user/
+│       └── pages/      # PublicProfilePage.tsx
+├── shared/
+│   ├── api/            # axiosInstance.ts, imageApi.ts, likeApi.ts
+│   ├── components/     # GNB.tsx, Avatar.tsx, VerifiedBadge.tsx, LikeButton.tsx
+│   ├── hooks/          # useLike.ts
+│   ├── styles/         # common.ts
+│   └── utils/          # auth.ts, push.ts, emojiText.ts, profileNav.ts
+├── pages/
+│   └── MainPage.tsx
+├── App.tsx
+└── main.tsx
+```
 
 ---
 
-## 🗂 데이터 모델 (핵심 엔티티)
+## 🔌 API
 
-| 엔티티 | 설명 |
-|--------|------|
-| User | 사용자 (nickname, email, role, profileImageUrl, profileLayout) |
-| SocialAccount | 소셜 계정 연동 (Google) |
-| Post | 게시글 (title, content, category, viewCount) |
-| PostImage | 게시글 첨부 이미지 |
-| Comment | 댓글 · 대댓글 (self-reference) |
-| PostLike / CommentLike | 좋아요 |
-| Pet | 반려동물 프로필 |
-| PetPhoto | 반려동물 사진 |
-| PetPhotoLike | 펫 사진 좋아요 |
-| Subscription | 구독 (status: ACTIVE / INACTIVE, type: RECURRING / ONE_TIME) |
-| Payment | 결제 내역 (status: READY / PAID / FAILED) |
-| PushSubscription | Web Push VAPID 구독 정보 |
-| RefreshToken | Refresh Token |
+Swagger UI에서 전체 API 명세를 확인할 수 있습니다.
 
-Role: `USER` · `ADMIN`  
-Category: `QNA` · `BOAST`
+📄 **https://15-164-213-118.nip.io/swagger-ui/index.html**
+
+| 도메인 | Base Path |
+|--------|-----------|
+| 인증 | `/api/v1/auth` |
+| 유저 · 공개 프로필 | `/api/v1/users` |
+| 게시글 | `/api/v1/posts` |
+| 댓글 | `/api/v1/posts/{postId}/comments` |
+| 좋아요 | `/api/v1/posts, /api/v1/comments, /api/v1/pets` |
+| 반려동물 | `/api/v1/pets` |
+| 빌링키 | `/api/v1/billing-keys` |
+| 구독 | `/api/v1/subscriptions` |
+| 결제 | `/api/v1/payments` |
+| 알림 | `/api/v1/notifications` |
+| 이모지 | `/api/v1/emojis` |
+| 이미지 | `/api/v1/images` |
+| 관리자 | `/api/v1/admin` |
 
 ---
-
 
 ## 🔒 보안 설계
 
@@ -325,7 +246,6 @@ Category: `QNA` · `BOAST`
 ```
 feature/* → develop (PR · Squash and merge)
 develop   → main    (배포 시 PR)
-release/* → 평가용 스냅샷 브랜치
 ```
 
 ---
@@ -334,22 +254,16 @@ release/* → 평가용 스냅샷 브랜치
 
 | 문서 | 설명 |
 |------|------|
-| [요구사항](docs/요구사항.md) | MVP1 · MVP2 기능 범위 및 미구현 항목 |
+| [요구사항](docs/요구사항.md) | MVP1 · MVP2 기능 범위 |
 | [사용자흐름](docs/사용자흐름.md) | 로그인 · 게시글 · 구독 플로우차트 |
-| [기능명세](docs/기능명세.md) | F-01 ~ F-71 기능 명세 (전제조건 · 처리 · 예외) |
-| [ERD](docs/ERD.md) | 엔티티 관계도 및 주요 컬럼 설명 |
+| [기능명세](docs/기능명세.md) | F-01 ~ F-42 기능 명세 |
+| [ERD](docs/ERD.md) | 엔티티 관계도 |
 | [API 명세](docs/API.md) | API 요약 + Swagger UI 링크 |
 | [화면설계](docs/화면설계.md) | 화면 목록 및 화면↔API 매핑 |
 | [패키지구조](docs/패키지구조.md) | Backend · Frontend 폴더 트리 |
 | [권한매트릭스](docs/권한매트릭스.md) | GUEST / USER / SUBSCRIBER / ADMIN 권한 분리 |
 | [구독상태전이](docs/구독상태전이.md) | ACTIVE → PAST_DUE → EXPIRED 상태 머신 |
-| [외부API연동](docs/외부API연동.md) | PortOne V2 결제 · VAPID Web Push · Google OAuth2 |
-| [배포가이드](docs/배포가이드.md) | GitHub Actions CI/CD · EC2 구성 · Secrets 목록 |
-| [시퀀스](docs/시퀀스.md) | OAuth2 로그인 · 정기결제 · 게시글 작성 시퀀스 |
-| [테스트체크리스트](docs/테스트체크리스트.md) | MVP1 · MVP2 테스트 시트 링크 및 핵심 시나리오 |
-
----
-
-## 👥 팀
-
-멋쟁이사자처럼 백엔드 24기 — 3팀 (PetInside)
+| [외부API연동](docs/외부API연동.md) | PortOne V2 · VAPID Web Push · Google OAuth2 |
+| [배포가이드](docs/배포가이드.md) | GitHub Actions CI/CD · EC2 구성 |
+| [시퀀스](docs/시퀀스.md) | 주요 흐름 시퀀스 다이어그램 |
+| [테스트체크리스트](docs/테스트체크리스트.md) | 핵심 시나리오 체크리스트 |

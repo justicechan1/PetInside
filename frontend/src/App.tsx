@@ -1,17 +1,17 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import MainPage from './pages/MainPage';
-import AuthPage from './pages/AuthPage';
-import OAuthCallbackPage from './pages/OAuthCallbackPage';
-import PostListPage from './pages/PostListPage';
-import PostDetailPage from './pages/PostDetailPage';
-import PostFormPage from './pages/PostFormPage';
-import MyPage from './pages/MyPage';
-import PublicProfilePage from './pages/PublicProfilePage';
-import SubscriptionPage from './pages/SubscriptionPage';
-import SubscriptionRedirectPage from './pages/SubscriptionRedirectPage';
-import PaymentHistoryPage from './pages/PaymentHistoryPage';
-import AdminPage from './pages/AdminPage';
-import ProtectedAdminRoute from "./components/ProtectedAdminRoute.tsx";
+import AuthPage from './domains/auth/pages/AuthPage';
+import OAuthCallbackPage from './domains/auth/pages/OAuthCallbackPage';
+import PostListPage from './domains/post/pages/PostListPage';
+import PostDetailPage from './domains/post/pages/PostDetailPage';
+import PostFormPage from './domains/post/pages/PostFormPage';
+import MyPage from './domains/mypage/pages/MyPage';
+import PublicProfilePage from './domains/user/pages/PublicProfilePage';
+import SubscriptionPage from './domains/subscription/pages/SubscriptionPage';
+import SubscriptionRedirectPage from './domains/subscription/pages/SubscriptionRedirectPage';
+import PaymentHistoryPage from './domains/subscription/pages/PaymentHistoryPage';
+import AdminPage from './domains/admin/pages/AdminPage';
+import ProtectedAdminRoute from './domains/admin/components/ProtectedAdminRoute';
 
 export default function App() {
     return (
