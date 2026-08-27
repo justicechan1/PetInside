@@ -7,6 +7,10 @@ on:
       - 'frontend/**'
   workflow_dispatch:
 
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -20,9 +24,12 @@ jobs:
 
       - name: Install and build
         working-directory: frontend
+        env:
+          VITE_API_URL: https://${{ secrets.EC2_HOST }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
         run: |
           npm ci
-          VITE_API_URL=https://${{ secrets.EC2_HOST }} npm run build
+          npm run build
 
       - name: Deploy to EC2
         env:
