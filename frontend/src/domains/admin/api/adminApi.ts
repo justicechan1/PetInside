@@ -94,3 +94,30 @@ export const getPayments = (page = 0, status?: PaymentStatus | '', userId?: numb
     axiosInstance.get<{ data: PageResult<Payment> }>('/api/v1/admin/payments', {
         params: { page, size: 10, status: status || undefined, userId: userId || undefined },
     }).then(r => r.data.data);
+
+// 백엔드 ReportStatus: PENDING | RESOLVED | REJECTED
+export type ReportStatus = 'PENDING' | 'RESOLVED' | 'REJECTED';
+export type ReportTargetType = 'POST' | 'COMMENT';
+export type ReportReason = 'SPAM' | 'ABUSE' | 'OBSCENE' | 'OTHER';
+
+export interface AdminReport {
+    id: number;
+    targetType: ReportTargetType;
+    targetId: number;
+    reason: ReportReason;
+    detail: string | null;
+    status: ReportStatus;
+    reporterId: number;
+    reporterNickname: string;
+    createdAt: string;
+}
+
+// F-44: 신고 목록 (status 지원)
+export const getReports = (page = 0, status?: ReportStatus | '') =>
+    axiosInstance.get<{ data: PageResult<AdminReport> }>('/api/v1/admin/reports', {
+        params: { page, size: 10, status: status || undefined },
+    }).then(r => r.data.data);
+
+// F-45: 신고 처리 (삭제 또는 반려)
+export const resolveReport = (reportId: number, action: 'DELETE' | 'REJECT') =>
+    axiosInstance.patch(`/api/v1/admin/reports/${reportId}`, { action });
