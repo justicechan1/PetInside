@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import GNB from '../components/GNB';
 import {
     getDailyStats, getUsers, updateRole,
-    deleteUser, getSubscriptions, getPayments, getAllPosts
+    deleteUser, getSubscriptions, getPayments, getAllPosts,
+    getReports, resolveReport
 } from '../api/adminApi';
-import type { DailyStats, AdminUser, Subscription, Payment, SubscriptionStatus, PaymentStatus, AdminPost } from '../api/adminApi';
+import type { DailyStats, AdminUser, Subscription, Payment, SubscriptionStatus, PaymentStatus, AdminPost, AdminReport, ReportStatus } from '../api/adminApi';
 
-type Tab = 'dashboard' | 'users' | 'content' | 'subscription' | 'payment';
+type Tab = 'dashboard' | 'users' | 'content' | 'subscription' | 'payment' | 'report';
 
 export default function AdminPage() {
     const navigate = useNavigate();
@@ -48,6 +49,12 @@ export default function AdminPage() {
     const [payStatusFilter, setPayStatusFilter] = useState<PaymentStatus | ''>('');
     const [payUserIdFilter, setPayUserIdFilter] = useState('');
 
+    // 신고 관리
+    const [reports, setReports] = useState<AdminReport[]>([]);
+    const [reportTotalPages, setReportTotalPages] = useState(0);
+    const [reportPage, setReportPage] = useState(0);
+    const [reportStatusFilter, setReportStatusFilter] = useState<ReportStatus | ''>('');
+
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
         if (!token) { navigate('/login'); return; }
@@ -61,6 +68,7 @@ export default function AdminPage() {
         if (tab === 'content') loadPosts(0);
         if (tab === 'subscription') loadSubscriptions(0, subStatusFilter);
         if (tab === 'payment') loadPayments(0, payStatusFilter, payUserIdFilter ? Number(payUserIdFilter) : undefined);
+        if (tab === 'report') loadReports(0, reportStatusFilter);
     }, [tab]);
 
     const loadUsers = (p: number) => {
@@ -99,6 +107,28 @@ export default function AdminPage() {
         await deleteUser(user.id);
         alert('회원이 삭제되었습니다.');
         loadUsers(page);
+    };
+
+    const loadReports = (p: number, status?: ReportStatus | '') => {
+        setIsLoading(true);
+        getReports(p, status)
+            .then(data => { setReports(data.content); setReportTotalPages(data.totalPages); setReportPage(p); })
+            .catch(() => alert('신고 목록 조회 실패'))
+            .finally(() => setIsLoading(false));
+    };
+
+    const handleResolveReport = async (report: AdminReport, action: 'DELETE' | 'REJECT') => {
+        const message = action === 'DELETE'
+            ? '신고된 대상을 삭제 처리할까요?'
+            : '이 신고를 반려할까요?';
+        if (!confirm(message)) return;
+        try {
+            await resolveReport(report.id, action);
+            alert(action === 'DELETE' ? '삭제 처리되었습니다.' : '반려되었습니다.');
+            loadReports(reportPage, reportStatusFilter);
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '신고 처리에 실패했습니다.');
+        }
     };
 
     const tabBtn = (t: Tab, label: string) => (
@@ -148,6 +178,7 @@ export default function AdminPage() {
                     {tabBtn('dashboard', '대시보드')}
                     {tabBtn('users', '회원 관리')}
                     {tabBtn('content', '콘텐츠 삭제')}
+                    {tabBtn('report', '신고 관리')}
                     {tabBtn('subscription', '구독 회원 관리')}
                     {tabBtn('payment', '결제 내역')}
                 </div>
@@ -228,6 +259,74 @@ export default function AdminPage() {
                             </tbody>
                         </table>
                         {pagination(postTotalPages, postPage, loadPosts)}
+                    </div>
+                )}
+
+                {/* 신고 관리 */}
+                {!isLoading && tab === 'report' && (
+                    <div>
+                        <h3 style={{ marginBottom: 16 }}>신고 목록</h3>
+                        <div style={{ marginBottom: 16 }}>
+                            <select value={reportStatusFilter} onChange={e => {
+                                const val = e.target.value as ReportStatus | '';
+                                setReportStatusFilter(val);
+                                loadReports(0, val);
+                            }} style={inputStyle}>
+                                <option value="">상태 전체</option>
+                                <option value="PENDING">PENDING (대기중)</option>
+                                <option value="RESOLVED">RESOLVED (삭제 처리됨)</option>
+                                <option value="REJECTED">REJECTED (반려됨)</option>
+                            </select>
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                            <tr style={{ background: '#f8f8f8' }}>
+                                {['ID', '대상', '사유', '상세', '신고자', '상태', '신고일', '관리'].map(h => (
+                                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: '#666', borderBottom: '1px solid #eee' }}>{h}</th>
+                                ))}
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {reports.map(report => {
+                                const reasonLabel: Record<string, string> = {
+                                    SPAM: '스팸/광고', ABUSE: '욕설/비방', OBSCENE: '음란물', OTHER: '기타',
+                                };
+                                return (
+                                    <tr key={report.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                                        <td style={{ padding: '12px 16px', fontSize: 13, color: '#999' }}>{report.id}</td>
+                                        <td
+                                            style={{ padding: '12px 16px', fontSize: 14, cursor: report.targetType === 'POST' ? 'pointer' : 'default' }}
+                                            onClick={() => report.targetType === 'POST' && navigate(`/posts/${report.targetId}`)}
+                                        >
+                                            {report.targetType === 'POST' ? '게시글' : '댓글'} #{report.targetId}
+                                        </td>
+                                        <td style={{ padding: '12px 16px', fontSize: 13 }}>{reasonLabel[report.reason] ?? report.reason}</td>
+                                        <td style={{ padding: '12px 16px', fontSize: 13, color: '#666', maxWidth: 200 }}>{report.detail || '-'}</td>
+                                        <td style={{ padding: '12px 16px', fontSize: 14 }}>{report.reporterNickname}</td>
+                                        <td style={{ padding: '12px 16px' }}>
+                                            <span style={{
+                                                fontSize: 12, padding: '2px 10px', borderRadius: 10,
+                                                background: report.status === 'PENDING' ? '#fff3cd' : report.status === 'RESOLVED' ? '#fdecea' : '#f0f0f0',
+                                                color: report.status === 'PENDING' ? '#856404' : report.status === 'RESOLVED' ? '#c0392b' : '#666',
+                                            }}>{report.status}</span>
+                                        </td>
+                                        <td style={{ padding: '12px 16px', fontSize: 13, color: '#999' }}>{new Date(report.createdAt).toLocaleDateString()}</td>
+                                        <td style={{ padding: '12px 16px', display: 'flex', gap: 6 }}>
+                                            {report.status === 'PENDING' ? (
+                                                <>
+                                                    <button onClick={() => handleResolveReport(report, 'DELETE')} style={{ padding: '5px 12px', fontSize: 12, border: 'none', borderRadius: 6, cursor: 'pointer', background: '#ff4d4f', color: '#fff' }}>삭제</button>
+                                                    <button onClick={() => handleResolveReport(report, 'REJECT')} style={{ padding: '5px 12px', fontSize: 12, border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer', background: '#fff' }}>반려</button>
+                                                </>
+                                            ) : (
+                                                <span style={{ fontSize: 12, color: '#bbb' }}>처리 완료</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            </tbody>
+                        </table>
+                        {pagination(reportTotalPages, reportPage, (i) => loadReports(i, reportStatusFilter))}
                     </div>
                 )}
 

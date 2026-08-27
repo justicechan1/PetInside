@@ -8,6 +8,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.petinside.domain.payment.dto.PaymentSummaryResponse;
 import org.example.petinside.domain.payment.entity.PaymentStatus;
+import org.example.petinside.domain.report.dto.ReportResolveRequest;
+import org.example.petinside.domain.report.dto.ReportResolveResponse;
+import org.example.petinside.domain.report.dto.ReportResponse;
+import org.example.petinside.domain.report.entity.ReportStatus;
 import org.example.petinside.domain.subscription.dto.SubscriptionSummaryResponse;
 import org.example.petinside.domain.subscription.entity.SubscriptionStatus;
 import org.example.petinside.domain.user.dto.UserSummaryResponse;
@@ -169,5 +173,40 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.of(200, "결제 목록 조회 성공", response));
     }
 
+    // F-44
+    @Operation(summary = "신고 목록 조회", description = "게시글/댓글/대댓글 신고 목록을 페이징하여 조회")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증이 필요합니다"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "ADMIN 권한이 없습니다")
+    })
+    @GetMapping("/reports")
+    public ResponseEntity<ApiResponse<Page<ReportResponse>>> getReports(
+            @Parameter(description = "신고 처리 상태 필터(PENDING/RESOLVED/REJECTED)", example = "PENDING")
+            @RequestParam(required = false) ReportStatus status,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        Page<ReportResponse> response = adminService.getReports(status, pageable);
+        return ResponseEntity.ok(ApiResponse.of(200, "조회 성공", response));
+    }
+
+    // F-45
+    @Operation(summary = "신고 처리", description = "신고된 게시글/댓글을 삭제하거나 신고를 반려 처리")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "신고 처리 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "이미 처리된 신고인 경우"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증이 필요합니다"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "ADMIN 권한이 없습니다"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "존재하지 않는 신고입니다")
+    })
+    @PatchMapping("/reports/{reportId}")
+    public ResponseEntity<ApiResponse<ReportResolveResponse>> resolveReport(
+            @Parameter(description = "처리할 신고 ID", example = "1")
+            @PathVariable Long reportId,
+            @Valid @RequestBody ReportResolveRequest request
+    ) {
+        ReportResolveResponse response = adminService.resolveReport(reportId, request.action());
+        return ResponseEntity.ok(ApiResponse.of(200, "신고가 처리되었습니다.", response));
+    }
 
 }

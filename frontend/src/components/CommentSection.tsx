@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { getComments, createComment, updateComment, deleteComment } from '../api/commentApi';
 import type { CommentItem } from '../api/commentApi';
 import { adminDeleteComment } from '../api/adminApi';
+import { createReport } from '../api/reportApi';
+import type { ReportReason } from '../api/reportApi';
 import Avatar from './Avatar';
 import EmojiPicker from './EmojiPicker';
 import EmojiText from './EmojiText';
@@ -45,6 +47,9 @@ export default function CommentSection({ postId }: { postId: number }) {
     const [editTargetId, setEditTargetId] = useState<number | null>(null);
     const [editContent, setEditContent] = useState('');
     const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const [reportTargetId, setReportTargetId] = useState<number | null>(null);
+    const [reportReason, setReportReason] = useState<ReportReason>('SPAM');
+    const [reportDetail, setReportDetail] = useState('');
 
     const loadComments = () => {
         setLoading(true);
@@ -115,6 +120,18 @@ export default function CommentSection({ postId }: { postId: number }) {
         }
     };
 
+    const handleReportSubmit = async (commentId: number) => {
+        try {
+            await createReport('COMMENT', commentId, reportReason, reportDetail.trim() || undefined);
+            alert('신고가 접수되었습니다.');
+            setReportTargetId(null);
+            setReportReason('SPAM');
+            setReportDetail('');
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '신고 접수에 실패했습니다.');
+        }
+    };
+
     const renderComment = (comment: CommentItem, isReply: boolean) => {
         const isAuthor = comment.authorNickname === nickname;
         const isEditing = editTargetId === comment.id;
@@ -135,7 +152,7 @@ export default function CommentSection({ postId }: { postId: number }) {
                         </span>
                         <span style={{ color: '#aaa', fontSize: 12 }}>{new Date(comment.createdAt).toLocaleString()}</span>
                     </div>
-                    {!isEditing && (isAuthor || isAdmin) && (
+                    {!isEditing && (isAuthor || isAdmin || isLoggedIn) && (
                         <div style={{ display: 'flex', gap: 10 }}>
                             {isAuthor && (
                                 <>
@@ -147,6 +164,13 @@ export default function CommentSection({ postId }: { postId: number }) {
                             )}
                             {isAdmin && (
                                 <button style={linkButtonStyle} onClick={() => handleAdminDeleteComment(comment.id)}>관리자 삭제</button>
+                            )}
+                            {!isAuthor && isLoggedIn && (
+                                <button style={linkButtonStyle} onClick={() => {
+                                    setReportTargetId(reportTargetId === comment.id ? null : comment.id);
+                                    setReportReason('SPAM');
+                                    setReportDetail('');
+                                }}>신고</button>
                             )}
                         </div>
                     )}
@@ -170,6 +194,27 @@ export default function CommentSection({ postId }: { postId: number }) {
                     <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
                         <EmojiText text={comment.content} emojis={comment.emojis} size={135} />
                     </p>
+                )}
+
+                {reportTargetId === comment.id && (
+                    <div style={{ marginTop: 8, padding: 12, background: '#fafafa', borderRadius: 8 }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                            <select value={reportReason} onChange={e => setReportReason(e.target.value as ReportReason)}
+                                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #ddd', fontSize: 13 }}>
+                                <option value="SPAM">스팸/광고</option>
+                                <option value="ABUSE">욕설/비방</option>
+                                <option value="OBSCENE">음란물</option>
+                                <option value="OTHER">기타</option>
+                            </select>
+                        </div>
+                        <textarea rows={2} style={inputStyle} placeholder="상세 사유(선택)"
+                                  value={reportDetail} onChange={e => setReportDetail(e.target.value)} />
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                            <button style={buttonStyle} onClick={() => handleReportSubmit(comment.id)}>신고 제출</button>
+                            <button style={{ ...buttonStyle, background: '#fff', color: '#333', border: '1px solid #ddd' }}
+                                    onClick={() => setReportTargetId(null)}>취소</button>
+                        </div>
+                    </div>
                 )}
 
                 {!isReply && (
