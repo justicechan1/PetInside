@@ -60,7 +60,7 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.<Void>of(HttpStatus.UNAUTHORIZED.value(), e.getMessage(), null));
     }
 
-    @ExceptionHandler({UserNotFoundException.class, PostNotFoundException.class, CommentNotFoundException.class})
+    @ExceptionHandler({UserNotFoundException.class, PostNotFoundException.class, CommentNotFoundException.class, ReportNotFoundException.class})
     public ResponseEntity<ApiResponse<Void>> handleNotFoundException(RuntimeException e) {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)

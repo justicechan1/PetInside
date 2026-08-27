@@ -11,6 +11,8 @@ import { getPost, deletePost } from '../api/postApi';
 import type { PostDetail } from '../api/postApi';
 import { adminDeletePost } from '../../admin/api/adminApi';
 import { getRoleFromToken } from '../../../shared/utils/auth';
+import { createReport } from '../api/reportApi';
+import type { ReportReason } from '../api/reportApi';
 
 export default function PostDetailPage() {
     const { postId } = useParams<{ postId: string }>();
@@ -18,9 +20,13 @@ export default function PostDetailPage() {
     const [post, setPost] = useState<PostDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [showReportForm, setShowReportForm] = useState(false);
+    const [reportReason, setReportReason] = useState<ReportReason>('SPAM');
+    const [reportDetail, setReportDetail] = useState('');
 
     const nickname = localStorage.getItem('nickname');
     const role = getRoleFromToken();
+    const isLoggedIn = !!localStorage.getItem('accessToken');
 
     useEffect(() => {
         getPost(Number(postId))
@@ -47,6 +53,18 @@ export default function PostDetailPage() {
         if (!confirm('관리자 권한으로 게시글을 삭제할까요?')) return;
         await adminDeletePost(id);
         navigate('/posts');
+    };
+
+    const handleReportSubmit = async () => {
+        try {
+            await createReport('POST', Number(postId), reportReason, reportDetail.trim() || undefined);
+            alert('신고가 접수되었습니다.');
+            setShowReportForm(false);
+            setReportReason('SPAM');
+            setReportDetail('');
+        } catch (e: any) {
+            alert(e.response?.data?.message ?? '신고 접수에 실패했습니다.');
+        }
     };
 
     if (loading) return <div><GNB /><p style={{ textAlign: 'center', marginTop: 80 }}>불러오는 중...</p></div>;
@@ -108,8 +126,8 @@ export default function PostDetailPage() {
                 )}
 
                 {/* 작성자 버튼 */}
-                {(isAuthor || role === 'ADMIN') && (
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 32 }}>
+                {(isAuthor || role === 'ADMIN' || (isLoggedIn && !isAuthor)) && (
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 8 }}>
                         {isAuthor && (
                             <>
                                 <button onClick={() => navigate(`/posts/${postId}/edit`)} style={{
@@ -128,8 +146,43 @@ export default function PostDetailPage() {
                                 background: '#ff4d4f', color: '#fff', cursor: 'pointer',
                             }}>관리자 삭제</button>
                         )}
+                        {isLoggedIn && !isAuthor && (
+                            <button onClick={() => setShowReportForm(v => !v)} style={{
+                                padding: '8px 20px', borderRadius: 8, border: '1px solid #ddd',
+                                background: '#fff', cursor: 'pointer',
+                            }}>신고</button>
+                        )}
                     </div>
                 )}
+
+                {showReportForm && (
+                    <div style={{ padding: 12, background: '#fafafa', borderRadius: 8, marginBottom: 32 }}>
+                        <div style={{ marginBottom: 8 }}>
+                            <select value={reportReason} onChange={e => setReportReason(e.target.value as ReportReason)}
+                                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #ddd', fontSize: 13 }}>
+                                <option value="SPAM">스팸/광고</option>
+                                <option value="ABUSE">욕설/비방</option>
+                                <option value="OBSCENE">음란물</option>
+                                <option value="OTHER">기타</option>
+                            </select>
+                        </div>
+                        <textarea rows={2} placeholder="상세 사유(선택)" value={reportDetail}
+                                  onChange={e => setReportDetail(e.target.value)}
+                                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box', resize: 'vertical' }} />
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                            <button onClick={handleReportSubmit} style={{
+                                padding: '8px 16px', borderRadius: 8, border: 'none',
+                                background: 'var(--primary, #FF8C00)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+                            }}>신고 제출</button>
+                            <button onClick={() => setShowReportForm(false)} style={{
+                                padding: '8px 16px', borderRadius: 8, border: '1px solid #ddd',
+                                background: '#fff', color: '#333', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+                            }}>취소</button>
+                        </div>
+                    </div>
+                )}
+
+                {!showReportForm && <div style={{ marginBottom: 24 }} />}
 
                 <CommentSection postId={Number(postId)} />
             </div>
