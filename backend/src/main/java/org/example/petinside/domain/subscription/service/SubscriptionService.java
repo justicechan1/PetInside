@@ -50,11 +50,19 @@ public class SubscriptionService {
     // 빌링키 기반 1회차 결제 실행 및 정기구독 신규 생성
     public SubscriptionCompleteResponse create(Long userId, SubscriptionCreateRequest request) {
         // 유저 DB 락을 획득하여 동시 중복 신청 차단 및 빌링키 상태 검증
-        BillingKey billingKey = creationSteps.reserveForNewSubscription(userId, request.billingKeyId());
+        SubscriptionCreationSteps.Reservation reservation = creationSteps.reserveForNewSubscription(userId, request.billingKeyId());
+        try {
+            return chargeFirstRound(userId, reservation);
+        } catch (RuntimeException e) {
+            creationSteps.releasePending(reservation.subscriptionId());
+            throw e;
+        }
+    }
 
+    private SubscriptionCompleteResponse chargeFirstRound(Long userId, SubscriptionCreationSteps.Reservation reservation) {
         // READY 상태의 Payment/Order 엔티티 생성
         Payment payment = paymentService.createReadyPayment(userId);
-        String rawBillingKey = billingKeyEncryptor.decrypt(billingKey.getBillingKeyEncrypted());
+        String rawBillingKey = billingKeyEncryptor.decrypt(reservation.billingKeyEncrypted());
 
         // PortOne REST API를 통해 빌링키 승인 요청(HTTP 통신)
         portOneClient.payWithBillingKey(payment.getPaymentId(), new PortOneBillingKeyPaymentRequest(
@@ -74,7 +82,7 @@ public class SubscriptionService {
         paymentService.verifyAndMarkPaid(userId, payment.getPaymentId());
 
         // 구독 엔티티 생성 및 결제 이력 연결
-        return creationSteps.activateSubscription(userId, billingKey, payment.getPaymentId());
+        return creationSteps.activateSubscription(reservation.subscriptionId(), payment.getPaymentId());
     }
 
     // 정기 구독 자동 재청구

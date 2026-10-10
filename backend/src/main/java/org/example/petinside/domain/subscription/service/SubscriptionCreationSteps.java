@@ -32,15 +32,23 @@ public class SubscriptionCreationSteps {
     private final BillingKeyRepository billingKeyRepository;
     private final PaymentService paymentService;
 
-    // 이미 활성 구독이 있는지 확인 + 빌링키 검증. 유저 row 락으로 동시 시작을 막음.
+    // 결제 진행 중인 선점 행도 "이미 구독 있음"으로 본다
+    static final Set<SubscriptionStatus> BLOCKING_STATUSES =
+            EnumSet.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE, SubscriptionStatus.PENDING);
+
+    public record Reservation(Long subscriptionId, String billingKeyEncrypted) {
+    }
+
+    // 이미 활성 구독이 있는지 확인 + 빌링키 검증 후 PENDING 구독으로 자리를 선점.
+    // 유저 row 락은 이 트랜잭션이 끝나면 풀리지만, 커밋된 PENDING 행이 남아 결제 중에 들어온 동시 요청을 막는다.
     @Transactional
-    public BillingKey reserveForNewSubscription(Long userId, Long billingKeyId) {
+    public Reservation reserveForNewSubscription(Long userId, Long billingKeyId) {
         // 유저 DB Row 비관적 락 조회 - 동시 구독 실행 방지
         User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
 
         // 이미 이용 중이거나 결제 유예 중인 활성 구독 존재 여부 검증
-        if (subscriptionRepository.existsByUserAndStatusIn(user, VALID_SUBSCRIPTION_STATUSES)) {
+        if (subscriptionRepository.existsByUserAndStatusIn(user, BLOCKING_STATUSES)) {
             throw new CustomException(HttpStatus.CONFLICT.value(), "이미 활성 구독이 존재합니다.");
         }
 
@@ -53,19 +61,25 @@ public class SubscriptionCreationSteps {
         if (!billingKey.isActive()) {
             throw new CustomException(HttpStatus.CONFLICT.value(), "폐기된 빌링키입니다.");
         }
-        return billingKey;
+        Subscription pending = subscriptionRepository.save(Subscription.pending(user, billingKey, LocalDateTime.now()));
+        return new Reservation(pending.getId(), billingKey.getBillingKeyEncrypted());
+    }
+
+    // 1회차 결제가 실패하면 선점 행을 지워 다시 시작할 수 있게 함
+    @Transactional
+    public void releasePending(Long subscriptionId) {
+        subscriptionRepository.deleteById(subscriptionId);
     }
 
     // 결제가 확정된 뒤 구독 row를 생성하고 결제 기록에 연결.
     @Transactional
-    public SubscriptionCompleteResponse activateSubscription(Long userId, BillingKey billingKey, String paymentId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+    public SubscriptionCompleteResponse activateSubscription(Long subscriptionId, String paymentId) {
+        Subscription subscription = subscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "구독을 찾을 수 없습니다."));
 
         LocalDateTime now = LocalDateTime.now();
         // 구독 기간 설정: 결제일시부터 1개월 후 하루 전까지(예: 8/19 결제 → 다음 결제일 9/18)
-        Subscription subscription = Subscription.activate(user, billingKey, now, now.plusMonths(1).minusDays(1));
-        subscriptionRepository.save(subscription);
+        subscription.activatePending(now, now.plusMonths(1).minusDays(1));
         // 생성된 Payment 엔티티에 새로 생성된 Subscription 연관관계 연결
         paymentService.linkSubscription(paymentId, subscription);
 

@@ -79,6 +79,21 @@ public class Subscription {
                 .build();
     }
 
+    // 정기구독 시작 요청이 1회차 결제를 하는 동안 자리를 선점하는 행. 유저 락 안에서 저장해,
+    // 결제 중에 들어온 같은 사용자의 다른 시작 요청이 이 행을 보고 거절되게 한다.
+    public static Subscription pending(User user, BillingKey billingKey, LocalDateTime now) {
+        Subscription subscription = activate(user, billingKey, now, now);
+        subscription.status = SubscriptionStatus.PENDING;
+        return subscription;
+    }
+
+    // 1회차 결제가 확정되면 선점 행을 정상 구독으로 전환
+    public void activatePending(LocalDateTime startAt, LocalDateTime nextBillingAt) {
+        this.status = SubscriptionStatus.ACTIVE;
+        this.startAt = startAt;
+        this.nextBillingAt = nextBillingAt;
+    }
+
     // 1개월 이용권 단건 구매. 자동 갱신이 없으므로 생성 시점에 이미 해지 예약된 상태로 시작해
     // 다음 배치 때 canceledAt+nextBillingAt(=만료일) 기준으로 자동 만료되게 함.
     public static Subscription purchaseOneTime(User user, LocalDateTime startAt, LocalDateTime expiresAt) {
